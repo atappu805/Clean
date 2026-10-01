@@ -521,6 +521,10 @@ fun ListenTogetherSheet(
 
                                 is ListenTogetherUiState.Hosting -> {
                                     val livePhase = s.members.size > 1
+                                    Column(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
                                     AnimatedContent(
                                         targetState = livePhase,
                                         transitionSpec = {
@@ -682,7 +686,6 @@ fun ListenTogetherSheet(
                                     }
                                 }
 
-                                Spacer(Modifier.height(4.dp))
                                 Button(
                                     onClick = { viewModel.endListenTogetherSession() },
                                     colors = ButtonDefaults.buttonColors(
@@ -693,9 +696,15 @@ fun ListenTogetherSheet(
                                 ) {
                                     Text(stringResource(R.string.listen_together_end_session))
                                 }
+                                    }
                             }
 
                             is ListenTogetherUiState.Guest -> {
+                                Column(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
                                 val copyCode = {
                                     val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                                     cm.setPrimaryClip(ClipData.newPlainText("room code", s.code))
