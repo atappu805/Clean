@@ -76,12 +76,21 @@ jobs:
           git commit -m "chore: bump version to v${{ env.NEW_NAME }} (Code: ${{ env.NEW_CODE }}) [skip ci]" || echo "No changes to commit"
           git push
 
-      - name: 🌐 Sync Source Code to Target Release Repository
+      - name: 🌐 Sync Source Code to Saurav-02/PixelMusic & atappu805/PixelMusic
         run: |
-          echo "Syncing code to ${{ env.TARGET_REPO }} (master branch)..."
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
           git config --local --unset-all "http.https://github.com/.extraheader" || true
-          git push https://x-access-token:${{ secrets.TARGET_REPO_TOKEN }}@github.com/${{ env.TARGET_REPO }}.git HEAD:master --force
-          git push https://x-access-token:${{ secrets.TARGET_REPO_TOKEN }}@github.com/${{ env.TARGET_REPO }}.git --delete main || true
+          git checkout -b dist-tmp
+          git rm -f vz-pixelmusic.jks
+          git rm -rf .github/workflows
+          git commit -m "chore: strip signing key and workflows for distribution [skip ci]"
+          echo "Syncing code to ${{ env.TARGET_REPO }} (master branch)..."
+          git push https://x-access-token:${{ secrets.TARGET_REPO_TOKEN }}@github.com/${{ env.TARGET_REPO }}.git dist-tmp:master --force
+          echo "Syncing code to ${{ env.DIST_REPO }} (main branch)..."
+          git push https://x-access-token:${{ secrets.DIST_REPO_TOKEN }}@github.com/${{ env.DIST_REPO }}.git dist-tmp:main --force
+          git checkout main
+          git branch -D dist-tmp
 
       - name: 📝 Read Release Notes from File
         run: |
@@ -94,7 +103,7 @@ jobs:
           echo -e "\n\n---\n*📦 Current Version Code: ${{ env.NEW_CODE }}*" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
-      - name: 🚀 Create GitHub Release (To SOURCE Repo)
+      - name: 🚀 Create GitHub Release (atappu805/Clean)
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.TAG_NAME }}
@@ -105,7 +114,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: 🚀 Create GitHub Release (To TARGET Repo)
+      - name: 🚀 Create GitHub Release (Saurav-02/PixelMusic)
         uses: softprops/action-gh-release@v2
         with:
           repository: ${{ env.TARGET_REPO }}
@@ -116,7 +125,7 @@ jobs:
           body: ${{ env.RELEASE_BODY }}
           files: app/build/outputs/apk/release/*.apk
 
-      - name: 🚀 Create GitHub Release (To DIST Repo)
+      - name: 🚀 Create GitHub Release (atappu805/PixelMusic)
         uses: softprops/action-gh-release@v2
         with:
           repository: ${{ env.DIST_REPO }}
@@ -127,7 +136,7 @@ jobs:
           body: ${{ env.RELEASE_BODY }}
           files: app/build/outputs/apk/release/*.apk
 
-      - name: 🧹 Clean Up Older Releases from SOURCE Repo (Keep Last 3)
+      - name: 🧹 Clean Up Older Releases from atappu805/Clean (Keep Last 3)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -137,7 +146,7 @@ jobs:
             fi
           done
 
-      - name: 🧹 Clean Up Older Releases from TARGET Repo (Keep Last 3)
+      - name: 🧹 Clean Up Older Releases from Saurav-02/PixelMusic (Keep Last 3)
         env:
           GH_TOKEN: ${{ secrets.TARGET_REPO_TOKEN }}
         run: |
@@ -147,7 +156,7 @@ jobs:
             fi
           done
 
-      - name: 🧹 Clean Up Older Releases from DIST Repo (Keep Last 3)
+      - name: 🧹 Clean Up Older Releases from atappu805/PixelMusic (Keep Last 3)
         env:
           GH_TOKEN: ${{ secrets.DIST_REPO_TOKEN }}
         run: |
