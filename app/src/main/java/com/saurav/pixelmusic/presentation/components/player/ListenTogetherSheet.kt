@@ -97,6 +97,7 @@ import com.saurav.pixelmusic.R
 import com.saurav.pixelmusic.data.model.Song
 import com.saurav.pixelmusic.data.preferences.dataStore
 import com.saurav.pixelmusic.data.session.ChatMessage
+import com.saurav.pixelmusic.data.session.ListenTogetherManager
 import com.saurav.pixelmusic.data.session.ListenTogetherConnectionState
 import com.saurav.pixelmusic.data.session.ListenTogetherUiState
 import com.saurav.pixelmusic.data.session.ReactionEvent
@@ -1311,7 +1312,7 @@ private fun BreathingLiveBadge(
                 )
             }
             Text(
-                text = "LIVE • $listenerCount",
+                text = "LIVE • $listenerCount/${ListenTogetherManager.MAX_SESSION_MEMBERS}",
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Bold,
                 color = colors.onPrimaryContainer

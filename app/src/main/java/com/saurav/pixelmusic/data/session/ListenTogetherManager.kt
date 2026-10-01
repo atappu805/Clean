@@ -111,6 +111,9 @@ class ListenTogetherManager @Inject constructor(
     private val lovedVideoIds = mutableSetOf<String>()
 
     companion object {
+        /** Maximum participants in a single Listen Together session (Host + Guests). */
+        const val MAX_SESSION_MEMBERS = 4
+
         /** How often each member refreshes its presence heartbeat. */
         private const val HEARTBEAT_INTERVAL_MS = 5_000L
         /** A member counts as live while its heartbeat is fresher than this. */
@@ -191,6 +194,7 @@ class ListenTogetherManager @Inject constructor(
                 mapOf(
                     "hostName" to cleanName,
                     "hostKey" to (FirebaseAuth.getInstance().currentUser?.uid ?: ""),
+                    "maxMembers" to MAX_SESSION_MEMBERS,
                     "createdAt" to ServerValue.TIMESTAMP
                 )
             ).await()
@@ -268,14 +272,37 @@ class ListenTogetherManager @Inject constructor(
                 _uiState.value = ListenTogetherUiState.Error("Couldn't find that session. Check the code and try again.")
                 return false
             }
-            val hostName = (meta.value as? Map<String, Any?>)?.get("hostName") as? String ?: "Host"
+            val metaMap = meta.value as? Map<String, Any?>
+            val hostName = metaMap?.get("hostName") as? String ?: "Host"
+            val maxAllowed = (metaMap?.get("maxMembers") as? Number)?.toInt() ?: MAX_SESSION_MEMBERS
 
             sessionRef = db.getReference("sessions/$cleanCode")
             val uid = FirebaseAuth.getInstance().currentUser?.uid ?: error("Missing Firebase user")
+
+            val membersSnapshot = sessionRef!!.child("members").get().await()
+            val isAlreadyMember = membersSnapshot.hasChild(uid)
+            if (!isAlreadyMember && membersSnapshot.childrenCount >= maxAllowed) {
+                _uiState.value = ListenTogetherUiState.Error("This session is full (maximum $maxAllowed people).")
+                cleanupRefs()
+                return false
+            }
+
             memberRef = sessionRef!!.child("members/$uid").also { ref ->
                 ref.setValue(memberPayload(cleanName, photoUrl)).await()
                 ref.onDisconnect().removeValue()
             }
+
+            val postCheck = sessionRef!!.child("members").get().await()
+            if (postCheck.childrenCount > maxAllowed) {
+                val allowedKeys = postCheck.children.take(maxAllowed).mapNotNull { it.key }
+                if (uid !in allowedKeys) {
+                    memberRef?.removeValue()?.await()
+                    cleanupRefs()
+                    _uiState.value = ListenTogetherUiState.Error("This session is full (maximum $maxAllowed people).")
+                    return false
+                }
+            }
+
             startHeartbeat()
 
             sessionCode = cleanCode
@@ -846,7 +873,7 @@ class ListenTogetherManager @Inject constructor(
     }
 
     private fun currentMembers(): List<SessionMember> =
-        memberMap.values.map { it.copy(isLive = isMemberLive(it)) }
+        memberMap.values.map { it.copy(isLive = isMemberLive(it)) }.take(MAX_SESSION_MEMBERS)
 
     /** Re-emits the session state with fresh member liveness when anything changed. */
     private fun refreshMemberList() {

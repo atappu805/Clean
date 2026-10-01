@@ -276,7 +276,7 @@
     <string name="listen_together_share_code">Share this code with friends</string>
     <string name="listen_together_copy_code">Copy code</string>
     <string name="listen_together_code_copied">Code copied to clipboard</string>
-    <string name="listen_together_listeners">%1$d listening</string>
+    <string name="listen_together_listeners">%1$d/4 listening</string>
     <string name="listen_together_end_session">End session</string>
     <string name="listen_together_listening_with">Listening with %1$s</string>
     <string name="listen_together_guest_note">Sit back, the host controls the music</string>
