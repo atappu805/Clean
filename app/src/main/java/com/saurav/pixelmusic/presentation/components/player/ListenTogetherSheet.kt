@@ -129,7 +129,8 @@ fun ListenTogetherSheet(
     val requests by viewModel.listenTogetherRequests.collectAsStateWithLifecycle()
     val remoteState by viewModel.listenTogetherRemoteState.collectAsStateWithLifecycle()
     val syncDriftMs by viewModel.listenTogetherSyncDriftMs.collectAsStateWithLifecycle()
-    val currentSong by viewModel.currentSong.collectAsStateWithLifecycle()
+    val stablePlayerState by viewModel.stablePlayerState.collectAsStateWithLifecycle()
+    val currentSong = stablePlayerState.currentSong
     val pendingCode by viewModel.pendingListenTogetherCode.collectAsStateWithLifecycle()
 
     val colors = MaterialTheme.colorScheme
