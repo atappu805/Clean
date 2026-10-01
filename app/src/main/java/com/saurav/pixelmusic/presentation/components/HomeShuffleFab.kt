@@ -7,6 +7,11 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -124,25 +129,23 @@ fun HomeShuffleFab(
 
     val targetContainerColor = when {
         isThresholdReached -> MaterialTheme.colorScheme.primary
-        isExploreMode -> MaterialTheme.colorScheme.primary
-        isShuffleEnabled -> MaterialTheme.colorScheme.primary
+        isShuffleEnabled && !isExploreMode -> MaterialTheme.colorScheme.primary
         else -> MaterialTheme.colorScheme.tertiaryContainer
     }
     val animatedContainerColor by animateColorAsState(
         targetValue = targetContainerColor,
-        animationSpec = tween(150),
+        animationSpec = tween(200),
         label = "fabContainerColor"
     )
 
     val targetContentColor = when {
         isThresholdReached -> MaterialTheme.colorScheme.onPrimary
-        isExploreMode -> MaterialTheme.colorScheme.onPrimary
-        isShuffleEnabled -> MaterialTheme.colorScheme.onPrimary
+        isShuffleEnabled && !isExploreMode -> MaterialTheme.colorScheme.onPrimary
         else -> MaterialTheme.colorScheme.onTertiaryContainer
     }
     val animatedContentColor by animateColorAsState(
         targetValue = targetContentColor,
-        animationSpec = tween(150),
+        animationSpec = tween(200),
         label = "fabContentColor"
     )
 
@@ -324,27 +327,94 @@ fun HomeShuffleFab(
                                 ),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(
-                                imageVector = Icons.Rounded.Group,
-                                contentDescription = stringResource(R.string.listen_together),
-                                tint = if (isSessionActive) MaterialTheme.colorScheme.primary else animatedContentColor,
-                                modifier = Modifier.size(32.dp)
-                            )
-                            if (isSessionActive) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(10.dp)
-                                        .align(Alignment.TopEnd)
-                                        .offset(x = (-14).dp, y = 14.dp)
-                                        .clip(CircleShape)
-                                        .background(Color(0xFF4CAF50))
-                                )
+                            Crossfade(
+                                targetState = isSessionActive,
+                                animationSpec = tween(300),
+                                label = "ltFabIconCrossfade"
+                            ) { active ->
+                                if (active) {
+                                    FabEqualizerBars(
+                                        color = animatedContentColor,
+                                        modifier = Modifier.size(28.dp)
+                                    )
+                                } else {
+                                    Icon(
+                                        imageVector = Icons.Rounded.Group,
+                                        contentDescription = stringResource(R.string.listen_together),
+                                        tint = animatedContentColor,
+                                        modifier = Modifier.size(32.dp)
+                                    )
+                                }
                             }
                         }
                     }
                 }
             }
         }
+    }
+}
+
+/** 3-bar animated equalizer replacing the static group icon when a session is active */
+@Composable
+private fun FabEqualizerBars(
+    color: Color,
+    modifier: Modifier = Modifier
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "fabEq")
+    val h1 by infiniteTransition.animateFloat(
+        initialValue = 6f,
+        targetValue = 22f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "fabH1"
+    )
+    val h2 by infiniteTransition.animateFloat(
+        initialValue = 22f,
+        targetValue = 8f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1500, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "fabH2"
+    )
+    val h3 by infiniteTransition.animateFloat(
+        initialValue = 10f,
+        targetValue = 24f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1350, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "fabH3"
+    )
+
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(3.5.dp, Alignment.CenterHorizontally),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .width(4.dp)
+                .height(h1.dp)
+                .clip(RoundedCornerShape(2.dp))
+                .background(color)
+        )
+        Box(
+            modifier = Modifier
+                .width(4.dp)
+                .height(h2.dp)
+                .clip(RoundedCornerShape(2.dp))
+                .background(color)
+        )
+        Box(
+            modifier = Modifier
+                .width(4.dp)
+                .height(h3.dp)
+                .clip(RoundedCornerShape(2.dp))
+                .background(color)
+        )
     }
 }
 
@@ -356,10 +426,10 @@ private fun ShuffleFabIcon(
     tint: Color,
 ) {
     Crossfade(
-        targetState = isThresholdReached,
-        animationSpec = tween(150),
+        targetState = Pair(isThresholdReached, isExploreMode),
+        animationSpec = tween(250),
         label = "fabIcon"
-    ) { reached ->
+    ) { (reached, explore) ->
         if (reached) {
             Icon(
                 imageVector = Icons.Rounded.GraphicEq,
@@ -367,7 +437,7 @@ private fun ShuffleFabIcon(
                 tint = tint,
                 modifier = Modifier.size(32.dp)
             )
-        } else if (isExploreMode) {
+        } else if (explore) {
             Icon(
                 imageVector = Icons.Rounded.AutoAwesome,
                 contentDescription = "Smart Mix",
