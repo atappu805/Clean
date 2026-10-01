@@ -810,50 +810,22 @@ class MainActivity : ComponentActivity() {
         val currentRoute = navBackStackEntry?.destination?.route
         var isSearchBarActive by remember { mutableStateOf(false) }
 
-        val routesWithHiddenNavigationBar = remember {
+        val mainRoutesWithNavigationBar = remember {
             setOf(
-                Screen.Settings.route,
-                Screen.Accounts.route,
-                Screen.PlaylistDetail.route,
-                Screen.DailyMixScreen.route,
-                Screen.RecentlyPlayed.route,
-                Screen.SmartMix.route,
-                Screen.QuickPicksAll.route,
-
-                Screen.AlbumDetail.route,
-                Screen.ArtistDetail.route,
-                Screen.DJSpace.route,
-                Screen.NavBarCrRad.route,
-                Screen.About.route,
-                Screen.Stats.route,
-                Screen.EditTransition.route,
-                Screen.Experimental.route,
-                Screen.ArtistSettings.route,
-                Screen.SettingsCategory.route,
-                Screen.DelimiterConfig.route,
-                Screen.PaletteStyle.route,
-                Screen.RecentlyPlayed.route,
-                Screen.DeviceCapabilities.route,
-                Screen.FeatureCompatibility.route,
-                Screen.EasterEgg.route,
-                Screen.WordDelimiterConfig.route,
-                "update_download"
+                Screen.Home.route,
+                Screen.Explore.route,
+                Screen.Search.route,
+                Screen.Library.route
             )
         }
         val shouldHideNavigationBar by remember(currentRoute, isSearchBarActive) {
             derivedStateOf {
-                if (currentRoute == Screen.Search.route && isSearchBarActive) {
+                if (currentRoute == null) {
+                    false
+                } else if (currentRoute == Screen.Search.route && isSearchBarActive) {
                     true
                 } else {
-                    currentRoute?.let { route ->
-                        routesWithHiddenNavigationBar.any { hiddenRoute ->
-                            if (hiddenRoute.contains("{")) {
-                                route.startsWith(hiddenRoute.substringBefore("{"))
-                            } else {
-                                route == hiddenRoute
-                            }
-                        }
-                    } ?: false
+                    currentRoute !in mainRoutesWithNavigationBar
                 }
             }
         }
