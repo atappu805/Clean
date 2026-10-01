@@ -77,6 +77,9 @@ internal fun BoxScope.UnifiedPlayerMiniAndFullLayers(
     // The Listen Together sheet is an app-wide overlay: fade the mini player
     // out while it's open so the two don't stack.
     val isListenTogetherSheetOpen by playerViewModel.showListenTogetherSheet.collectAsStateWithLifecycle()
+    val ltUiState by playerViewModel.listenTogetherUiState.collectAsStateWithLifecycle()
+    val isLtActive = ltUiState is com.saurav.pixelmusic.data.session.ListenTogetherUiState.Hosting ||
+        ltUiState is com.saurav.pixelmusic.data.session.ListenTogetherUiState.Guest
     currentSong?.let { currentSongNonNull ->
         miniPlayerScheme?.let { readyScheme ->
             CompositionLocalProvider(
@@ -116,6 +119,7 @@ internal fun BoxScope.UnifiedPlayerMiniAndFullLayers(
                         isCastConnecting = isCastConnecting,
                         isPreparingPlayback = isPreparingPlayback,
                         isBuffering = infrequentPlayerState.isBuffering,
+                        isListenTogetherActive = isLtActive,
                         onPlayPause = { playerViewModel.playPause() },
                         onPrevious = { playerViewModel.previousSong() },
                         onNext = { playerViewModel.nextSong() },
