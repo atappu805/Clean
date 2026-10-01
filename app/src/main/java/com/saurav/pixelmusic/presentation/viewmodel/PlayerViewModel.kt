@@ -902,20 +902,13 @@ class PlayerViewModel @Inject constructor(
     fun queueNextListenTogetherRequest(request: com.saurav.pixelmusic.data.session.SongRequest) {
         viewModelScope.launch {
             try {
-                val results = musicRepository.searchAllOnce(request.text, com.saurav.pixelmusic.data.model.SearchFilterType.SONG)
+                val results = musicRepository.searchAllOnce(request.text, com.saurav.pixelmusic.data.model.SearchFilterType.SONGS)
                 val targetSong = results.filterIsInstance<com.saurav.pixelmusic.data.model.SearchResultItem.SongItem>().firstOrNull()?.song
                 if (targetSong != null) {
                     addSongNextToQueue(targetSong)
                     sendToast("Queued \"${targetSong.title}\" next")
                 } else {
-                    val localSongs = musicRepository.searchSongs(request.text).firstOrNull()
-                    val fallback = localSongs?.firstOrNull()
-                    if (fallback != null) {
-                        addSongNextToQueue(fallback)
-                        sendToast("Queued \"${fallback.title}\" next")
-                    } else {
-                        sendToast("Could not find track for \"${request.text}\"")
-                    }
+                    sendToast("Could not find track for \"${request.text}\"")
                 }
             } catch (e: Exception) {
                 Timber.w(e, "Failed to queue song request: %s", request.text)
