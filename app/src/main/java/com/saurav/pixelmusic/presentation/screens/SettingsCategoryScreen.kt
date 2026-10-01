@@ -1974,6 +1974,10 @@ fun SettingsCategoryScreen(
                                 }
                             }
 
+                            SettingsCategory.LISTEN_TOGETHER -> {
+                                // Listen Together has its own dedicated screen
+                            }
+
                             SettingsCategory.EQUALIZER -> {
                                 // Equalizer has its own screen, so this block is unreachable via standard navigation
                                 // but required for exhaustiveness.
