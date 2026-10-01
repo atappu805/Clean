@@ -5,6 +5,7 @@ on:
 
 env:
   TARGET_REPO: 'Saurav-02/PixelMusic'
+  DIST_REPO: 'atappu805/PixelMusic'
 
 jobs:
   build:
@@ -115,6 +116,17 @@ jobs:
           body: ${{ env.RELEASE_BODY }}
           files: app/build/outputs/apk/release/*.apk
 
+      - name: 🚀 Create GitHub Release (To DIST Repo)
+        uses: softprops/action-gh-release@v2
+        with:
+          repository: ${{ env.DIST_REPO }}
+          token: ${{ secrets.DIST_REPO_TOKEN }}
+          tag_name: ${{ env.TAG_NAME }}
+          name: 🔧 Sub-Release ${{ env.TAG_NAME }}
+          make_latest: true
+          body: ${{ env.RELEASE_BODY }}
+          files: app/build/outputs/apk/release/*.apk
+
       - name: 🧹 Clean Up Older Releases from SOURCE Repo (Keep Last 3)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -132,6 +144,16 @@ jobs:
           gh release list -R ${{ env.TARGET_REPO }} --limit 100 --json tagName -q ".[].tagName" | tail -n +4 | while read -r tag; do
             if [ -n "$tag" ] && [ "$tag" != "${{ env.TAG_NAME }}" ]; then
               gh release delete "$tag" -R ${{ env.TARGET_REPO }} --cleanup-tag -y || true
+            fi
+          done
+
+      - name: 🧹 Clean Up Older Releases from DIST Repo (Keep Last 3)
+        env:
+          GH_TOKEN: ${{ secrets.DIST_REPO_TOKEN }}
+        run: |
+          gh release list -R ${{ env.DIST_REPO }} --limit 100 --json tagName -q ".[].tagName" | tail -n +4 | while read -r tag; do
+            if [ -n "$tag" ] && [ "$tag" != "${{ env.TAG_NAME }}" ]; then
+              gh release delete "$tag" -R ${{ env.DIST_REPO }} --cleanup-tag -y || true
             fi
           done
           
