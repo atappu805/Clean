@@ -547,12 +547,32 @@ fun ListenTogetherSheet(
                                                     onToast = viewModel::sendToast
                                                 )
 
-                                                // Pulse / Radar concentric wave animation around host avatar with profile picture
-                                                PulseRadarDiscovery(
-                                                    hostName = s.hostName,
-                                                    hostPhotoUrl = s.members.firstOrNull()?.photoUrl ?: currentUserAvatarUrl.ifBlank { null },
-                                                    colors = colors
-                                                )
+                                                // Static host avatar (no pulse animation)
+                                                val hostPhoto = s.members.firstOrNull()?.photoUrl ?: currentUserAvatarUrl.ifBlank { null }
+                                                Surface(
+                                                    shape = CircleShape,
+                                                    color = avatarColorFor(s.hostName),
+                                                    shadowElevation = 6.dp,
+                                                    modifier = Modifier.size(72.dp)
+                                                ) {
+                                                    Box(contentAlignment = Alignment.Center) {
+                                                        if (!hostPhoto.isNullOrBlank()) {
+                                                            AsyncImage(
+                                                                model = hostPhoto,
+                                                                contentDescription = null,
+                                                                contentScale = ContentScale.Crop,
+                                                                modifier = Modifier.fillMaxSize().clip(CircleShape)
+                                                            )
+                                                        } else {
+                                                            Text(
+                                                                text = s.hostName.firstOrNull()?.uppercase() ?: "?",
+                                                                color = Color.White,
+                                                                fontWeight = FontWeight.Bold,
+                                                                fontSize = 28.sp
+                                                            )
+                                                        }
+                                                    }
+                                                }
 
                                                 Text(
                                                     text = context.getString(R.string.listen_together_listeners, s.members.size),
