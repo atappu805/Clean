@@ -302,11 +302,11 @@ fun ListenTogetherSheet(
                         AnimatedContent(
                             targetState = uiState,
                             transitionSpec = {
-                                (fadeIn(animationSpec = tween(350, easing = FastOutSlowInEasing)) +
-                                    scaleIn(animationSpec = tween(350, easing = FastOutSlowInEasing), initialScale = 0.96f)) togetherWith
-                                (fadeOut(animationSpec = tween(200, easing = FastOutSlowInEasing)) +
-                                    scaleOut(animationSpec = tween(200, easing = FastOutSlowInEasing), targetScale = 0.96f))
-                            },
+                                fadeIn(animationSpec = tween(220)) togetherWith
+                                fadeOut(animationSpec = tween(180))
+                            }.using(
+                                SizeTransform(clip = true)
+                            ),
                             label = "listenTogetherUiStateTransition",
                             modifier = Modifier.fillMaxWidth()
                         ) { s ->
@@ -524,6 +524,12 @@ fun ListenTogetherSheet(
                                     val livePhase = s.members.size > 1
                                     AnimatedContent(
                                         targetState = livePhase,
+                                        transitionSpec = {
+                                            fadeIn(animationSpec = tween(220)) togetherWith
+                                            fadeOut(animationSpec = tween(180))
+                                        }.using(
+                                            SizeTransform(clip = true)
+                                        ),
                                         label = "listenTogetherHostPhase",
                                         modifier = Modifier.fillMaxWidth()
                                     ) { live ->
