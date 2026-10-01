@@ -25,6 +25,8 @@
 
 * 👥 **YouTube Multi-Account:** Connect up to 2 YouTube accounts and switch between them seamlessly from Settings — the library, synced playlists, and counts follow the active account.
 
+* 🎧 **Listen Together (Synchronized Group Listening):** Real-time shared music rooms powered by Firebase Realtime Database. Host sessions, invite friends with 7-letter room codes, synchronize playback with coordinated buffering and drift correction, send floating emoji reactions, chat presets, and submit/vote on song requests.
+
 ---
 
 **Sub release 4.4.0**
