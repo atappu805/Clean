@@ -66,6 +66,7 @@ internal fun MiniPlayerContentInternal(
     isCastConnecting: Boolean,
     isPreparingPlayback: Boolean,
     isBuffering: Boolean = false,
+    isListenTogetherActive: Boolean = false,
     onPlayPause: () -> Unit,
     onPrevious: () -> Unit,
     cornerRadiusAlb: Dp,
@@ -130,15 +131,52 @@ internal fun MiniPlayerContentInternal(
                 color = LocalMaterialTheme.current.onPrimaryContainer.copy(alpha = 0.7f)
             )
 
-            AutoScrollingText(
-                text = when {
-                    isCastConnecting -> "Connecting to device…"
-                    isPreparingPlayback -> "Preparing playback…"
-                    else -> song.title
-                },
-                style = titleStyle,
-                gradientEdgeColor = LocalMaterialTheme.current.primaryContainer
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Box(modifier = Modifier.weight(1f, fill = false)) {
+                    AutoScrollingText(
+                        text = when {
+                            isCastConnecting -> "Connecting to device…"
+                            isPreparingPlayback -> "Preparing playback…"
+                            else -> song.title
+                        },
+                        style = titleStyle,
+                        gradientEdgeColor = LocalMaterialTheme.current.primaryContainer
+                    )
+                }
+                if (isListenTogetherActive) {
+                    Spacer(Modifier.width(6.dp))
+                    Surface(
+                        shape = RoundedCornerShape(4.dp),
+                        color = LocalMaterialTheme.current.onPrimaryContainer.copy(alpha = 0.12f),
+                        modifier = Modifier.padding(bottom = 1.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(5.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFF4CAF50))
+                            )
+                            Spacer(Modifier.width(3.dp))
+                            Text(
+                                text = "Live Sync",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    fontFamily = GoogleSansRounded,
+                                    color = LocalMaterialTheme.current.onPrimaryContainer
+                                )
+                            )
+                        }
+                    }
+                }
+            }
             AutoScrollingText(
                 text = if (isPreparingPlayback) "Loading audio…" else song.displayArtist,
                 style = artistStyle,
