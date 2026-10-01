@@ -1610,15 +1610,15 @@ private fun MiniEqualizerBars(color: Color) {
     val infiniteTransition = rememberInfiniteTransition(label = "miniEq")
     val h1 by infiniteTransition.animateFloat(
         initialValue = 4f, targetValue = 14f,
-        animationSpec = infiniteRepeatable(tween(900, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "h1"
+        animationSpec = infiniteRepeatable(tween(1200, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "h1"
     )
     val h2 by infiniteTransition.animateFloat(
         initialValue = 14f, targetValue = 5f,
-        animationSpec = infiniteRepeatable(tween(1150, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "h2"
+        animationSpec = infiniteRepeatable(tween(1500, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "h2"
     )
     val h3 by infiniteTransition.animateFloat(
         initialValue = 6f, targetValue = 16f,
-        animationSpec = infiniteRepeatable(tween(1000, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "h3"
+        animationSpec = infiniteRepeatable(tween(1350, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "h3"
     )
 
     Row(

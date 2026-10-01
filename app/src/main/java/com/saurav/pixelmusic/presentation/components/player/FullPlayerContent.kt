@@ -1005,7 +1005,7 @@ fun FullPlayerContent(
                                             initialValue = 4f,
                                             targetValue = 12f,
                                             animationSpec = infiniteRepeatable(
-                                                animation = tween(900, easing = FastOutSlowInEasing),
+                                                animation = tween(1200, easing = FastOutSlowInEasing),
                                                 repeatMode = RepeatMode.Reverse
                                             ),
                                             label = "eqBar1"
@@ -1014,7 +1014,7 @@ fun FullPlayerContent(
                                             initialValue = 12f,
                                             targetValue = 5f,
                                             animationSpec = infiniteRepeatable(
-                                                animation = tween(1150, easing = FastOutSlowInEasing),
+                                                animation = tween(1500, easing = FastOutSlowInEasing),
                                                 repeatMode = RepeatMode.Reverse
                                             ),
                                             label = "eqBar2"
@@ -1023,7 +1023,7 @@ fun FullPlayerContent(
                                             initialValue = 6f,
                                             targetValue = 14f,
                                             animationSpec = infiniteRepeatable(
-                                                animation = tween(1000, easing = FastOutSlowInEasing),
+                                                animation = tween(1350, easing = FastOutSlowInEasing),
                                                 repeatMode = RepeatMode.Reverse
                                             ),
                                             label = "eqBar3"
