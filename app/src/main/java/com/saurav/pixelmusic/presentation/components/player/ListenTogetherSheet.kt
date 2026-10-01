@@ -786,8 +786,9 @@ fun ListenTogetherSheet(
                         }
                     }
                 }
+            }
 
-                // Floating reactions overlay (honors animated reactions setting)
+            // Floating reactions overlay (honors animated reactions setting)
                 if (animatedReactions) {
                     FloatingReactionsOverlay(
                         events = reactionEvents,
