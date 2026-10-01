@@ -814,6 +814,7 @@ fun ListenTogetherSheet(
                                 ) {
                                     Text(stringResource(R.string.listen_together_leave))
                                 }
+                                }
                             }
                         }
                     }
