@@ -892,6 +892,39 @@ class PlayerViewModel @Inject constructor(
         viewModelScope.launch { listenTogetherManager.dismissSongRequest(key) }
     }
 
+    private val _pendingListenTogetherCode = MutableStateFlow<String?>(null)
+    val pendingListenTogetherCode: StateFlow<String?> = _pendingListenTogetherCode.asStateFlow()
+
+    fun setPendingListenTogetherCode(code: String?) {
+        _pendingListenTogetherCode.value = code
+    }
+
+    fun queueNextListenTogetherRequest(request: com.saurav.pixelmusic.data.session.SongRequest) {
+        viewModelScope.launch {
+            try {
+                val results = musicRepository.searchAllOnce(request.text, com.saurav.pixelmusic.data.model.SearchFilterType.SONG)
+                val targetSong = results.filterIsInstance<com.saurav.pixelmusic.data.model.SearchResultItem.SongItem>().firstOrNull()?.song
+                if (targetSong != null) {
+                    addSongNextToQueue(targetSong)
+                    sendToast("Queued \"${targetSong.title}\" next")
+                } else {
+                    val localSongs = musicRepository.searchSongs(request.text).firstOrNull()
+                    val fallback = localSongs?.firstOrNull()
+                    if (fallback != null) {
+                        addSongNextToQueue(fallback)
+                        sendToast("Queued \"${fallback.title}\" next")
+                    } else {
+                        sendToast("Could not find track for \"${request.text}\"")
+                    }
+                }
+            } catch (e: Exception) {
+                Timber.w(e, "Failed to queue song request: %s", request.text)
+                sendToast("Could not queue request: ${request.text}")
+            }
+            listenTogetherManager.dismissSongRequest(request.key)
+        }
+    }
+
     /** The videoId of whatever the room is playing right now. */
     private fun currentSessionVideoId(): String? {
         return if (listenTogetherManager.isHostActive()) {
