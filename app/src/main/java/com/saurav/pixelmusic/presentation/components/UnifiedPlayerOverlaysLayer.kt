@@ -501,21 +501,20 @@ internal fun UnifiedPlayerListenTogetherLayer(
     playerViewModel: PlayerViewModel
 ) {
     val showSheet by playerViewModel.showListenTogetherSheet.collectAsStateWithLifecycle()
-    // The sheet drives its own slide-up/slide-down animation
-    // (see ListenTogetherSheet), so no wrapper animation is needed here.
-    CompositionLocalProvider(
-        LocalMaterialTheme provides albumColorScheme
-    ) {
-        MaterialTheme(
-            colorScheme = LocalMaterialTheme.current,
-            typography = MaterialTheme.typography,
-            shapes = MaterialTheme.shapes
+    if (showSheet) {
+        CompositionLocalProvider(
+            LocalMaterialTheme provides albumColorScheme
         ) {
-            ListenTogetherSheet(
-                viewModel = playerViewModel,
-                visible = showSheet,
-                onDismiss = { playerViewModel.closeListenTogetherSheet() }
-            )
+            MaterialTheme(
+                colorScheme = LocalMaterialTheme.current,
+                typography = MaterialTheme.typography,
+                shapes = MaterialTheme.shapes
+            ) {
+                ListenTogetherSheet(
+                    viewModel = playerViewModel,
+                    onDismiss = { playerViewModel.closeListenTogetherSheet() }
+                )
+            }
         }
     }
 }
