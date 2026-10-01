@@ -24,6 +24,12 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.ui.draw.alpha
 import androidx.compose.animation.fadeIn
 import coil.imageLoader
 import androidx.compose.animation.fadeOut
@@ -975,20 +981,119 @@ fun FullPlayerContent(
                             val ltUiState by playerViewModel.listenTogetherUiState.collectAsStateWithLifecycle()
                             val ltActive = ltUiState is com.saurav.pixelmusic.data.session.ListenTogetherUiState.Hosting ||
                                 ltUiState is com.saurav.pixelmusic.data.session.ListenTogetherUiState.Guest
-                            Box(
-                                modifier = Modifier
-                                    .size(height = 42.dp, width = 50.dp)
-                                    .clip(RoundedCornerShape(14.dp))
-                                    .background(topBarButtonBg)
-                                    .clickable { playerViewModel.openListenTogetherSheet() },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Rounded.Group,
-                                    contentDescription = stringResource(R.string.listen_together),
-                                    tint = if (ltActive) LocalMaterialTheme.current.primary
-                                    else topBarIconColor
+                            val ltMemberCount = when (val s = ltUiState) {
+                                is com.saurav.pixelmusic.data.session.ListenTogetherUiState.Hosting -> s.members.size
+                                is com.saurav.pixelmusic.data.session.ListenTogetherUiState.Guest -> s.members.size
+                                else -> 0
+                            }
+                            if (!ltActive) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(height = 42.dp, width = 50.dp)
+                                        .clip(RoundedCornerShape(14.dp))
+                                        .background(topBarButtonBg)
+                                        .clickable { playerViewModel.openListenTogetherSheet() },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.Group,
+                                        contentDescription = stringResource(R.string.listen_together),
+                                        tint = topBarIconColor
+                                    )
+                                }
+                            } else {
+                                val ltInfiniteTransition = rememberInfiniteTransition(label = "ltPillPulse")
+                                val pulseAlpha by ltInfiniteTransition.animateFloat(
+                                    initialValue = 0.4f,
+                                    targetValue = 1f,
+                                    animationSpec = infiniteRepeatable(
+                                        animation = tween(800, easing = LinearEasing),
+                                        repeatMode = RepeatMode.Reverse
+                                    ),
+                                    label = "pulseAlpha"
                                 )
+                                val eqBar1 by ltInfiniteTransition.animateFloat(
+                                    initialValue = 4f,
+                                    targetValue = 12f,
+                                    animationSpec = infiniteRepeatable(
+                                        animation = tween(400, easing = FastOutSlowInEasing),
+                                        repeatMode = RepeatMode.Reverse
+                                    ),
+                                    label = "eqBar1"
+                                )
+                                val eqBar2 by ltInfiniteTransition.animateFloat(
+                                    initialValue = 12f,
+                                    targetValue = 5f,
+                                    animationSpec = infiniteRepeatable(
+                                        animation = tween(350, easing = FastOutSlowInEasing),
+                                        repeatMode = RepeatMode.Reverse
+                                    ),
+                                    label = "eqBar2"
+                                )
+                                val eqBar3 by ltInfiniteTransition.animateFloat(
+                                    initialValue = 6f,
+                                    targetValue = 14f,
+                                    animationSpec = infiniteRepeatable(
+                                        animation = tween(450, easing = FastOutSlowInEasing),
+                                        repeatMode = RepeatMode.Reverse
+                                    ),
+                                    label = "eqBar3"
+                                )
+
+                                Row(
+                                    modifier = Modifier
+                                        .height(42.dp)
+                                        .clip(RoundedCornerShape(21.dp))
+                                        .background(LocalMaterialTheme.current.primary.copy(alpha = 0.18f))
+                                        .clickable { playerViewModel.openListenTogetherSheet() }
+                                        .padding(horizontal = 10.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(8.dp)
+                                            .alpha(pulseAlpha)
+                                            .clip(CircleShape)
+                                            .background(Color(0xFF4CAF50))
+                                    )
+                                    Text(
+                                        text = if (ltMemberCount > 0) "LIVE • $ltMemberCount" else "LIVE",
+                                        style = MaterialTheme.typography.labelMedium.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 11.sp,
+                                            fontFamily = GoogleSansRounded,
+                                            color = LocalMaterialTheme.current.primary
+                                        )
+                                    )
+                                    Row(
+                                        verticalAlignment = Alignment.Bottom,
+                                        horizontalArrangement = Arrangement.spacedBy(2.dp),
+                                        modifier = Modifier.height(14.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .width(2.5.dp)
+                                                .height(eqBar1.dp)
+                                                .clip(RoundedCornerShape(1.dp))
+                                                .background(LocalMaterialTheme.current.primary)
+                                        )
+                                        Box(
+                                            modifier = Modifier
+                                                .width(2.5.dp)
+                                                .height(eqBar2.dp)
+                                                .clip(RoundedCornerShape(1.dp))
+                                                .background(LocalMaterialTheme.current.primary)
+                                        )
+                                        Box(
+                                            modifier = Modifier
+                                                .width(2.5.dp)
+                                                .height(eqBar3.dp)
+                                                .clip(RoundedCornerShape(1.dp))
+                                                .background(LocalMaterialTheme.current.primary)
+                                        )
+                                    }
+                                }
                             }
 
                             // Queue Button
