@@ -308,7 +308,7 @@ fun ListenTogetherSheet(
                                     scaleOut(animationSpec = tween(200, easing = FastOutSlowInEasing), targetScale = 0.96f))
                             },
                             label = "listenTogetherUiStateTransition",
-                            modifier = Modifier.fillMaxWidth().animateContentSize(tween(350, easing = FastOutSlowInEasing))
+                            modifier = Modifier.fillMaxWidth()
                         ) { s ->
                             when (s) {
                                 is ListenTogetherUiState.Idle, is ListenTogetherUiState.Error -> {
@@ -445,7 +445,7 @@ fun ListenTogetherSheet(
                                                 }
                                             },
                                             label = "preSessionTabAnimation",
-                                            modifier = Modifier.fillMaxWidth().animateContentSize(tween(300, easing = FastOutSlowInEasing))
+                                            modifier = Modifier.fillMaxWidth()
                                         ) { tab ->
                                             if (tab == PreSessionTab.HOST) {
                                                 Button(
@@ -525,7 +525,7 @@ fun ListenTogetherSheet(
                                     AnimatedContent(
                                         targetState = livePhase,
                                         label = "listenTogetherHostPhase",
-                                        modifier = Modifier.fillMaxWidth().animateContentSize(tween(300))
+                                        modifier = Modifier.fillMaxWidth()
                                     ) { live ->
                                         if (!live) {
                                             // Phase 1: Waiting Room
@@ -1272,7 +1272,11 @@ private fun BreathingLiveBadge(
             Box(contentAlignment = Alignment.Center) {
                 Box(
                     modifier = Modifier
-                        .size((12 * beaconPulse).dp)
+                        .size(12.dp)
+                        .graphicsLayer {
+                            scaleX = beaconPulse
+                            scaleY = beaconPulse
+                        }
                         .alpha(beaconAlpha)
                         .clip(CircleShape)
                         .background(Color(0xFF4CAF50))
