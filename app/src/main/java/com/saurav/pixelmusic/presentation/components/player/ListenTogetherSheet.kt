@@ -46,6 +46,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material.icons.rounded.ContentPaste
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
@@ -422,11 +423,30 @@ fun ListenTogetherSheet(
                                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                                     ) {
                                         OutlinedButton(
-                                            onClick = { showQrDialogCode = if (code.length == 7) code else "DEMO777" },
-                                            modifier = Modifier.weight(1f),
+                                            onClick = {
+                                                val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                                val clipText = cm.primaryClip?.getItemAt(0)?.text?.toString().orEmpty()
+                                                val uriCode = if (clipText.contains("code=")) {
+                                                    clipText.substringAfter("code=").take(7)
+                                                } else {
+                                                    clipText
+                                                }
+                                                val extracted = uriCode.uppercase().filter { it in 'A'..'Z' || it in '0'..'9' }.take(7)
+                                                if (extracted.isNotEmpty()) {
+                                                    code = extracted
+                                                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                }
+                                            },
+                                            modifier = Modifier.weight(0.9f),
                                             shape = RoundedCornerShape(14.dp)
                                         ) {
-                                            Text("Show QR Code")
+                                            Icon(
+                                                imageVector = Icons.Rounded.ContentPaste,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                            Spacer(Modifier.width(6.dp))
+                                            Text("Paste")
                                         }
 
                                         Button(
@@ -435,7 +455,7 @@ fun ListenTogetherSheet(
                                                 viewModel.joinListenTogetherSession(code, effectiveName)
                                             },
                                             enabled = code.length == 7 && effectiveName.isNotBlank(),
-                                            modifier = Modifier.weight(1f),
+                                            modifier = Modifier.weight(1.3f),
                                             shape = RoundedCornerShape(14.dp)
                                         ) {
                                             Text(stringResource(R.string.listen_together_join))
