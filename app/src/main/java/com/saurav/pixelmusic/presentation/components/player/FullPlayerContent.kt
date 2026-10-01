@@ -977,7 +977,6 @@ fun FullPlayerContent(
                                 }
                             }
 
-
                             // Queue Button
                             Box(
                                 modifier = Modifier

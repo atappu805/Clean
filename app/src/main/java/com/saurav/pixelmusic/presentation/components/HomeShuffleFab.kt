@@ -283,7 +283,7 @@ fun HomeShuffleFab(
     }
 }
 
-/** The shuffle / Smart Mix / recognize icon, shared by both FAB forms. */
+/** The shuffle / Smart Mix / recognize icon. */
 @Composable
 private fun ShuffleFabIcon(
     isThresholdReached: Boolean,
