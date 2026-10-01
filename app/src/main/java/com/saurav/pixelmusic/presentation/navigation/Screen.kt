@@ -12,7 +12,6 @@ sealed class Screen(val route: String) {
     object Explore : Screen("explore")
     object Settings : Screen("settings")
     object SettingsSearch : Screen("settings_search")
-    object ListenTogetherSettings : Screen("listen_together_settings")
     object Accounts : Screen("settings_accounts")
 
     object SettingsCategory : Screen("settings_category/{categoryId}?highlight={highlight}") {

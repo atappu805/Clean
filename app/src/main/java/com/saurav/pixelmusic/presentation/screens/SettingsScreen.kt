@@ -337,8 +337,6 @@ fun SettingsScreen(
                                     } catch (e: Exception) {
                                         android.widget.Toast.makeText(context, "System equalizer not available", android.widget.Toast.LENGTH_SHORT).show()
                                     }
-                                } else if (category == SettingsCategory.LISTEN_TOGETHER) {
-                                    navController.navigateSafely(Screen.ListenTogetherSettings.route)
                                 } else {
                                     navController.navigateSafely(Screen.SettingsCategory.createRoute(category.id))
                                 }
@@ -704,7 +702,6 @@ private fun getCategoryColors(category: SettingsCategory, isDark: Boolean): Pair
             SettingsCategory.CONTENT -> Color(0xFF88FFD9) to Color(0xFF005049)
             SettingsCategory.APPEARANCE -> Color(0xFFFFD8E4) to Color(0xFF631835)
             SettingsCategory.PLAYBACK -> Color(0xFFFFD8EC) to Color(0xFF631B4B)
-            SettingsCategory.LISTEN_TOGETHER -> Color(0xFFA7F0D0) to Color(0xFF00513B)
             SettingsCategory.BEHAVIOR -> Color(0xFFD7E3FF) to Color(0xFF253347)
             SettingsCategory.AI_INTEGRATION -> Color(0xFFCCE8EA) to Color(0xFF004F58)
             SettingsCategory.BACKUP_RESTORE -> Color(0xFFD9E2FF) to Color(0xFF27304E)

@@ -95,20 +95,6 @@ object SettingsSearchCatalog {
             listOf("battery", "optimization", "background", "keep alive"),
             SettingsCategory.PLAYBACK, Screen.SettingsCategory.createRoute(SettingsCategory.PLAYBACK.id)),
 
-        // ─── Listen Together ────────────────────────────────────────────────────────
-        SearchableSetting("Compact Member List", "Collapse participants into a dense horizontal avatar strip",
-            listOf("listen together", "compact", "members", "participants", "avatars"),
-            SettingsCategory.LISTEN_TOGETHER, Screen.ListenTogetherSettings.route),
-        SearchableSetting("Animated Reactions", "Display floating emoji reaction animations",
-            listOf("listen together", "reactions", "animations", "emojis"),
-            SettingsCategory.LISTEN_TOGETHER, Screen.ListenTogetherSettings.route),
-        SearchableSetting("Chat & Social Bar", "Show quick chat reaction chips and song request controls",
-            listOf("listen together", "chat", "social", "requests"),
-            SettingsCategory.LISTEN_TOGETHER, Screen.ListenTogetherSettings.route),
-        SearchableSetting("Keep Session Alive", "Maintain realtime synchronization in background",
-            listOf("listen together", "background", "connection", "sync", "keep alive"),
-            SettingsCategory.LISTEN_TOGETHER, Screen.ListenTogetherSettings.route),
-
         // ─── Library ────────────────────────────────────────────────────────────────
         SearchableSetting("Excluded Directories", "Folders to ignore while scanning",
             listOf("excluded", "folders", "directories", "ignore", "scan", "hide"),
