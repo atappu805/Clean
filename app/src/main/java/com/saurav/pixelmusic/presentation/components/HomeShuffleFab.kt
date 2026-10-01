@@ -78,6 +78,7 @@ fun HomeShuffleFab(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     isExploreMode: Boolean = false,
+    isSessionActive: Boolean = false,
     onLongClick: (() -> Unit)? = null,
     onSwipeUp: (() -> Unit)? = null,
     onListenTogetherClick: (() -> Unit)? = null,
@@ -161,7 +162,7 @@ fun HomeShuffleFab(
 
     // Idle + Listen Together action available: the FAB becomes a dual pill
     // (shuffle on the left, Listen Together on the right).
-    val showDualFab = onListenTogetherClick != null && !isPlayerActiveDelayed
+    val showDualFab = onListenTogetherClick != null && (!isPlayerActiveDelayed || isSessionActive)
 
     // Swipe-up-to-recognize gesture, shared by both FAB forms.
     val fabDragModifier = if (onSwipeUp != null) {
@@ -333,9 +334,19 @@ fun HomeShuffleFab(
                             Icon(
                                 imageVector = Icons.Rounded.Group,
                                 contentDescription = stringResource(R.string.listen_together),
-                                tint = animatedContentColor,
+                                tint = if (isSessionActive) MaterialTheme.colorScheme.primary else animatedContentColor,
                                 modifier = Modifier.size(32.dp)
                             )
+                            if (isSessionActive) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(10.dp)
+                                        .align(Alignment.TopEnd)
+                                        .offset(x = (-14).dp, y = 14.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(0xFF4CAF50))
+                                )
+                            }
                         }
                     }
                 }
