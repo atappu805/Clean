@@ -45,8 +45,19 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.material.icons.rounded.ContentCopy
-import androidx.compose.material.icons.rounded.ContentPaste
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
@@ -133,6 +144,8 @@ fun ListenTogetherSheet(
     val stablePlayerState by viewModel.stablePlayerState.collectAsStateWithLifecycle()
     val currentSong = stablePlayerState.currentSong
     val pendingCode by viewModel.pendingListenTogetherCode.collectAsStateWithLifecycle()
+    val currentUserAvatarUrl by viewModel.currentUserAvatarUrl.collectAsStateWithLifecycle()
+    val currentYtUsername by viewModel.currentYtUsername.collectAsStateWithLifecycle()
 
     val colors = MaterialTheme.colorScheme
     val context = LocalContext.current
@@ -166,7 +179,6 @@ fun ListenTogetherSheet(
     var isEditingName by remember { mutableStateOf(false) }
     var code by remember { mutableStateOf("") }
     var requestText by remember { mutableStateOf("") }
-    var showQrDialogCode by remember { mutableStateOf<String?>(null) }
 
     // When a deep link code is passed in, switch to JOIN mode and pre-fill code
     LaunchedEffect(pendingCode) {
@@ -287,270 +299,305 @@ fun ListenTogetherSheet(
                             )
                         }
 
-                        when (val s = uiState) {
-                            is ListenTogetherUiState.Idle, is ListenTogetherUiState.Error -> {
-                                if (s is ListenTogetherUiState.Error) {
+                        AnimatedContent(
+                            targetState = uiState,
+                            transitionSpec = {
+                                (fadeIn(animationSpec = tween(350, easing = FastOutSlowInEasing)) +
+                                    scaleIn(animationSpec = tween(350, easing = FastOutSlowInEasing), initialScale = 0.96f)) togetherWith
+                                (fadeOut(animationSpec = tween(200, easing = FastOutSlowInEasing)) +
+                                    scaleOut(animationSpec = tween(200, easing = FastOutSlowInEasing), targetScale = 0.96f))
+                            },
+                            label = "listenTogetherUiStateTransition",
+                            modifier = Modifier.fillMaxWidth().animateContentSize(tween(350, easing = FastOutSlowInEasing))
+                        ) { s ->
+                            when (s) {
+                                is ListenTogetherUiState.Idle, is ListenTogetherUiState.Error -> {
+                                    Column(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalArrangement = Arrangement.spacedBy(14.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        if (s is ListenTogetherUiState.Error) {
+                                            Text(
+                                                text = s.message,
+                                                color = colors.error,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                textAlign = TextAlign.Center
+                                            )
+                                        }
+
+                                        // Segmented Mode Switcher (Host vs Join)
+                                        SegmentedModeSwitcher(
+                                            selectedTab = selectedTab,
+                                            onTabSelected = { selectedTab = it },
+                                            colors = colors
+                                        )
+
+                                        val effectiveName = if (isEditingName || (savedName.isBlank() && currentYtUsername.isBlank())) {
+                                            nameInput
+                                        } else {
+                                            savedName.ifBlank { currentYtUsername }
+                                        }
+
+                                        // Persisted User Identity Avatar Chip
+                                        if (effectiveName.isNotBlank() && !isEditingName) {
+                                            Surface(
+                                                shape = RoundedCornerShape(16.dp),
+                                                color = colors.surfaceContainerHigh,
+                                                modifier = Modifier.fillMaxWidth()
+                                            ) {
+                                                Row(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Surface(
+                                                        shape = CircleShape,
+                                                        color = colors.primaryContainer,
+                                                        modifier = Modifier.size(40.dp)
+                                                    ) {
+                                                        Box(contentAlignment = Alignment.Center) {
+                                                            if (currentUserAvatarUrl.isNotBlank()) {
+                                                                AsyncImage(
+                                                                    model = currentUserAvatarUrl,
+                                                                    contentDescription = null,
+                                                                    contentScale = ContentScale.Crop,
+                                                                    modifier = Modifier.fillMaxSize().clip(CircleShape)
+                                                                )
+                                                            } else {
+                                                                Text(
+                                                                    text = effectiveName.firstOrNull()?.uppercase() ?: "?",
+                                                                    fontWeight = FontWeight.Bold,
+                                                                    fontSize = 18.sp,
+                                                                    color = colors.onPrimaryContainer
+                                                                )
+                                                            }
+                                                        }
+                                                    }
+                                                    Spacer(Modifier.width(12.dp))
+                                                    Column(modifier = Modifier.weight(1f)) {
+                                                        Text(
+                                                            text = if (selectedTab == PreSessionTab.HOST) "Hosting as $effectiveName" else "Joining as $effectiveName",
+                                                            style = MaterialTheme.typography.bodyMedium,
+                                                            fontWeight = FontWeight.SemiBold,
+                                                            color = colors.onSurface
+                                                        )
+                                                        Text(
+                                                            text = "Tap edit to change name",
+                                                            style = MaterialTheme.typography.labelSmall,
+                                                            color = colors.onSurfaceVariant
+                                                        )
+                                                    }
+                                                    IconButton(
+                                                        onClick = {
+                                                            nameInput = effectiveName
+                                                            isEditingName = true
+                                                        }
+                                                    ) {
+                                                        Icon(
+                                                            imageVector = Icons.Rounded.Edit,
+                                                            contentDescription = "Edit name",
+                                                            tint = colors.primary,
+                                                            modifier = Modifier.size(18.dp)
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        } else {
+                                            OutlinedTextField(
+                                                value = nameInput,
+                                                onValueChange = { nameInput = it },
+                                                label = {
+                                                    Text(
+                                                        if (selectedTab == PreSessionTab.HOST) stringResource(R.string.listen_together_your_name)
+                                                        else stringResource(R.string.listen_together_guest_name)
+                                                    )
+                                                },
+                                                singleLine = true,
+                                                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
+                                                shape = RoundedCornerShape(16.dp),
+                                                colors = OutlinedTextFieldDefaults.colors(
+                                                    unfocusedBorderColor = colors.onSurfaceVariant,
+                                                    focusedBorderColor = colors.primary
+                                                ),
+                                                trailingIcon = if (effectiveName.isNotBlank() && isEditingName) {
+                                                    {
+                                                        IconButton(onClick = { isEditingName = false }) {
+                                                            Icon(Icons.Rounded.Check, contentDescription = "Done", tint = colors.primary)
+                                                        }
+                                                    }
+                                                } else null,
+                                                modifier = Modifier.fillMaxWidth()
+                                            )
+                                        }
+
+                                        // Smooth Animated Tab Content
+                                        AnimatedContent(
+                                            targetState = selectedTab,
+                                            transitionSpec = {
+                                                if (targetState == PreSessionTab.JOIN) {
+                                                    (slideInHorizontally(tween(300, easing = FastOutSlowInEasing)) { it / 3 } + fadeIn(tween(250))) togetherWith
+                                                        (slideOutHorizontally(tween(250, easing = FastOutSlowInEasing)) { -it / 3 } + fadeOut(tween(200)))
+                                                } else {
+                                                    (slideInHorizontally(tween(300, easing = FastOutSlowInEasing)) { -it / 3 } + fadeIn(tween(250))) togetherWith
+                                                        (slideOutHorizontally(tween(250, easing = FastOutSlowInEasing)) { it / 3 } + fadeOut(tween(200)))
+                                                }
+                                            },
+                                            label = "preSessionTabAnimation",
+                                            modifier = Modifier.fillMaxWidth().animateContentSize(tween(300, easing = FastOutSlowInEasing))
+                                        ) { tab ->
+                                            if (tab == PreSessionTab.HOST) {
+                                                Button(
+                                                    onClick = {
+                                                        persistUserName(effectiveName)
+                                                        viewModel.startHostingSession(effectiveName)
+                                                    },
+                                                    enabled = effectiveName.isNotBlank(),
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .height(50.dp),
+                                                    shape = RoundedCornerShape(16.dp)
+                                                ) {
+                                                    Text(
+                                                        text = stringResource(R.string.listen_together_start),
+                                                        style = MaterialTheme.typography.titleMedium,
+                                                        fontWeight = FontWeight.Bold
+                                                    )
+                                                }
+                                            } else {
+                                                Column(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                                                    horizontalAlignment = Alignment.CenterHorizontally
+                                                ) {
+                                                    Text(
+                                                        text = stringResource(R.string.listen_together_room_code),
+                                                        style = MaterialTheme.typography.labelMedium,
+                                                        fontWeight = FontWeight.SemiBold,
+                                                        color = colors.onSurfaceVariant,
+                                                        modifier = Modifier.align(Alignment.Start)
+                                                    )
+
+                                                    // Segmented PIN-Style Room Code Input (manual input, responsive)
+                                                    SegmentedRoomCodeInput(
+                                                        code = code,
+                                                        onCodeChange = { code = it },
+                                                        colors = colors
+                                                    )
+
+                                                    Button(
+                                                        onClick = {
+                                                            persistUserName(effectiveName)
+                                                            viewModel.joinListenTogetherSession(code, effectiveName)
+                                                        },
+                                                        enabled = code.length == 7 && effectiveName.isNotBlank(),
+                                                        modifier = Modifier
+                                                            .fillMaxWidth()
+                                                            .height(50.dp),
+                                                        shape = RoundedCornerShape(16.dp)
+                                                    ) {
+                                                        Text(
+                                                            text = stringResource(R.string.listen_together_join),
+                                                            style = MaterialTheme.typography.titleMedium,
+                                                            fontWeight = FontWeight.Bold
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                ListenTogetherUiState.Creating, ListenTogetherUiState.Joining -> {
+                                    Spacer(Modifier.height(8.dp))
+                                    CircularProgressIndicator()
                                     Text(
-                                        text = s.message,
-                                        color = colors.error,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        textAlign = TextAlign.Center
+                                        text = if (s is ListenTogetherUiState.Creating) stringResource(R.string.listen_together_creating)
+                                        else stringResource(R.string.listen_together_joining),
+                                        color = colors.onSurfaceVariant,
+                                        style = MaterialTheme.typography.bodyMedium
                                     )
                                 }
 
-                                // Segmented Mode Switcher (Host vs Join)
-                                SegmentedModeSwitcher(
-                                    selectedTab = selectedTab,
-                                    onTabSelected = { selectedTab = it },
-                                    colors = colors
-                                )
-
-                                val effectiveName = if (isEditingName || savedName.isBlank()) nameInput else savedName
-
-                                // Persisted User Identity Avatar Chip
-                                if (savedName.isNotBlank() && !isEditingName) {
-                                    Surface(
-                                        shape = RoundedCornerShape(16.dp),
-                                        color = colors.surfaceContainerHigh,
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) {
-                                        Row(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(horizontal = 14.dp, vertical = 10.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(36.dp)
-                                                    .clip(CircleShape)
-                                                    .background(colors.primaryContainer),
-                                                contentAlignment = Alignment.Center
+                                is ListenTogetherUiState.Hosting -> {
+                                    val livePhase = s.members.size > 1
+                                    AnimatedContent(
+                                        targetState = livePhase,
+                                        label = "listenTogetherHostPhase",
+                                        modifier = Modifier.fillMaxWidth().animateContentSize(tween(300))
+                                    ) { live ->
+                                        if (!live) {
+                                            // Phase 1: Waiting Room
+                                            Column(
+                                                horizontalAlignment = Alignment.CenterHorizontally,
+                                                verticalArrangement = Arrangement.spacedBy(16.dp),
+                                                modifier = Modifier.fillMaxWidth()
                                             ) {
-                                                Text(
-                                                    text = savedName.firstOrNull()?.uppercase() ?: "?",
-                                                    fontWeight = FontWeight.Bold,
-                                                    fontSize = 16.sp,
-                                                    color = colors.onPrimaryContainer
+                                                // Now Playing Anchor Preview
+                                                if (currentSong != null) {
+                                                    NowPlayingAnchorPreviewCard(song = currentSong, colors = colors)
+                                                }
+
+                                                // Hero Code Display Card (No QR sharing)
+                                                HeroCodeDisplayCard(
+                                                    code = s.code,
+                                                    colors = colors,
+                                                    context = context,
+                                                    onToast = viewModel::sendToast
                                                 )
-                                            }
-                                            Spacer(Modifier.width(12.dp))
-                                            Column(modifier = Modifier.weight(1f)) {
-                                                Text(
-                                                    text = if (selectedTab == PreSessionTab.HOST) "Hosting as $savedName" else "Joining as $savedName",
-                                                    style = MaterialTheme.typography.bodyMedium,
-                                                    fontWeight = FontWeight.SemiBold,
-                                                    color = colors.onSurface
+
+                                                // Pulse / Radar concentric wave animation around host avatar with profile picture
+                                                PulseRadarDiscovery(
+                                                    hostName = s.hostName,
+                                                    hostPhotoUrl = s.members.firstOrNull()?.photoUrl ?: currentUserAvatarUrl.ifBlank { null },
+                                                    colors = colors
                                                 )
+
                                                 Text(
-                                                    text = "Tap edit to change name",
-                                                    style = MaterialTheme.typography.labelSmall,
+                                                    text = context.getString(R.string.listen_together_listeners, s.members.size),
+                                                    style = MaterialTheme.typography.titleSmall,
                                                     color = colors.onSurfaceVariant
                                                 )
                                             }
-                                            IconButton(
-                                                onClick = {
-                                                    nameInput = savedName
-                                                    isEditingName = true
-                                                }
+                                        } else {
+                                            // Phase 2: Live session
+                                            Column(
+                                                verticalArrangement = Arrangement.spacedBy(12.dp),
+                                                modifier = Modifier.fillMaxWidth()
                                             ) {
-                                                Icon(
-                                                    imageVector = Icons.Rounded.Edit,
-                                                    contentDescription = "Edit name",
-                                                    tint = colors.primary,
-                                                    modifier = Modifier.size(18.dp)
-                                                )
-                                            }
-                                        }
-                                    }
-                                } else {
-                                    OutlinedTextField(
-                                        value = nameInput,
-                                        onValueChange = { nameInput = it },
-                                        label = {
-                                            Text(
-                                                if (selectedTab == PreSessionTab.HOST) stringResource(R.string.listen_together_your_name)
-                                                else stringResource(R.string.listen_together_guest_name)
-                                            )
-                                        },
-                                        singleLine = true,
-                                        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
-                                        shape = RoundedCornerShape(16.dp),
-                                        colors = OutlinedTextFieldDefaults.colors(
-                                            unfocusedBorderColor = colors.onSurfaceVariant,
-                                            focusedBorderColor = colors.primary
-                                        ),
-                                        trailingIcon = if (savedName.isNotBlank() && isEditingName) {
-                                            {
-                                                IconButton(onClick = { isEditingName = false }) {
-                                                    Icon(Icons.Rounded.Check, contentDescription = "Done", tint = colors.primary)
+                                                // Live Header with Breathing Live Badge
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    BreathingLiveBadge(listenerCount = s.members.size, colors = colors)
+                                                    Spacer(Modifier.width(8.dp))
+                                                    Text(
+                                                        text = when (connectionState) {
+                                                            ListenTogetherConnectionState.CONNECTED -> "Sync live"
+                                                            ListenTogetherConnectionState.RECONNECTING -> "Reconnecting…"
+                                                            ListenTogetherConnectionState.CONNECTING -> "Connecting…"
+                                                            ListenTogetherConnectionState.DISCONNECTED -> "Offline"
+                                                        },
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = when (connectionState) {
+                                                            ListenTogetherConnectionState.CONNECTED -> colors.primary
+                                                            ListenTogetherConnectionState.RECONNECTING -> colors.error
+                                                            else -> colors.onSurfaceVariant
+                                                        }
+                                                    )
+                                                    Spacer(Modifier.weight(1f))
+                                                    RoomCodeChip(
+                                                        code = s.code,
+                                                        onCopy = {
+                                                            val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                                            cm.setPrimaryClip(ClipData.newPlainText("room code", s.code))
+                                                            viewModel.sendToast(context.getString(R.string.listen_together_code_copied))
+                                                        },
+                                                        colors = colors
+                                                    )
                                                 }
-                                            }
-                                        } else null,
-                                        modifier = Modifier.fillMaxWidth()
-                                    )
-                                }
-
-                                if (selectedTab == PreSessionTab.HOST) {
-                                    Button(
-                                        onClick = {
-                                            persistUserName(effectiveName)
-                                            viewModel.startHostingSession(effectiveName)
-                                        },
-                                        enabled = effectiveName.isNotBlank(),
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) {
-                                        Text(stringResource(R.string.listen_together_start))
-                                    }
-                                } else {
-                                    Text(
-                                        text = stringResource(R.string.listen_together_room_code),
-                                        style = MaterialTheme.typography.labelMedium,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = colors.onSurfaceVariant,
-                                        modifier = Modifier.align(Alignment.Start)
-                                    )
-
-                                    // Segmented PIN-Style Room Code Input
-                                    SegmentedRoomCodeInput(
-                                        code = code,
-                                        onCodeChange = { code = it },
-                                        colors = colors
-                                    )
-
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                                    ) {
-                                        OutlinedButton(
-                                            onClick = {
-                                                val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                                val clipText = cm.primaryClip?.getItemAt(0)?.text?.toString().orEmpty()
-                                                val uriCode = if (clipText.contains("code=")) {
-                                                    clipText.substringAfter("code=").take(7)
-                                                } else {
-                                                    clipText
-                                                }
-                                                val extracted = uriCode.uppercase().filter { it in 'A'..'Z' || it in '0'..'9' }.take(7)
-                                                if (extracted.isNotEmpty()) {
-                                                    code = extracted
-                                                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                }
-                                            },
-                                            modifier = Modifier.weight(0.9f),
-                                            shape = RoundedCornerShape(14.dp)
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Rounded.ContentPaste,
-                                                contentDescription = null,
-                                                modifier = Modifier.size(18.dp)
-                                            )
-                                            Spacer(Modifier.width(6.dp))
-                                            Text("Paste")
-                                        }
-
-                                        Button(
-                                            onClick = {
-                                                persistUserName(effectiveName)
-                                                viewModel.joinListenTogetherSession(code, effectiveName)
-                                            },
-                                            enabled = code.length == 7 && effectiveName.isNotBlank(),
-                                            modifier = Modifier.weight(1.3f),
-                                            shape = RoundedCornerShape(14.dp)
-                                        ) {
-                                            Text(stringResource(R.string.listen_together_join))
-                                        }
-                                    }
-                                }
-                            }
-
-                            ListenTogetherUiState.Creating, ListenTogetherUiState.Joining -> {
-                                Spacer(Modifier.height(8.dp))
-                                CircularProgressIndicator()
-                                Text(
-                                    text = if (s is ListenTogetherUiState.Creating) stringResource(R.string.listen_together_creating)
-                                    else stringResource(R.string.listen_together_joining),
-                                    color = colors.onSurfaceVariant,
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                            }
-
-                            is ListenTogetherUiState.Hosting -> {
-                                val livePhase = s.members.size > 1
-                                AnimatedContent(
-                                    targetState = livePhase,
-                                    label = "listenTogetherHostPhase",
-                                    modifier = Modifier.fillMaxWidth()
-                                ) { live ->
-                                    if (!live) {
-                                        // Phase 1: Waiting Room
-                                        Column(
-                                            horizontalAlignment = Alignment.CenterHorizontally,
-                                            verticalArrangement = Arrangement.spacedBy(16.dp),
-                                            modifier = Modifier.fillMaxWidth()
-                                        ) {
-                                            // Now Playing Anchor Preview
-                                            if (currentSong != null) {
-                                                NowPlayingAnchorPreviewCard(song = currentSong, colors = colors)
-                                            }
-
-                                            // Hero Code Display Card
-                                            HeroCodeDisplayCard(
-                                                code = s.code,
-                                                onShowQr = { showQrDialogCode = s.code },
-                                                colors = colors,
-                                                context = context,
-                                                onToast = viewModel::sendToast
-                                            )
-
-                                            // Pulse / Radar concentric wave animation around host avatar
-                                            PulseRadarDiscovery(hostName = s.hostName, colors = colors)
-
-                                            Text(
-                                                text = context.getString(R.string.listen_together_listeners, s.members.size),
-                                                style = MaterialTheme.typography.titleSmall,
-                                                color = colors.onSurfaceVariant
-                                            )
-                                        }
-                                    } else {
-                                        // Phase 2: Live session
-                                        Column(
-                                            verticalArrangement = Arrangement.spacedBy(12.dp),
-                                            modifier = Modifier.fillMaxWidth()
-                                        ) {
-                                            // Live Header with Breathing Live Badge
-                                            Row(
-                                                modifier = Modifier.fillMaxWidth(),
-                                                verticalAlignment = Alignment.CenterVertically
-                                            ) {
-                                                BreathingLiveBadge(listenerCount = s.members.size, colors = colors)
-                                                Spacer(Modifier.width(8.dp))
-                                                Text(
-                                                    text = when (connectionState) {
-                                                        ListenTogetherConnectionState.CONNECTED -> "Sync live"
-                                                        ListenTogetherConnectionState.RECONNECTING -> "Reconnecting…"
-                                                        ListenTogetherConnectionState.CONNECTING -> "Connecting…"
-                                                        ListenTogetherConnectionState.DISCONNECTED -> "Offline"
-                                                    },
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    color = when (connectionState) {
-                                                        ListenTogetherConnectionState.CONNECTED -> colors.primary
-                                                        ListenTogetherConnectionState.RECONNECTING -> colors.error
-                                                        else -> colors.onSurfaceVariant
-                                                    }
-                                                )
-                                                Spacer(Modifier.weight(1f))
-                                                RoomCodeChip(
-                                                    code = s.code,
-                                                    onCopy = {
-                                                        val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                                        cm.setPrimaryClip(ClipData.newPlainText("room code", s.code))
-                                                        viewModel.sendToast(context.getString(R.string.listen_together_code_copied))
-                                                    },
-                                                    onShowQr = { showQrDialogCode = s.code },
-                                                    colors = colors
-                                                )
-                                            }
 
                                             // Member List (Compact horizontal strip or Vertical list)
                                             if (compactMode) {
@@ -672,7 +719,6 @@ fun ListenTogetherSheet(
                                 RoomCodeChip(
                                     code = s.code,
                                     onCopy = copyCode,
-                                    onShowQr = { showQrDialogCode = s.code },
                                     colors = colors
                                 )
 
@@ -751,14 +797,6 @@ fun ListenTogetherSheet(
             }
         }
     }
-
-    // QR Code Dialog
-    showQrDialogCode?.let { qrCode ->
-        ListenTogetherQrDialog(
-            code = qrCode,
-            onDismiss = { showQrDialogCode = null }
-        )
-    }
 }
 
 /** Segmented Mode Switcher: [ Host Session | Join Room ] */
@@ -768,6 +806,27 @@ private fun SegmentedModeSwitcher(
     onTabSelected: (PreSessionTab) -> Unit,
     colors: ColorScheme
 ) {
+    val hostBg by animateColorAsState(
+        if (selectedTab == PreSessionTab.HOST) colors.primary else Color.Transparent,
+        tween(250),
+        label = "hostBg"
+    )
+    val hostTextColor by animateColorAsState(
+        if (selectedTab == PreSessionTab.HOST) colors.onPrimary else colors.onSurfaceVariant,
+        tween(250),
+        label = "hostText"
+    )
+    val joinBg by animateColorAsState(
+        if (selectedTab == PreSessionTab.JOIN) colors.primary else Color.Transparent,
+        tween(250),
+        label = "joinBg"
+    )
+    val joinTextColor by animateColorAsState(
+        if (selectedTab == PreSessionTab.JOIN) colors.onPrimary else colors.onSurfaceVariant,
+        tween(250),
+        label = "joinText"
+    )
+
     Surface(
         shape = RoundedCornerShape(50),
         color = colors.surfaceContainerHighest,
@@ -785,7 +844,7 @@ private fun SegmentedModeSwitcher(
                     .weight(1f)
                     .fillMaxHeight()
                     .clip(RoundedCornerShape(50))
-                    .background(if (selectedTab == PreSessionTab.HOST) colors.primary else Color.Transparent)
+                    .background(hostBg)
                     .clickable { onTabSelected(PreSessionTab.HOST) },
                 contentAlignment = Alignment.Center
             ) {
@@ -793,7 +852,7 @@ private fun SegmentedModeSwitcher(
                     text = "Host Session",
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold,
-                    color = if (selectedTab == PreSessionTab.HOST) colors.onPrimary else colors.onSurfaceVariant
+                    color = hostTextColor
                 )
             }
             Box(
@@ -801,7 +860,7 @@ private fun SegmentedModeSwitcher(
                     .weight(1f)
                     .fillMaxHeight()
                     .clip(RoundedCornerShape(50))
-                    .background(if (selectedTab == PreSessionTab.JOIN) colors.primary else Color.Transparent)
+                    .background(joinBg)
                     .clickable { onTabSelected(PreSessionTab.JOIN) },
                 contentAlignment = Alignment.Center
             ) {
@@ -809,7 +868,7 @@ private fun SegmentedModeSwitcher(
                     text = "Join Room",
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold,
-                    color = if (selectedTab == PreSessionTab.JOIN) colors.onPrimary else colors.onSurfaceVariant
+                    color = joinTextColor
                 )
             }
         }
@@ -823,34 +882,78 @@ private fun SegmentedRoomCodeInput(
     onCodeChange: (String) -> Unit,
     colors: ColorScheme
 ) {
+    val focusRequester = remember { FocusRequester() }
+    val keyboardController = LocalSoftwareKeyboardController.current
+
     Box(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) {
+                focusRequester.requestFocus()
+                keyboardController?.show()
+            },
         contentAlignment = Alignment.Center
     ) {
         Row(
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             for (i in 0 until 7) {
                 val char = code.getOrNull(i)?.toString() ?: ""
-                val isFocused = code.length == i
+                val isFocused = code.length == i || (i == 6 && code.length == 7)
+                val borderColor by animateColorAsState(
+                    if (isFocused) colors.primary else colors.outlineVariant.copy(alpha = 0.4f),
+                    animationSpec = tween(200),
+                    label = "boxBorder_$i"
+                )
+                val boxScale by animateFloatAsState(
+                    if (isFocused) 1.05f else 1.0f,
+                    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+                    label = "boxScale_$i"
+                )
+
                 Surface(
                     shape = RoundedCornerShape(12.dp),
-                    color = colors.surfaceContainerHighest,
-                    border = BorderStroke(
-                        width = if (isFocused) 2.dp else 1.dp,
-                        color = if (isFocused) colors.primary else colors.outlineVariant.copy(alpha = 0.5f)
-                    ),
-                    modifier = Modifier.size(width = 38.dp, height = 52.dp)
+                    color = if (char.isNotEmpty()) colors.surfaceContainerHighest else colors.surfaceContainerLow,
+                    border = BorderStroke(if (isFocused) 2.dp else 1.dp, borderColor),
+                    modifier = Modifier
+                        .graphicsLayer {
+                            scaleX = boxScale
+                            scaleY = boxScale
+                        }
+                        .size(width = 40.dp, height = 54.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        Text(
-                            text = char,
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            fontFamily = GoogleSansRounded,
-                            color = colors.onSurface
-                        )
+                        if (char.isNotEmpty()) {
+                            Text(
+                                text = char,
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                fontFamily = GoogleSansRounded,
+                                color = colors.primary
+                            )
+                        } else if (isFocused) {
+                            val infiniteTransition = rememberInfiniteTransition(label = "cursor")
+                            val cursorAlpha by infiniteTransition.animateFloat(
+                                initialValue = 0f,
+                                targetValue = 1f,
+                                animationSpec = infiniteRepeatable(
+                                    animation = tween(500),
+                                    repeatMode = RepeatMode.Reverse
+                                ),
+                                label = "cursorAlpha"
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .width(2.dp)
+                                    .height(20.dp)
+                                    .alpha(cursorAlpha)
+                                    .background(colors.primary, RoundedCornerShape(1.dp))
+                            )
+                        }
                     }
                 }
             }
@@ -859,15 +962,23 @@ private fun SegmentedRoomCodeInput(
         // Invisible text field overlay for IME input handling
         BasicTextField(
             value = code,
-            onValueChange = {
-                val filtered = it.uppercase().filter { c -> c in 'A'..'Z' }.take(7)
+            onValueChange = { newText ->
+                val filtered = newText.uppercase().filter { c -> c in 'A'..'Z' || c in '0'..'9' }.take(7)
                 onCodeChange(filtered)
             },
-            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
+            keyboardOptions = KeyboardOptions(
+                capitalization = KeyboardCapitalization.Characters,
+                keyboardType = KeyboardType.Ascii,
+                imeAction = ImeAction.Done
+            ),
+            keyboardActions = KeyboardActions(
+                onDone = { keyboardController?.hide() }
+            ),
             textStyle = TextStyle(color = Color.Transparent),
             modifier = Modifier
                 .matchParentSize()
                 .alpha(0.01f)
+                .focusRequester(focusRequester)
         )
     }
 }
@@ -926,11 +1037,10 @@ private fun NowPlayingAnchorPreviewCard(
     }
 }
 
-/** Hero Code Display Card with glow, 1-tap copy checkmark feedback, share, and QR */
+/** Hero Code Display Card with glow, 1-tap copy checkmark feedback, and share */
 @Composable
 private fun HeroCodeDisplayCard(
     code: String,
-    onShowQr: () -> Unit,
     colors: ColorScheme,
     context: Context,
     onToast: (String) -> Unit
@@ -968,7 +1078,7 @@ private fun HeroCodeDisplayCard(
             )
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 OutlinedButton(
                     onClick = {
@@ -982,7 +1092,7 @@ private fun HeroCodeDisplayCard(
                         }
                     },
                     modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(14.dp)
                 ) {
                     Icon(
                         imageVector = if (copied) Icons.Rounded.Check else Icons.Rounded.ContentCopy,
@@ -993,19 +1103,19 @@ private fun HeroCodeDisplayCard(
                     Text(if (copied) "Copied!" else stringResource(R.string.listen_together_copy_code))
                 }
 
-                OutlinedButton(
+                Button(
                     onClick = {
                         val intent = Intent(Intent.ACTION_SEND).apply {
                             type = "text/plain"
                             putExtra(
                                 Intent.EXTRA_TEXT,
-                                "Join my Listen Together session on Pixel Music! Room Code: $code\npixelmusic://listen_together?code=$code"
+                                "Join my Listen Together session on Pixel Music! Room Code: $code"
                             )
                         }
                         context.startActivity(Intent.createChooser(intent, "Share Listen Together Invite"))
                     },
                     modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(14.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Rounded.Share,
@@ -1014,13 +1124,6 @@ private fun HeroCodeDisplayCard(
                     )
                     Spacer(Modifier.width(6.dp))
                     Text("Share")
-                }
-
-                OutlinedButton(
-                    onClick = onShowQr,
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text("QR")
                 }
             }
         }
@@ -1031,6 +1134,7 @@ private fun HeroCodeDisplayCard(
 @Composable
 private fun PulseRadarDiscovery(
     hostName: String,
+    hostPhotoUrl: String?,
     colors: ColorScheme
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "pulseRadar")
@@ -1097,15 +1201,24 @@ private fun PulseRadarDiscovery(
                 shape = CircleShape,
                 color = avatarColorFor(hostName),
                 shadowElevation = 6.dp,
-                modifier = Modifier.size(52.dp)
+                modifier = Modifier.size(56.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Text(
-                        text = hostName.firstOrNull()?.uppercase() ?: "?",
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 22.sp
-                    )
+                    if (!hostPhotoUrl.isNullOrBlank()) {
+                        AsyncImage(
+                            model = hostPhotoUrl,
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize().clip(CircleShape)
+                        )
+                    } else {
+                        Text(
+                            text = hostName.firstOrNull()?.uppercase() ?: "?",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 22.sp
+                        )
+                    }
                 }
             }
         }
@@ -1986,18 +2099,18 @@ private fun avatarColorFor(name: String): Color {
     return avatarPalette[index]
 }
 
-/** Room code chip with copy and QR triggers */
+/** Room code chip with copy trigger */
 @Composable
 private fun RoomCodeChip(
     code: String,
     onCopy: () -> Unit,
-    onShowQr: () -> Unit,
     colors: ColorScheme
 ) {
     Surface(
         shape = RoundedCornerShape(12.dp),
         color = colors.surfaceContainerHigh,
-        tonalElevation = 2.dp
+        tonalElevation = 2.dp,
+        modifier = Modifier.clickable(onClick = onCopy)
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
@@ -2015,23 +2128,8 @@ private fun RoomCodeChip(
                 imageVector = Icons.Rounded.ContentCopy,
                 contentDescription = stringResource(R.string.listen_together_copy_code),
                 tint = colors.primary,
-                modifier = Modifier
-                    .size(16.dp)
-                    .clickable(onClick = onCopy)
+                modifier = Modifier.size(16.dp)
             )
-            Box(
-                modifier = Modifier
-                    .clip(CircleShape)
-                    .clickable(onClick = onShowQr)
-                    .padding(2.dp)
-            ) {
-                Text(
-                    text = "QR",
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = colors.primary
-                )
-            }
         }
     }
 }
