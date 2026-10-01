@@ -33,9 +33,10 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
-import com.saurav.pixelmusic.data.model.youtube.SongItem
+import com.saurav.pixelmusic.data.model.Song
 import com.saurav.pixelmusic.data.remote.youtube.toNativeSong
-import com.saurav.pixelmusic.data.remote.youtube.YouTube
+import saurav.shru.pixelmusic.innertube.YouTube
+import saurav.shru.pixelmusic.innertube.models.SongItem
 import com.saurav.pixelmusic.presentation.components.HomeShuffleFab
 import com.saurav.pixelmusic.presentation.components.MusicRecognitionOverlay
 import kotlinx.coroutines.Dispatchers
