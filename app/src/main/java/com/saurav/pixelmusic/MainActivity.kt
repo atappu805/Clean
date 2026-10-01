@@ -31,6 +31,9 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import com.saurav.pixelmusic.presentation.components.HomeShuffleFab
+import com.saurav.pixelmusic.presentation.components.MusicRecognitionOverlay
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
@@ -942,6 +945,7 @@ class MainActivity : ComponentActivity() {
             mutableStateOf(PlayStoreAnnouncementDefaults.localizedTemplate(context))
         }
         var showPlayStoreAnnouncement by remember { mutableStateOf(false) }
+        var showRecognitionDialog by remember { mutableStateOf(false) }
 
         LaunchedEffect(Unit) {
             if (PlayStoreAnnouncementDefaults.LOCAL_PREVIEW_ENABLED) {
@@ -1283,6 +1287,50 @@ class MainActivity : ComponentActivity() {
                                 onSearchBarActiveChange = { isSearchBarActive = it },
                             onOpenSidebar = { scope.launch { drawerState.open() } }
                         )
+
+                        val isHomeOrExploreRoute = currentRoute == Screen.Home.route || currentRoute == Screen.Explore.route
+                        val isFabVisible by remember(currentRoute, isSearchBarActive) {
+                            derivedStateOf { isHomeOrExploreRoute && !isSearchBarActive }
+                        }
+                        AnimatedVisibility(
+                            visible = isFabVisible,
+                            enter = fadeIn(animationSpec = tween(250)) + scaleIn(initialScale = 0.85f),
+                            exit = fadeOut(animationSpec = tween(200)) + scaleOut(targetScale = 0.85f),
+                            modifier = Modifier.align(Alignment.BottomEnd)
+                        ) {
+                            val isExplore = currentRoute == Screen.Explore.route
+                            val currentSong by remember {
+                                playerViewModel.stablePlayerState
+                                    .map { it.currentSong }
+                                    .distinctUntilChanged()
+                            }.collectAsStateWithLifecycle(initialValue = null)
+
+                            val ltUiState by playerViewModel.listenTogetherUiState.collectAsStateWithLifecycle()
+                            val isLtActive = ltUiState is com.saurav.pixelmusic.data.session.ListenTogetherUiState.Hosting ||
+                                ltUiState is com.saurav.pixelmusic.data.session.ListenTogetherUiState.Guest
+
+                            HomeShuffleFab(
+                                isShuffleEnabled = false,
+                                isPlayerActive = currentSong != null,
+                                baseBottomOffset = innerPadding.calculateBottomPadding(),
+                                isExploreMode = isExplore,
+                                isSessionActive = isLtActive,
+                                onClick = {
+                                    if (isExplore) {
+                                        navController.navigateSafely(Screen.SmartMix.route)
+                                    } else {
+                                        val yourMix = playerViewModel.yourMixSongs.value
+                                        val songsToUse = yourMix.ifEmpty { playerViewModel.playerUiState.value.cachedSongs }
+                                        if (songsToUse.isNotEmpty()) {
+                                            playerViewModel.playSongsShuffled(songsToUse, "Your Mix")
+                                        }
+                                    }
+                                },
+                                onLongClick = { showRecognitionDialog = true },
+                                onSwipeUp = { showRecognitionDialog = true },
+                                onListenTogetherClick = { playerViewModel.openListenTogetherSheet() }
+                            )
+                        }
                             
                         val isExpandedOrExpanding by remember {
                             derivedStateOf {
@@ -1369,6 +1417,21 @@ class MainActivity : ComponentActivity() {
                                 onOpenPlayStore = { url ->
                                     showPlayStoreAnnouncement = false
                                     openExternalUrl(url)
+                                }
+                            )
+                        }
+
+                        AnimatedVisibility(
+                            visible = showRecognitionDialog,
+                            enter = fadeIn(animationSpec = tween(300, easing = FastOutSlowInEasing)),
+                            exit = fadeOut(animationSpec = tween(300, easing = FastOutSlowInEasing))
+                        ) {
+                            MusicRecognitionOverlay(
+                                isExternalWindow = false,
+                                onDismiss = { showRecognitionDialog = false },
+                                onPlayMusic = { recognizedSong ->
+                                    showRecognitionDialog = false
+                                    playerViewModel.playSong(recognizedSong)
                                 }
                             )
                         }

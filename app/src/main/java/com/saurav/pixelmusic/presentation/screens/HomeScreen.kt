@@ -720,26 +720,6 @@ fun HomeScreen(
             )
         }
 
-        val ltUiState by playerViewModel.listenTogetherUiState.collectAsStateWithLifecycle()
-        val isLtActive = ltUiState is com.saurav.pixelmusic.data.session.ListenTogetherUiState.Hosting ||
-            ltUiState is com.saurav.pixelmusic.data.session.ListenTogetherUiState.Guest
-
-        HomeShuffleFab(
-            isShuffleEnabled = isShuffleEnabled,
-            isPlayerActive = currentSong != null,
-            baseBottomOffset = paddingValuesParent.calculateBottomPadding(),
-            onClick = {
-                val songsToUse = quickPicks.ifEmpty { yourMixSongs }
-                if (songsToUse.isNotEmpty()) {
-                    playerViewModel.playSongsShuffled(songsToUse, "Your Mix")
-                }
-            },
-            isSessionActive = isLtActive,
-            onLongClick = { showRecognitionDialog = true },
-            onSwipeUp = { showRecognitionDialog = true },
-            onListenTogetherClick = { playerViewModel.openListenTogetherSheet() },
-            modifier = Modifier.align(Alignment.BottomEnd)
-        )
     }
 
     if (showOptionsBottomSheet) {
@@ -822,47 +802,7 @@ fun HomeScreen(
         )
     }
 
-AnimatedVisibility(
-    visible = showRecognitionDialog,
-    enter = fadeIn(animationSpec = tween(300, easing = FastOutSlowInEasing)),
-    exit = fadeOut(animationSpec = tween(300, easing = FastOutSlowInEasing))
-) {
-    MusicRecognitionOverlay(
-        isExternalWindow = false,
-        onDismiss = { showRecognitionDialog = false },
-        onPlayMusic = { recognizedSong ->
-            showRecognitionDialog = false
-            scope.launch {
-                val songToPlay = withContext(Dispatchers.IO) {
-                    val query = "${recognizedSong.title} ${recognizedSong.artist}"
-                    val searchResult = YouTube.search(
-                        query,
-                        YouTube.SearchFilter.FILTER_SONG
-                    ).getOrNull()
 
-                    val topResult = searchResult?.items
-                        ?.firstOrNull { it is SongItem } as? SongItem
-
-                    val nativeSong = topResult?.toNativeSong()
-                    nativeSong?.copy(
-                        albumArtUriString = recognizedSong.coverArtHqUrl
-                            ?: recognizedSong.coverArtUrl
-                            ?: nativeSong.albumArtUriString
-                    )
-                }
-
-                if (songToPlay != null) {
-                    playerViewModel.playWithArchiveTuneQueueBuilder(
-                        song = songToPlay,
-                        queueName = "Recognized Music"
-                    )
-                } else {
-                    playerViewModel.sendToast("Could not find this track on YouTube Music.")
-                }
-            }
-        }
-    )
-    }
 }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
