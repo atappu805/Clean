@@ -484,16 +484,8 @@ class MainActivity : ComponentActivity() {
 
             intent.action == android.content.Intent.ACTION_VIEW && intent.data != null -> {
                 intent.data?.let { uri ->
-                    if (uri.scheme == "pixelmusic" && (uri.host == "listen_together" || uri.path?.contains("listen_together") == true)) {
-                        val roomCode = uri.getQueryParameter("code")
-                        if (!roomCode.isNullOrBlank()) {
-                            playerViewModel.setPendingListenTogetherCode(roomCode)
-                        }
-                        playerViewModel.openListenTogetherSheet()
-                    } else {
-                        persistUriPermissionIfNeeded(intent, uri)
-                        playerViewModel.playExternalUri(uri)
-                    }
+                    persistUriPermissionIfNeeded(intent, uri)
+                    playerViewModel.playExternalUri(uri)
                 }
                 clearExternalIntentPayload(intent)
             }
@@ -830,13 +822,9 @@ class MainActivity : ComponentActivity() {
                 "update_download"
             )
         }
-        val showListenTogetherSheet by playerViewModel.showListenTogetherSheet.collectAsStateWithLifecycle()
-        val shouldHideNavigationBar by remember(currentRoute, isSearchBarActive, showListenTogetherSheet) {
+        val shouldHideNavigationBar by remember(currentRoute, isSearchBarActive) {
             derivedStateOf {
-                if (showListenTogetherSheet) {
-                    // Listen Together sheet is an app-wide overlay: tuck the nav pill away.
-                    true
-                } else if (currentRoute == Screen.Search.route && isSearchBarActive) {
+                if (currentRoute == Screen.Search.route && isSearchBarActive) {
                     true
                 } else {
                     currentRoute?.let { route ->
