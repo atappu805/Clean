@@ -6,6 +6,9 @@ import android.content.Context
 import android.content.Intent
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
@@ -179,16 +182,30 @@ fun ListenTogetherSheet(
         }
     }
 
-    val latestMessage = chatMessages.lastOrNull()
-    var activeMessage by remember { mutableStateOf<ChatMessage?>(null) }
+    val activeMessagesByUser = remember { mutableStateMapOf<String, ChatMessage>() }
 
-    LaunchedEffect(latestMessage?.key) {
-        val msg = latestMessage ?: return@LaunchedEffect
-        val isFresh = msg.ts == 0L || System.currentTimeMillis() - msg.ts < 10_000L
-        if (isFresh) {
-            activeMessage = msg
-            delay(9_500L)
-            activeMessage = null
+    LaunchedEffect(chatMessages) {
+        val now = System.currentTimeMillis()
+        chatMessages.forEach { msg ->
+            val fromKey = msg.from.lowercase().trim()
+            val isFresh = msg.ts == 0L || (now - msg.ts) < 8_500L
+            if (isFresh) {
+                val existing = activeMessagesByUser[fromKey]
+                if (existing == null || existing.key != msg.key || existing.ts < msg.ts) {
+                    activeMessagesByUser[fromKey] = msg
+                }
+            }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        while (isActive) {
+            delay(800L)
+            val now = System.currentTimeMillis()
+            val expiredKeys = activeMessagesByUser.entries.filter { (_, msg) ->
+                msg.ts > 0L && (now - msg.ts) >= 8_500L
+            }.map { it.key }
+            expiredKeys.forEach { activeMessagesByUser.remove(it) }
         }
     }
 
@@ -283,7 +300,7 @@ fun ListenTogetherSheet(
                                     requests = requests,
                                     requestText = requestText,
                                     onRequestTextChange = { requestText = it },
-                                    activeMessage = activeMessage,
+                                    activeMessagesByUser = activeMessagesByUser,
                                     compactMode = compactMode,
                                     showSocial = showSocial,
                                     remoteState = remoteState,
@@ -304,7 +321,7 @@ fun ListenTogetherSheet(
                                     requests = requests,
                                     requestText = requestText,
                                     onRequestTextChange = { requestText = it },
-                                    activeMessage = activeMessage,
+                                    activeMessagesByUser = activeMessagesByUser,
                                     compactMode = compactMode,
                                     showSocial = showSocial,
                                     remoteState = remoteState,
@@ -589,7 +606,7 @@ private fun HostingContent(
     requests: List<SongRequest>,
     requestText: String,
     onRequestTextChange: (String) -> Unit,
-    activeMessage: ChatMessage?,
+    activeMessagesByUser: Map<String, ChatMessage>,
     compactMode: Boolean,
     showSocial: Boolean,
     remoteState: SessionTrack?,
@@ -691,6 +708,7 @@ private fun HostingContent(
             if (compactMode) {
                 CompactMemberList(
                     members = hosting.members,
+                    activeMessagesByUser = activeMessagesByUser,
                     hostName = hosting.hostName,
                     targetVideoId = remoteState?.videoId,
                     colors = colors
@@ -699,7 +717,7 @@ private fun HostingContent(
                 hosting.members.forEach { member ->
                     MemberRow(
                         member = member,
-                        activeMessage = activeMessage,
+                        activeMessage = activeMessagesByUser[member.name.lowercase().trim()],
                         colors = colors,
                         isHost = member.name == hosting.hostName,
                         targetVideoId = remoteState?.videoId
@@ -772,7 +790,7 @@ private fun GuestContent(
     requests: List<SongRequest>,
     requestText: String,
     onRequestTextChange: (String) -> Unit,
-    activeMessage: ChatMessage?,
+    activeMessagesByUser: Map<String, ChatMessage>,
     compactMode: Boolean,
     showSocial: Boolean,
     remoteState: SessionTrack?,
@@ -845,6 +863,7 @@ private fun GuestContent(
             if (compactMode) {
                 CompactMemberList(
                     members = guest.members,
+                    activeMessagesByUser = activeMessagesByUser,
                     hostName = guest.hostName,
                     targetVideoId = remoteState?.videoId,
                     colors = colors
@@ -853,7 +872,7 @@ private fun GuestContent(
                 guest.members.forEach { member ->
                     MemberRow(
                         member = member,
-                        activeMessage = activeMessage,
+                        activeMessage = activeMessagesByUser[member.name.lowercase().trim()],
                         colors = colors,
                         isHost = member.name == guest.hostName,
                         targetVideoId = remoteState?.videoId
@@ -1235,7 +1254,7 @@ private fun HeroCodeDisplayCard(
     }
 }
 
-/** Breathing Live Badge with pulsating beacon dot */
+/** Breathing Live Badge with pulsating beacon dot (slowed down for smooth presence) */
 @Composable
 private fun BreathingLiveBadge(
     listenerCount: Int,
@@ -1246,7 +1265,7 @@ private fun BreathingLiveBadge(
         initialValue = 0.85f,
         targetValue = 1.35f,
         animationSpec = infiniteRepeatable(
-            animation = tween(1000, easing = FastOutSlowInEasing),
+            animation = tween(1800, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
         ),
         label = "beaconPulse"
@@ -1255,7 +1274,7 @@ private fun BreathingLiveBadge(
         initialValue = 0.8f,
         targetValue = 0.25f,
         animationSpec = infiniteRepeatable(
-            animation = tween(1000, easing = FastOutSlowInEasing),
+            animation = tween(1800, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
         ),
         label = "beaconAlpha"
@@ -1304,12 +1323,15 @@ private fun BreathingLiveBadge(
 @Composable
 private fun CompactMemberList(
     members: List<SessionMember>,
+    activeMessagesByUser: Map<String, ChatMessage>,
     hostName: String,
     targetVideoId: String?,
     colors: ColorScheme
 ) {
     LazyRow(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .animateContentSize(animationSpec = tween(550, easing = FastOutSlowInEasing)),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp)
     ) {
@@ -1322,10 +1344,12 @@ private fun CompactMemberList(
                 isBuffering -> Color(0xFFFFB300)
                 else -> colors.outlineVariant
             }
+            val userMsg = activeMessagesByUser[member.name.lowercase().trim()]
 
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+                modifier = Modifier.animateContentSize(animationSpec = tween(550, easing = FastOutSlowInEasing))
             ) {
                 Box {
                     Box(
@@ -1379,12 +1403,45 @@ private fun CompactMemberList(
                     overflow = TextOverflow.Ellipsis,
                     color = colors.onSurface
                 )
+                AnimatedVisibility(
+                    visible = userMsg != null,
+                    enter = slideInVertically(
+                        animationSpec = tween(550, easing = FastOutSlowInEasing),
+                        initialOffsetY = { -it }
+                    ) + expandVertically(
+                        animationSpec = tween(550, easing = FastOutSlowInEasing)
+                    ) + fadeIn(animationSpec = tween(450)),
+                    exit = slideOutVertically(
+                        animationSpec = tween(500, easing = FastOutSlowInEasing),
+                        targetOffsetY = { -it }
+                    ) + shrinkVertically(
+                        animationSpec = tween(500, easing = FastOutSlowInEasing)
+                    ) + fadeOut(animationSpec = tween(400))
+                ) {
+                    if (userMsg != null) {
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = colors.surfaceContainerHigh,
+                            border = BorderStroke(0.5.dp, colors.outlineVariant.copy(alpha = 0.35f)),
+                            tonalElevation = 2.dp,
+                            modifier = Modifier.widthIn(max = 90.dp)
+                        ) {
+                            Text(
+                                text = userMsg.text,
+                                style = MaterialTheme.typography.labelSmall,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                }
             }
         }
     }
 }
 
-/** One guest card with avatar border sync ring and vector crown badge */
+/** One guest card with avatar border sync ring, vector crown badge, and smooth animated speech bubble */
 @Composable
 private fun MemberRow(
     member: SessionMember,
@@ -1393,7 +1450,6 @@ private fun MemberRow(
     isHost: Boolean = false,
     targetVideoId: String? = null
 ) {
-    val isMyMessage = activeMessage != null && activeMessage.from.equals(member.name, ignoreCase = true)
     val hostLabel = stringResource(R.string.listen_together_host)
 
     val isSynced = member.isLive && (!member.syncVideoId.isNullOrBlank() && (targetVideoId == null || member.syncVideoId == targetVideoId))
@@ -1407,7 +1463,9 @@ private fun MemberRow(
     }
 
     Column(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .animateContentSize(animationSpec = tween(550, easing = FastOutSlowInEasing)),
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         Row(
@@ -1492,49 +1550,75 @@ private fun MemberRow(
             }
         }
 
-        // Overlay speech bubble placed below row so member row is never compressed
+        // Overlay speech bubble with slow, smooth slide up/down and expand/shrink animation
         AnimatedVisibility(
-            visible = isMyMessage,
-            enter = fadeIn(animationSpec = tween(220)) + scaleIn(initialScale = 0.85f),
-            exit = fadeOut(animationSpec = tween(180)) + scaleOut(targetScale = 0.85f)
+            visible = activeMessage != null,
+            enter = slideInVertically(
+                animationSpec = tween(550, easing = FastOutSlowInEasing),
+                initialOffsetY = { -it / 2 }
+            ) + expandVertically(
+                animationSpec = tween(550, easing = FastOutSlowInEasing),
+                expandFrom = Alignment.Top
+            ) + fadeIn(
+                animationSpec = tween(450, easing = FastOutSlowInEasing)
+            ),
+            exit = slideOutVertically(
+                animationSpec = tween(500, easing = FastOutSlowInEasing),
+                targetOffsetY = { -it / 2 }
+            ) + shrinkVertically(
+                animationSpec = tween(500, easing = FastOutSlowInEasing),
+                shrinkTowards = Alignment.Top
+            ) + fadeOut(
+                animationSpec = tween(400, easing = FastOutSlowInEasing)
+            )
         ) {
             if (activeMessage != null) {
                 Surface(
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(14.dp),
                     color = colors.surfaceContainerHigh,
+                    border = BorderStroke(1.dp, colors.outlineVariant.copy(alpha = 0.35f)),
                     tonalElevation = 2.dp,
                     modifier = Modifier
-                        .padding(start = 56.dp)
+                        .padding(start = 56.dp, top = 2.dp)
                         .fillMaxWidth()
                 ) {
-                    Text(
-                        text = activeMessage.text,
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Medium,
-                        color = colors.onSurface,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-                    )
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = "\uD83D\uDCAC",
+                            fontSize = 14.sp
+                        )
+                        Text(
+                            text = activeMessage.text,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Medium,
+                            color = colors.onSurface
+                        )
+                    }
                 }
             }
         }
     }
 }
 
-/** Mini 3-bar animated equalizer */
+/** Mini 3-bar animated equalizer with calm, slowed rhythm */
 @Composable
 private fun MiniEqualizerBars(color: Color) {
     val infiniteTransition = rememberInfiniteTransition(label = "miniEq")
     val h1 by infiniteTransition.animateFloat(
         initialValue = 4f, targetValue = 14f,
-        animationSpec = infiniteRepeatable(tween(420, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "h1"
+        animationSpec = infiniteRepeatable(tween(900, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "h1"
     )
     val h2 by infiniteTransition.animateFloat(
         initialValue = 14f, targetValue = 5f,
-        animationSpec = infiniteRepeatable(tween(360, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "h2"
+        animationSpec = infiniteRepeatable(tween(1150, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "h2"
     )
     val h3 by infiniteTransition.animateFloat(
         initialValue = 6f, targetValue = 16f,
-        animationSpec = infiniteRepeatable(tween(480, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "h3"
+        animationSpec = infiniteRepeatable(tween(1000, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "h3"
     )
 
     Row(
