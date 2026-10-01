@@ -307,7 +307,6 @@ dependencies {
     implementation(libs.androidx.glance.material3)
     implementation(libs.accompanist.drawablepainter)
     implementation(libs.accompanist.permissions)
-    implementation("com.google.zxing:core:3.5.3")
     implementation(libs.capturable) {
         exclude(group = "androidx.compose.animation")
         exclude(group = "androidx.compose.foundation")
