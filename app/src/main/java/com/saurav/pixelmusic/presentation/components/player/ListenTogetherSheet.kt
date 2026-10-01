@@ -1540,9 +1540,17 @@ private fun MiniEqualizerBars(color: Color) {
         verticalAlignment = Alignment.Bottom,
         modifier = Modifier.height(16.dp)
     ) {
-        Box(modifier = Modifier.width(2.5.dp).height(h1.dp).clip(RoundedCornerShape(1.dp)).background(color))
-        Box(modifier = Modifier.width(2.5.dp).height(h2.dp).clip(RoundedCornerShape(1.dp)).background(color))
-        Box(modifier = Modifier.width(2.5.dp).height(h3.dp).clip(RoundedCornerShape(1.dp)).background(color))
+        // Fixed-height containers prevent the Row from remeasuring on every animation frame;
+        // only the inner bar height animates, anchored to the bottom.
+        Box(modifier = Modifier.width(2.5.dp).height(16.dp), contentAlignment = Alignment.BottomCenter) {
+            Box(modifier = Modifier.width(2.5.dp).height(h1.dp).clip(RoundedCornerShape(1.dp)).background(color))
+        }
+        Box(modifier = Modifier.width(2.5.dp).height(16.dp), contentAlignment = Alignment.BottomCenter) {
+            Box(modifier = Modifier.width(2.5.dp).height(h2.dp).clip(RoundedCornerShape(1.dp)).background(color))
+        }
+        Box(modifier = Modifier.width(2.5.dp).height(16.dp), contentAlignment = Alignment.BottomCenter) {
+            Box(modifier = Modifier.width(2.5.dp).height(h3.dp).clip(RoundedCornerShape(1.dp)).background(color))
+        }
     }
 }
 
