@@ -72,7 +72,6 @@ httpclient = "4.5.14"
 newpipeextractor = "v0.26.3"
 innertubex = "v0.7.0"
 fuel = "2.3.1"
-firebaseBom = "34.19.0"
 
 # DI
 dagger = "2.59.2"
@@ -106,10 +105,6 @@ profileinstaller = "1.4.1"
 pagingCommon = "3.3.6"
 
 [libraries]
-# Firebase — Listen Together group sessions (BoM 34.x merged the -ktx artifacts into the main ones)
-firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
-firebase-database = { group = "com.google.firebase", name = "firebase-database" }
-firebase-auth = { group = "com.google.firebase", name = "firebase-auth" }
 accompanist-drawablepainter = { module = "com.google.accompanist:accompanist-drawablepainter", version.ref = "accompanistDrawablepainter" }
 androidx-app = { module = "androidx.car.app:app", version.ref = "app" }
 androidx-app-projected = { module = "androidx.car.app:app-projected", version.ref = "app" }
@@ -247,9 +242,6 @@ turbine = { group = "app.cash.turbine", name = "turbine", version.ref = "turbine
 truth = { group = "com.google.truth", name = "truth", version.ref = "truth" }
 androidx-room-testing = { module = "androidx.room:room-testing", version.ref = "roomRuntime" }
 kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "kotlinx-coroutines" }
-
-# Coroutines Play Services (for .await() on GMS Tasks)
-kotlinx-coroutines-play-services = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-play-services", version.ref = "kotlinx-coroutines" }
 
 # Security/Vulnerability fixes (Constraints)
 netty-common = { module = "io.netty:netty-common", version.ref = "netty" }
