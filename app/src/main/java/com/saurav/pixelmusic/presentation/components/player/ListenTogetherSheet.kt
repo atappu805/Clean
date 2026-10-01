@@ -305,9 +305,7 @@ fun ListenTogetherSheet(
                             transitionSpec = {
                                 fadeIn(animationSpec = tween(220)) togetherWith
                                 fadeOut(animationSpec = tween(180))
-                            }.using(
-                                SizeTransform(clip = true)
-                            ),
+                            },
                             label = "listenTogetherUiStateTransition",
                             modifier = Modifier.fillMaxWidth()
                         ) { s ->
@@ -528,9 +526,7 @@ fun ListenTogetherSheet(
                                         transitionSpec = {
                                             fadeIn(animationSpec = tween(220)) togetherWith
                                             fadeOut(animationSpec = tween(180))
-                                        }.using(
-                                            SizeTransform(clip = true)
-                                        ),
+                                        },
                                         label = "listenTogetherHostPhase",
                                         modifier = Modifier.fillMaxWidth()
                                     ) { live ->
