@@ -4,10 +4,10 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
-import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
@@ -27,7 +27,6 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -40,23 +39,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CheckCircle
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Favorite
@@ -77,20 +65,22 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -108,6 +98,7 @@ import com.saurav.pixelmusic.data.session.ListenTogetherConnectionState
 import com.saurav.pixelmusic.data.session.ListenTogetherUiState
 import com.saurav.pixelmusic.data.session.ReactionEvent
 import com.saurav.pixelmusic.data.session.SessionMember
+import com.saurav.pixelmusic.data.session.SessionTrack
 import com.saurav.pixelmusic.data.session.SongRequest
 import com.saurav.pixelmusic.presentation.components.SmartImage
 import com.saurav.pixelmusic.presentation.viewmodel.PlayerViewModel
@@ -120,18 +111,17 @@ import kotlin.math.PI
 import kotlin.math.sin
 
 private enum class PreSessionTab { HOST, JOIN }
+private enum class SheetStage { SETUP, HOSTING, GUEST }
 
 /**
- * Enhanced Listen Together bottom sheet with ambient presence,
- * Material 3 segmented host/join experience, persisted identity,
- * waiting room discovery, breathing live beacon, avatar sync rings,
- * dynamic transport controls, interactive song requests, and settings integration.
+ * Enhanced Listen Together bottom sheet with Material 3 ModalBottomSheet,
+ * smooth stable transitions without flickering, responsive controls,
+ * real-time member sync rings, and interactive social reactions.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ListenTogetherSheet(
     viewModel: PlayerViewModel,
-    visible: Boolean,
     onDismiss: () -> Unit
 ) {
     val uiState by viewModel.listenTogetherUiState.collectAsStateWithLifecycle()
@@ -202,10 +192,6 @@ fun ListenTogetherSheet(
         }
     }
 
-    if (visible) {
-        BackHandler(onBack = onDismiss)
-    }
-
     fun persistUserName(newName: String) {
         val trimmed = newName.trim()
         if (trimmed.isNotBlank()) {
@@ -215,620 +201,706 @@ fun ListenTogetherSheet(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        AnimatedVisibility(
-            visible = visible,
-            enter = fadeIn(animationSpec = tween(200)),
-            exit = fadeOut(animationSpec = tween(180)),
-            label = "listenTogetherScrim"
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.45f))
-                    .clickable(
-                        indication = null,
-                        interactionSource = remember { MutableInteractionSource() },
-                        onClick = onDismiss
-                    )
-            )
-        }
-        AnimatedVisibility(
-            visible = visible,
-            enter = slideInVertically(
-                initialOffsetY = { it },
-                animationSpec = tween(280, easing = FastOutSlowInEasing)
-            ),
-            exit = slideOutVertically(
-                targetOffsetY = { it },
-                animationSpec = tween(240, easing = FastOutSlowInEasing)
-            ),
-            label = "listenTogetherSheet"
-        ) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.BottomCenter
-            ) {
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .defaultMinSize(minHeight = 420.dp)
-                        .imePadding(),
-                    shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-                    color = colors.surfaceContainerLow,
-                    tonalElevation = 12.dp
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .verticalScroll(rememberScrollState())
-                            .padding(horizontal = 24.dp)
-                            .padding(top = 12.dp, bottom = 36.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(14.dp)
-                    ) {
-                        // Visual drag handle
-                        Box(
-                            modifier = Modifier
-                                .width(32.dp)
-                                .height(4.dp)
-                                .background(
-                                    color = colors.onSurfaceVariant.copy(alpha = 0.4f),
-                                    shape = RoundedCornerShape(2.dp)
-                                )
-                        )
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-                        val isHostOrGuest = uiState is ListenTogetherUiState.Hosting || uiState is ListenTogetherUiState.Guest
-                        if (!isHostOrGuest) {
-                            Icon(
-                                imageVector = Icons.Rounded.Group,
-                                contentDescription = null,
-                                tint = colors.primary,
-                                modifier = Modifier.size(44.dp)
-                            )
-                            Text(
-                                text = stringResource(R.string.listen_together),
-                                style = MaterialTheme.typography.headlineSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = colors.onSurface
-                            )
-                            Text(
-                                text = stringResource(R.string.listen_together_desc),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = colors.onSurfaceVariant,
-                                textAlign = TextAlign.Center
+    val isCreating = uiState is ListenTogetherUiState.Creating
+    val isJoining = uiState is ListenTogetherUiState.Joining
+    val isBusy = isCreating || isJoining
+
+    val stage = when (uiState) {
+        is ListenTogetherUiState.Hosting -> SheetStage.HOSTING
+        is ListenTogetherUiState.Guest -> SheetStage.GUEST
+        else -> SheetStage.SETUP
+    }
+
+    val effectiveName = if (isEditingName || (savedName.isBlank() && currentYtUsername.isBlank())) {
+        nameInput
+    } else {
+        savedName.ifBlank { currentYtUsername }
+    }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        dragHandle = { BottomSheetDefaults.DragHandle() },
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        containerColor = colors.surfaceContainerLow,
+        tonalElevation = 12.dp
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .imePadding()
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 24.dp)
+                    .padding(bottom = 24.dp)
+            ) {
+                Crossfade(
+                    targetState = stage,
+                    animationSpec = tween(220),
+                    label = "listenTogetherStageTransition"
+                ) { currentStage ->
+                    when (currentStage) {
+                        SheetStage.SETUP -> {
+                            SetupContent(
+                                uiState = uiState,
+                                selectedTab = selectedTab,
+                                onTabSelected = { selectedTab = it },
+                                nameInput = nameInput,
+                                onNameInputChange = { nameInput = it },
+                                isEditingName = isEditingName,
+                                onIsEditingNameChange = { isEditingName = it },
+                                effectiveName = effectiveName,
+                                code = code,
+                                onCodeChange = { code = it },
+                                currentUserAvatarUrl = currentUserAvatarUrl,
+                                colors = colors,
+                                isBusy = isBusy,
+                                isCreating = isCreating,
+                                isJoining = isJoining,
+                                onStartHosting = {
+                                    persistUserName(effectiveName)
+                                    viewModel.startHostingSession(effectiveName)
+                                },
+                                onJoinSession = {
+                                    persistUserName(effectiveName)
+                                    viewModel.joinListenTogetherSession(code, effectiveName)
+                                }
                             )
                         }
-
-                        AnimatedContent(
-                            targetState = uiState,
-                            transitionSpec = {
-                                fadeIn(animationSpec = tween(220)) togetherWith
-                                fadeOut(animationSpec = tween(180))
-                            },
-                            label = "listenTogetherUiStateTransition",
-                            modifier = Modifier.fillMaxWidth()
-                        ) { s ->
-                            when (s) {
-                                is ListenTogetherUiState.Idle, is ListenTogetherUiState.Error -> {
-                                    Column(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        verticalArrangement = Arrangement.spacedBy(14.dp),
-                                        horizontalAlignment = Alignment.CenterHorizontally
-                                    ) {
-                                        if (s is ListenTogetherUiState.Error) {
-                                            Text(
-                                                text = s.message,
-                                                color = colors.error,
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                textAlign = TextAlign.Center
-                                            )
-                                        }
-
-                                        // Segmented Mode Switcher (Host vs Join)
-                                        SegmentedModeSwitcher(
-                                            selectedTab = selectedTab,
-                                            onTabSelected = { selectedTab = it },
-                                            colors = colors
-                                        )
-
-                                        val effectiveName = if (isEditingName || (savedName.isBlank() && currentYtUsername.isBlank())) {
-                                            nameInput
-                                        } else {
-                                            savedName.ifBlank { currentYtUsername }
-                                        }
-
-                                        // Persisted User Identity Avatar Chip
-                                        if (effectiveName.isNotBlank() && !isEditingName) {
-                                            Surface(
-                                                shape = RoundedCornerShape(16.dp),
-                                                color = colors.surfaceContainerHigh,
-                                                modifier = Modifier.fillMaxWidth()
-                                            ) {
-                                                Row(
-                                                    modifier = Modifier
-                                                        .fillMaxWidth()
-                                                        .padding(horizontal = 14.dp, vertical = 10.dp),
-                                                    verticalAlignment = Alignment.CenterVertically
-                                                ) {
-                                                    Surface(
-                                                        shape = CircleShape,
-                                                        color = colors.primaryContainer,
-                                                        modifier = Modifier.size(40.dp)
-                                                    ) {
-                                                        Box(contentAlignment = Alignment.Center) {
-                                                            if (currentUserAvatarUrl.isNotBlank()) {
-                                                                AsyncImage(
-                                                                    model = currentUserAvatarUrl,
-                                                                    contentDescription = null,
-                                                                    contentScale = ContentScale.Crop,
-                                                                    modifier = Modifier.fillMaxSize().clip(CircleShape)
-                                                                )
-                                                            } else {
-                                                                Text(
-                                                                    text = effectiveName.firstOrNull()?.uppercase() ?: "?",
-                                                                    fontWeight = FontWeight.Bold,
-                                                                    fontSize = 18.sp,
-                                                                    color = colors.onPrimaryContainer
-                                                                )
-                                                            }
-                                                        }
-                                                    }
-                                                    Spacer(Modifier.width(12.dp))
-                                                    Column(modifier = Modifier.weight(1f)) {
-                                                        Text(
-                                                            text = if (selectedTab == PreSessionTab.HOST) "Hosting as $effectiveName" else "Joining as $effectiveName",
-                                                            style = MaterialTheme.typography.bodyMedium,
-                                                            fontWeight = FontWeight.SemiBold,
-                                                            color = colors.onSurface
-                                                        )
-                                                        Text(
-                                                            text = "Tap edit to change name",
-                                                            style = MaterialTheme.typography.labelSmall,
-                                                            color = colors.onSurfaceVariant
-                                                        )
-                                                    }
-                                                    IconButton(
-                                                        onClick = {
-                                                            nameInput = effectiveName
-                                                            isEditingName = true
-                                                        }
-                                                    ) {
-                                                        Icon(
-                                                            imageVector = Icons.Rounded.Edit,
-                                                            contentDescription = "Edit name",
-                                                            tint = colors.primary,
-                                                            modifier = Modifier.size(18.dp)
-                                                        )
-                                                    }
-                                                }
-                                            }
-                                        } else {
-                                            OutlinedTextField(
-                                                value = nameInput,
-                                                onValueChange = { nameInput = it },
-                                                label = {
-                                                    Text(
-                                                        if (selectedTab == PreSessionTab.HOST) stringResource(R.string.listen_together_your_name)
-                                                        else stringResource(R.string.listen_together_guest_name)
-                                                    )
-                                                },
-                                                singleLine = true,
-                                                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
-                                                shape = RoundedCornerShape(16.dp),
-                                                colors = OutlinedTextFieldDefaults.colors(
-                                                    unfocusedBorderColor = colors.onSurfaceVariant,
-                                                    focusedBorderColor = colors.primary
-                                                ),
-                                                trailingIcon = if (effectiveName.isNotBlank() && isEditingName) {
-                                                    {
-                                                        IconButton(onClick = { isEditingName = false }) {
-                                                            Icon(Icons.Rounded.Check, contentDescription = "Done", tint = colors.primary)
-                                                        }
-                                                    }
-                                                } else null,
-                                                modifier = Modifier.fillMaxWidth()
-                                            )
-                                        }
-
-                                        // Smooth Animated Tab Content
-                                        AnimatedContent(
-                                            targetState = selectedTab,
-                                            transitionSpec = {
-                                                if (targetState == PreSessionTab.JOIN) {
-                                                    (slideInHorizontally(tween(300, easing = FastOutSlowInEasing)) { it / 3 } + fadeIn(tween(250))) togetherWith
-                                                        (slideOutHorizontally(tween(250, easing = FastOutSlowInEasing)) { -it / 3 } + fadeOut(tween(200)))
-                                                } else {
-                                                    (slideInHorizontally(tween(300, easing = FastOutSlowInEasing)) { -it / 3 } + fadeIn(tween(250))) togetherWith
-                                                        (slideOutHorizontally(tween(250, easing = FastOutSlowInEasing)) { it / 3 } + fadeOut(tween(200)))
-                                                }
-                                            },
-                                            label = "preSessionTabAnimation",
-                                            modifier = Modifier.fillMaxWidth()
-                                        ) { tab ->
-                                            if (tab == PreSessionTab.HOST) {
-                                                Button(
-                                                    onClick = {
-                                                        persistUserName(effectiveName)
-                                                        viewModel.startHostingSession(effectiveName)
-                                                    },
-                                                    enabled = effectiveName.isNotBlank(),
-                                                    modifier = Modifier
-                                                        .fillMaxWidth()
-                                                        .height(50.dp),
-                                                    shape = RoundedCornerShape(16.dp)
-                                                ) {
-                                                    Text(
-                                                        text = stringResource(R.string.listen_together_start),
-                                                        style = MaterialTheme.typography.titleMedium,
-                                                        fontWeight = FontWeight.Bold
-                                                    )
-                                                }
-                                            } else {
-                                                Column(
-                                                    modifier = Modifier.fillMaxWidth(),
-                                                    verticalArrangement = Arrangement.spacedBy(14.dp),
-                                                    horizontalAlignment = Alignment.CenterHorizontally
-                                                ) {
-                                                    Text(
-                                                        text = stringResource(R.string.listen_together_room_code),
-                                                        style = MaterialTheme.typography.labelMedium,
-                                                        fontWeight = FontWeight.SemiBold,
-                                                        color = colors.onSurfaceVariant,
-                                                        modifier = Modifier.align(Alignment.Start)
-                                                    )
-
-                                                    // Segmented PIN-Style Room Code Input (manual input, responsive)
-                                                    SegmentedRoomCodeInput(
-                                                        code = code,
-                                                        onCodeChange = { code = it },
-                                                        colors = colors
-                                                    )
-
-                                                    Button(
-                                                        onClick = {
-                                                            persistUserName(effectiveName)
-                                                            viewModel.joinListenTogetherSession(code, effectiveName)
-                                                        },
-                                                        enabled = code.length == 7 && effectiveName.isNotBlank(),
-                                                        modifier = Modifier
-                                                            .fillMaxWidth()
-                                                            .height(50.dp),
-                                                        shape = RoundedCornerShape(16.dp)
-                                                    ) {
-                                                        Text(
-                                                            text = stringResource(R.string.listen_together_join),
-                                                            style = MaterialTheme.typography.titleMedium,
-                                                            fontWeight = FontWeight.Bold
-                                                        )
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-
-                                ListenTogetherUiState.Creating, ListenTogetherUiState.Joining -> {
-                                    Spacer(Modifier.height(8.dp))
-                                    CircularProgressIndicator()
-                                    Text(
-                                        text = if (s is ListenTogetherUiState.Creating) stringResource(R.string.listen_together_creating)
-                                        else stringResource(R.string.listen_together_joining),
-                                        color = colors.onSurfaceVariant,
-                                        style = MaterialTheme.typography.bodyMedium
-                                    )
-                                }
-
-                                is ListenTogetherUiState.Hosting -> {
-                                    val livePhase = s.members.size > 1
-                                    Column(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
-                                    AnimatedContent(
-                                        targetState = livePhase,
-                                        transitionSpec = {
-                                            fadeIn(animationSpec = tween(220)) togetherWith
-                                            fadeOut(animationSpec = tween(180))
-                                        },
-                                        label = "listenTogetherHostPhase",
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) { live ->
-                                        if (!live) {
-                                            // Phase 1: Waiting Room
-                                            Column(
-                                                horizontalAlignment = Alignment.CenterHorizontally,
-                                                verticalArrangement = Arrangement.spacedBy(16.dp),
-                                                modifier = Modifier.fillMaxWidth()
-                                            ) {
-                                                // Now Playing Anchor Preview
-                                                if (currentSong != null) {
-                                                    NowPlayingAnchorPreviewCard(song = currentSong, colors = colors)
-                                                }
-
-                                                // Hero Code Display Card (No QR sharing)
-                                                HeroCodeDisplayCard(
-                                                    code = s.code,
-                                                    colors = colors,
-                                                    context = context,
-                                                    onToast = viewModel::sendToast
-                                                )
-
-                                                // Static host avatar (no pulse animation)
-                                                val hostPhoto = s.members.firstOrNull()?.photoUrl ?: currentUserAvatarUrl.ifBlank { null }
-                                                Surface(
-                                                    shape = CircleShape,
-                                                    color = avatarColorFor(s.hostName),
-                                                    shadowElevation = 6.dp,
-                                                    modifier = Modifier.size(72.dp)
-                                                ) {
-                                                    Box(contentAlignment = Alignment.Center) {
-                                                        if (!hostPhoto.isNullOrBlank()) {
-                                                            AsyncImage(
-                                                                model = hostPhoto,
-                                                                contentDescription = null,
-                                                                contentScale = ContentScale.Crop,
-                                                                modifier = Modifier.fillMaxSize().clip(CircleShape)
-                                                            )
-                                                        } else {
-                                                            Text(
-                                                                text = s.hostName.firstOrNull()?.uppercase() ?: "?",
-                                                                color = Color.White,
-                                                                fontWeight = FontWeight.Bold,
-                                                                fontSize = 28.sp
-                                                            )
-                                                        }
-                                                    }
-                                                }
-
-                                                Text(
-                                                    text = context.getString(R.string.listen_together_listeners, s.members.size),
-                                                    style = MaterialTheme.typography.titleSmall,
-                                                    color = colors.onSurfaceVariant
-                                                )
-                                            }
-                                        } else {
-                                            // Phase 2: Live session
-                                            Column(
-                                                verticalArrangement = Arrangement.spacedBy(12.dp),
-                                                modifier = Modifier.fillMaxWidth()
-                                            ) {
-                                                // Live Header with Breathing Live Badge
-                                                Row(
-                                                    modifier = Modifier.fillMaxWidth(),
-                                                    verticalAlignment = Alignment.CenterVertically
-                                                ) {
-                                                    BreathingLiveBadge(listenerCount = s.members.size, colors = colors)
-                                                    Spacer(Modifier.width(8.dp))
-                                                    Text(
-                                                        text = when (connectionState) {
-                                                            ListenTogetherConnectionState.CONNECTED -> "Sync live"
-                                                            ListenTogetherConnectionState.RECONNECTING -> "Reconnecting…"
-                                                            ListenTogetherConnectionState.CONNECTING -> "Connecting…"
-                                                            ListenTogetherConnectionState.DISCONNECTED -> "Offline"
-                                                        },
-                                                        style = MaterialTheme.typography.labelSmall,
-                                                        color = when (connectionState) {
-                                                            ListenTogetherConnectionState.CONNECTED -> colors.primary
-                                                            ListenTogetherConnectionState.RECONNECTING -> colors.error
-                                                            else -> colors.onSurfaceVariant
-                                                        }
-                                                    )
-                                                    Spacer(Modifier.weight(1f))
-                                                    RoomCodeChip(
-                                                        code = s.code,
-                                                        onCopy = {
-                                                            val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                                            cm.setPrimaryClip(ClipData.newPlainText("room code", s.code))
-                                                            viewModel.sendToast(context.getString(R.string.listen_together_code_copied))
-                                                        },
-                                                        colors = colors
-                                                    )
-                                                }
-
-                                            // Member List (Compact horizontal strip or Vertical list)
-                                            if (compactMode) {
-                                                CompactMemberList(
-                                                    members = s.members,
-                                                    hostName = s.hostName,
-                                                    targetVideoId = remoteState?.videoId,
-                                                    colors = colors
-                                                )
-                                            } else {
-                                                s.members.forEach { member ->
-                                                    MemberRow(
-                                                        member = member,
-                                                        activeMessage = activeMessage,
-                                                        colors = colors,
-                                                        isHost = member.name == s.hostName,
-                                                        targetVideoId = remoteState?.videoId
-                                                    )
-                                                }
-                                            }
-
-                                            // Embedded Mini Transport Card in Host Controls
-                                            HostControlBar(
-                                                isPlaying = remoteState?.isPlaying == true,
-                                                currentSong = currentSong,
-                                                onPrevious = viewModel::previousSong,
-                                                onPlayPause = viewModel::playPause,
-                                                onNext = viewModel::nextSong,
-                                                colors = colors
-                                            )
-
-                                            // Interactive Song Request Cards
-                                            SongRequestsSection(
-                                                requests = requests,
-                                                requestText = requestText,
-                                                onRequestTextChange = { requestText = it },
-                                                onSubmit = {
-                                                    viewModel.sendListenTogetherSongRequest(requestText)
-                                                    requestText = ""
-                                                },
-                                                onVote = viewModel::voteListenTogetherRequest,
-                                                isHost = true,
-                                                onQueueNext = { req -> viewModel.queueNextListenTogetherRequest(req) },
-                                                onDismissRequest = viewModel::dismissListenTogetherRequest,
-                                                colors = colors
-                                            )
-
-                                            // Social Section (Honors hide social preference)
-                                            if (showSocial) {
-                                                SocialSection(
-                                                    onReaction = { viewModel.sendListenTogetherReaction(it) },
-                                                    onLoved = { viewModel.sendLovedReaction() },
-                                                    onMessage = { viewModel.sendListenTogetherMessage(it) },
-                                                    colors = colors,
-                                                    hapticFeedback = hapticFeedback
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-
-                                Button(
-                                    onClick = { viewModel.endListenTogetherSession() },
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = colors.error,
-                                        contentColor = colors.onError
-                                    ),
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Text(stringResource(R.string.listen_together_end_session))
-                                }
-                                    }
+                        SheetStage.HOSTING -> {
+                            val hosting = uiState as? ListenTogetherUiState.Hosting
+                            if (hosting != null) {
+                                HostingContent(
+                                    hosting = hosting,
+                                    connectionState = connectionState,
+                                    currentSong = currentSong,
+                                    requests = requests,
+                                    requestText = requestText,
+                                    onRequestTextChange = { requestText = it },
+                                    activeMessage = activeMessage,
+                                    compactMode = compactMode,
+                                    showSocial = showSocial,
+                                    remoteState = remoteState,
+                                    viewModel = viewModel,
+                                    colors = colors,
+                                    context = context,
+                                    hapticFeedback = hapticFeedback
+                                )
                             }
-
-                            is ListenTogetherUiState.Guest -> {
-                                Column(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally
-                                ) {
-                                val copyCode = {
-                                    val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                    cm.setPrimaryClip(ClipData.newPlainText("room code", s.code))
-                                    viewModel.sendToast(context.getString(R.string.listen_together_code_copied))
-                                }
-
-                                if (connectionState != ListenTogetherConnectionState.CONNECTED) {
-                                    Text(
-                                        text = when (connectionState) {
-                                            ListenTogetherConnectionState.RECONNECTING -> "Reconnecting to the session…"
-                                            ListenTogetherConnectionState.CONNECTING -> "Connecting to the session…"
-                                            else -> "Session connection unavailable"
-                                        },
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = if (connectionState == ListenTogetherConnectionState.RECONNECTING) colors.error else colors.onSurfaceVariant,
-                                        textAlign = TextAlign.Center
-                                    )
-                                }
-
-                                // Guest Sync Action Bar with animated icon and micro-interaction pill
-                                if (connectionState == ListenTogetherConnectionState.CONNECTED) {
-                                    GuestSyncActionBar(
-                                        syncDriftMs = syncDriftMs,
-                                        onSync = { viewModel.syncListenTogetherNow() },
-                                        colors = colors
-                                    )
-                                }
-
-                                Text(
-                                    text = context.getString(R.string.listen_together_listening_with, s.hostName),
-                                    style = MaterialTheme.typography.headlineSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = colors.onSurface,
-                                    textAlign = TextAlign.Center
+                        }
+                        SheetStage.GUEST -> {
+                            val guest = uiState as? ListenTogetherUiState.Guest
+                            if (guest != null) {
+                                GuestContent(
+                                    guest = guest,
+                                    connectionState = connectionState,
+                                    syncDriftMs = syncDriftMs,
+                                    requests = requests,
+                                    requestText = requestText,
+                                    onRequestTextChange = { requestText = it },
+                                    activeMessage = activeMessage,
+                                    compactMode = compactMode,
+                                    showSocial = showSocial,
+                                    remoteState = remoteState,
+                                    viewModel = viewModel,
+                                    colors = colors,
+                                    context = context,
+                                    hapticFeedback = hapticFeedback
                                 )
-
-                                Text(
-                                    text = stringResource(R.string.listen_together_guest_note),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = colors.onSurfaceVariant,
-                                    textAlign = TextAlign.Center
-                                )
-
-                                RoomCodeChip(
-                                    code = s.code,
-                                    onCopy = copyCode,
-                                    colors = colors
-                                )
-
-                                if (s.members.isNotEmpty()) {
-                                    Spacer(Modifier.height(8.dp))
-                                    Text(
-                                        text = context.getString(R.string.listen_together_listeners, s.members.size),
-                                        style = MaterialTheme.typography.titleSmall,
-                                        color = colors.onSurfaceVariant
-                                    )
-
-                                    if (compactMode) {
-                                        CompactMemberList(
-                                            members = s.members,
-                                            hostName = s.hostName,
-                                            targetVideoId = remoteState?.videoId,
-                                            colors = colors
-                                        )
-                                    } else {
-                                        s.members.forEach { member ->
-                                            MemberRow(
-                                                member = member,
-                                                activeMessage = activeMessage,
-                                                colors = colors,
-                                                isHost = member.name == s.hostName,
-                                                targetVideoId = remoteState?.videoId
-                                            )
-                                        }
-                                    }
-
-                                    SongRequestsSection(
-                                        requests = requests,
-                                        requestText = requestText,
-                                        onRequestTextChange = { requestText = it },
-                                        onSubmit = {
-                                            viewModel.sendListenTogetherSongRequest(requestText)
-                                            requestText = ""
-                                        },
-                                        onVote = viewModel::voteListenTogetherRequest,
-                                        isHost = false,
-                                        onQueueNext = {},
-                                        onDismissRequest = {},
-                                        colors = colors
-                                    )
-
-                                    if (showSocial) {
-                                        SocialSection(
-                                            onReaction = { viewModel.sendListenTogetherReaction(it) },
-                                            onLoved = { viewModel.sendLovedReaction() },
-                                            onMessage = { viewModel.sendListenTogetherMessage(it) },
-                                            colors = colors,
-                                            hapticFeedback = hapticFeedback
-                                        )
-                                    }
-                                }
-
-                                Spacer(Modifier.height(4.dp))
-                                OutlinedButton(
-                                    onClick = { viewModel.leaveListenTogetherSession() },
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Text(stringResource(R.string.listen_together_leave))
-                                }
-                                }
                             }
                         }
                     }
                 }
             }
 
-            // Floating reactions overlay (honors animated reactions setting)
-                if (animatedReactions) {
-                    FloatingReactionsOverlay(
-                        events = reactionEvents,
-                        modifier = Modifier.fillMaxSize()
+            // Floating reactions overlay
+            if (animatedReactions && (stage == SheetStage.HOSTING || stage == SheetStage.GUEST)) {
+                FloatingReactionsOverlay(
+                    events = reactionEvents,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(260.dp)
+                        .align(Alignment.BottomCenter)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SetupContent(
+    uiState: ListenTogetherUiState,
+    selectedTab: PreSessionTab,
+    onTabSelected: (PreSessionTab) -> Unit,
+    nameInput: String,
+    onNameInputChange: (String) -> Unit,
+    isEditingName: Boolean,
+    onIsEditingNameChange: (Boolean) -> Unit,
+    effectiveName: String,
+    code: String,
+    onCodeChange: (String) -> Unit,
+    currentUserAvatarUrl: String,
+    colors: ColorScheme,
+    isBusy: Boolean,
+    isCreating: Boolean,
+    isJoining: Boolean,
+    onStartHosting: () -> Unit,
+    onJoinSession: () -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        Icon(
+            imageVector = Icons.Rounded.Group,
+            contentDescription = null,
+            tint = colors.primary,
+            modifier = Modifier.size(44.dp)
+        )
+        Text(
+            text = stringResource(R.string.listen_together),
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            color = colors.onSurface
+        )
+        Text(
+            text = stringResource(R.string.listen_together_desc),
+            style = MaterialTheme.typography.bodyMedium,
+            color = colors.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
+
+        if (uiState is ListenTogetherUiState.Error) {
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = colors.errorContainer,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = uiState.message,
+                    color = colors.onErrorContainer,
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(12.dp)
+                )
+            }
+        }
+
+        SegmentedModeSwitcher(
+            selectedTab = selectedTab,
+            onTabSelected = onTabSelected,
+            colors = colors
+        )
+
+        if (effectiveName.isNotBlank() && !isEditingName) {
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = colors.surfaceContainerHigh,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        shape = CircleShape,
+                        color = colors.primaryContainer,
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            if (currentUserAvatarUrl.isNotBlank()) {
+                                AsyncImage(
+                                    model = currentUserAvatarUrl,
+                                    contentDescription = null,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize().clip(CircleShape)
+                                )
+                            } else {
+                                Text(
+                                    text = effectiveName.firstOrNull()?.uppercase() ?: "?",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 18.sp,
+                                    color = colors.onPrimaryContainer
+                                )
+                            }
+                        }
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = if (selectedTab == PreSessionTab.HOST) "Hosting as $effectiveName" else "Joining as $effectiveName",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = colors.onSurface
+                        )
+                        Text(
+                            text = "Tap edit to change name",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = colors.onSurfaceVariant
+                        )
+                    }
+                    IconButton(
+                        onClick = {
+                            onNameInputChange(effectiveName)
+                            onIsEditingNameChange(true)
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Edit,
+                            contentDescription = "Edit name",
+                            tint = colors.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+            }
+        } else {
+            OutlinedTextField(
+                value = nameInput,
+                onValueChange = onNameInputChange,
+                label = {
+                    Text(
+                        if (selectedTab == PreSessionTab.HOST) stringResource(R.string.listen_together_your_name)
+                        else stringResource(R.string.listen_together_guest_name)
+                    )
+                },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
+                shape = RoundedCornerShape(16.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedBorderColor = colors.onSurfaceVariant,
+                    focusedBorderColor = colors.primary
+                ),
+                trailingIcon = if (effectiveName.isNotBlank() && isEditingName) {
+                    {
+                        IconButton(onClick = { onIsEditingNameChange(false) }) {
+                            Icon(Icons.Rounded.Check, contentDescription = "Done", tint = colors.primary)
+                        }
+                    }
+                } else null,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+
+        if (selectedTab == PreSessionTab.HOST) {
+            Button(
+                onClick = onStartHosting,
+                enabled = effectiveName.isNotBlank() && !isBusy,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                if (isCreating) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.5.dp,
+                            color = colors.onPrimary
+                        )
+                        Text(
+                            text = stringResource(R.string.listen_together_creating),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                } else {
+                    Text(
+                        text = stringResource(R.string.listen_together_start),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }
+        } else {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = stringResource(R.string.listen_together_room_code),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = colors.onSurfaceVariant,
+                    modifier = Modifier.align(Alignment.Start)
+                )
+
+                SegmentedRoomCodeInput(
+                    code = code,
+                    onCodeChange = onCodeChange,
+                    colors = colors
+                )
+
+                Button(
+                    onClick = onJoinSession,
+                    enabled = code.length == 7 && effectiveName.isNotBlank() && !isBusy,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    if (isJoining) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                strokeWidth = 2.5.dp,
+                                color = colors.onPrimary
+                            )
+                            Text(
+                                text = stringResource(R.string.listen_together_joining),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    } else {
+                        Text(
+                            text = stringResource(R.string.listen_together_join),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun HostingContent(
+    hosting: ListenTogetherUiState.Hosting,
+    connectionState: ListenTogetherConnectionState,
+    currentSong: Song?,
+    requests: List<SongRequest>,
+    requestText: String,
+    onRequestTextChange: (String) -> Unit,
+    activeMessage: ChatMessage?,
+    compactMode: Boolean,
+    showSocial: Boolean,
+    remoteState: SessionTrack?,
+    viewModel: PlayerViewModel,
+    colors: ColorScheme,
+    context: Context,
+    hapticFeedback: androidx.compose.ui.hapticfeedback.HapticFeedback
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            BreathingLiveBadge(listenerCount = hosting.members.size, colors = colors)
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = when (connectionState) {
+                    ListenTogetherConnectionState.CONNECTED -> "Sync live"
+                    ListenTogetherConnectionState.RECONNECTING -> "Reconnecting…"
+                    ListenTogetherConnectionState.CONNECTING -> "Connecting…"
+                    ListenTogetherConnectionState.DISCONNECTED -> "Offline"
+                },
+                style = MaterialTheme.typography.labelSmall,
+                color = when (connectionState) {
+                    ListenTogetherConnectionState.CONNECTED -> colors.primary
+                    ListenTogetherConnectionState.RECONNECTING -> colors.error
+                    else -> colors.onSurfaceVariant
+                }
+            )
+            Spacer(Modifier.weight(1f))
+            RoomCodeChip(
+                code = hosting.code,
+                onCopy = {
+                    val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                    cm.setPrimaryClip(ClipData.newPlainText("room code", hosting.code))
+                    viewModel.sendToast(context.getString(R.string.listen_together_code_copied))
+                },
+                colors = colors
+            )
+        }
+
+        if (currentSong != null) {
+            NowPlayingAnchorPreviewCard(song = currentSong, colors = colors)
+        }
+
+        if (hosting.members.size <= 1) {
+            HeroCodeDisplayCard(
+                code = hosting.code,
+                colors = colors,
+                context = context,
+                onToast = viewModel::sendToast
+            )
+
+            val hostPhoto = hosting.members.firstOrNull()?.photoUrl ?: viewModel.currentUserAvatarUrl.collectAsStateWithLifecycle().value.ifBlank { null }
+            Surface(
+                shape = CircleShape,
+                color = avatarColorFor(hosting.hostName),
+                shadowElevation = 4.dp,
+                modifier = Modifier
+                    .size(68.dp)
+                    .align(Alignment.CenterHorizontally)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    if (!hostPhoto.isNullOrBlank()) {
+                        AsyncImage(
+                            model = hostPhoto,
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize().clip(CircleShape)
+                        )
+                    } else {
+                        Text(
+                            text = hosting.hostName.firstOrNull()?.uppercase() ?: "?",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 26.sp
+                        )
+                    }
+                }
+            }
+
+            Text(
+                text = "Share the room code to start listening together",
+                style = MaterialTheme.typography.bodyMedium,
+                color = colors.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
+        } else {
+            Text(
+                text = context.getString(R.string.listen_together_listeners, hosting.members.size),
+                style = MaterialTheme.typography.titleSmall,
+                color = colors.onSurfaceVariant
+            )
+
+            if (compactMode) {
+                CompactMemberList(
+                    members = hosting.members,
+                    hostName = hosting.hostName,
+                    targetVideoId = remoteState?.videoId,
+                    colors = colors
+                )
+            } else {
+                hosting.members.forEach { member ->
+                    MemberRow(
+                        member = member,
+                        activeMessage = activeMessage,
+                        colors = colors,
+                        isHost = member.name == hosting.hostName,
+                        targetVideoId = remoteState?.videoId
+                    )
+                }
+            }
+
+            HostControlBar(
+                isPlaying = remoteState?.isPlaying == true || viewModel.stablePlayerState.collectAsStateWithLifecycle().value.isPlaying,
+                currentSong = currentSong,
+                onPrevious = viewModel::previousSong,
+                onPlayPause = viewModel::playPause,
+                onNext = viewModel::nextSong,
+                colors = colors
+            )
+
+            SongRequestsSection(
+                requests = requests,
+                requestText = requestText,
+                onRequestTextChange = onRequestTextChange,
+                onSubmit = {
+                    viewModel.sendListenTogetherSongRequest(requestText)
+                    onRequestTextChange("")
+                },
+                onVote = viewModel::voteListenTogetherRequest,
+                isHost = true,
+                onQueueNext = { req -> viewModel.queueNextListenTogetherRequest(req) },
+                onDismissRequest = viewModel::dismissListenTogetherRequest,
+                colors = colors
+            )
+
+            if (showSocial) {
+                SocialSection(
+                    onReaction = { viewModel.sendListenTogetherReaction(it) },
+                    onLoved = { viewModel.sendLovedReaction() },
+                    onMessage = { viewModel.sendListenTogetherMessage(it) },
+                    colors = colors,
+                    hapticFeedback = hapticFeedback
+                )
+            }
+        }
+
+        Spacer(Modifier.height(8.dp))
+
+        Button(
+            onClick = { viewModel.endListenTogetherSession() },
+            colors = ButtonDefaults.buttonColors(
+                containerColor = colors.error,
+                contentColor = colors.onError
+            ),
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.listen_together_end_session),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+        }
+    }
+}
+
+@Composable
+private fun GuestContent(
+    guest: ListenTogetherUiState.Guest,
+    connectionState: ListenTogetherConnectionState,
+    syncDriftMs: Long,
+    requests: List<SongRequest>,
+    requestText: String,
+    onRequestTextChange: (String) -> Unit,
+    activeMessage: ChatMessage?,
+    compactMode: Boolean,
+    showSocial: Boolean,
+    remoteState: SessionTrack?,
+    viewModel: PlayerViewModel,
+    colors: ColorScheme,
+    context: Context,
+    hapticFeedback: androidx.compose.ui.hapticfeedback.HapticFeedback
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            BreathingLiveBadge(listenerCount = guest.members.size, colors = colors)
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = context.getString(R.string.listen_together_listening_with, guest.hostName),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = colors.onSurface
+            )
+            Spacer(Modifier.weight(1f))
+            RoomCodeChip(
+                code = guest.code,
+                onCopy = {
+                    val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                    cm.setPrimaryClip(ClipData.newPlainText("room code", guest.code))
+                    viewModel.sendToast(context.getString(R.string.listen_together_code_copied))
+                },
+                colors = colors
+            )
+        }
+
+        if (connectionState != ListenTogetherConnectionState.CONNECTED) {
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = colors.errorContainer,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = when (connectionState) {
+                        ListenTogetherConnectionState.RECONNECTING -> "Reconnecting to the session…"
+                        ListenTogetherConnectionState.CONNECTING -> "Connecting to the session…"
+                        else -> "Session connection unavailable"
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colors.onErrorContainer,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(10.dp)
+                )
+            }
+        }
+
+        GuestSyncActionBar(
+            syncDriftMs = syncDriftMs,
+            onSync = { viewModel.syncListenTogetherNow() },
+            colors = colors
+        )
+
+        if (guest.members.isNotEmpty()) {
+            Text(
+                text = context.getString(R.string.listen_together_listeners, guest.members.size),
+                style = MaterialTheme.typography.titleSmall,
+                color = colors.onSurfaceVariant
+            )
+
+            if (compactMode) {
+                CompactMemberList(
+                    members = guest.members,
+                    hostName = guest.hostName,
+                    targetVideoId = remoteState?.videoId,
+                    colors = colors
+                )
+            } else {
+                guest.members.forEach { member ->
+                    MemberRow(
+                        member = member,
+                        activeMessage = activeMessage,
+                        colors = colors,
+                        isHost = member.name == guest.hostName,
+                        targetVideoId = remoteState?.videoId
+                    )
+                }
+            }
+
+            SongRequestsSection(
+                requests = requests,
+                requestText = requestText,
+                onRequestTextChange = onRequestTextChange,
+                onSubmit = {
+                    viewModel.sendListenTogetherSongRequest(requestText)
+                    onRequestTextChange("")
+                },
+                onVote = viewModel::voteListenTogetherRequest,
+                isHost = false,
+                onQueueNext = {},
+                onDismissRequest = {},
+                colors = colors
+            )
+
+            if (showSocial) {
+                SocialSection(
+                    onReaction = { viewModel.sendListenTogetherReaction(it) },
+                    onLoved = { viewModel.sendLovedReaction() },
+                    onMessage = { viewModel.sendListenTogetherMessage(it) },
+                    colors = colors,
+                    hapticFeedback = hapticFeedback
+                )
+            }
+        }
+
+        Spacer(Modifier.height(8.dp))
+
+        OutlinedButton(
+            onClick = { viewModel.leaveListenTogetherSession() },
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.listen_together_leave),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
         }
     }
 }
@@ -993,7 +1065,6 @@ private fun SegmentedRoomCodeInput(
             }
         }
 
-        // Invisible text field overlay for IME input handling
         BasicTextField(
             value = code,
             onValueChange = { newText ->
@@ -1161,108 +1232,6 @@ private fun HeroCodeDisplayCard(
                 }
             }
         }
-    }
-}
-
-/** Concentric ripple / radar animation around host avatar with waiting status text */
-@Composable
-private fun PulseRadarDiscovery(
-    hostName: String,
-    hostPhotoUrl: String?,
-    colors: ColorScheme
-) {
-    val infiniteTransition = rememberInfiniteTransition(label = "pulseRadar")
-    val waveScale1 by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 2.1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2200, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "radar1"
-    )
-    val waveAlpha1 by infiniteTransition.animateFloat(
-        initialValue = 0.55f,
-        targetValue = 0f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2200, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "radarAlpha1"
-    )
-    val waveScale2 by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 2.1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2200, delayMillis = 1100, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "radar2"
-    )
-    val waveAlpha2 by infiniteTransition.animateFloat(
-        initialValue = 0.55f,
-        targetValue = 0f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2200, delayMillis = 1100, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "radarAlpha2"
-    )
-
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-        modifier = Modifier.padding(vertical = 12.dp)
-    ) {
-        Box(
-            modifier = Modifier.size(110.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Canvas(modifier = Modifier.fillMaxSize()) {
-                val radius = 24.dp.toPx()
-                drawCircle(
-                    color = colors.primary.copy(alpha = waveAlpha1),
-                    radius = radius * waveScale1,
-                    style = Stroke(width = 2.dp.toPx())
-                )
-                drawCircle(
-                    color = colors.primary.copy(alpha = waveAlpha2),
-                    radius = radius * waveScale2,
-                    style = Stroke(width = 2.dp.toPx())
-                )
-            }
-            Surface(
-                shape = CircleShape,
-                color = avatarColorFor(hostName),
-                shadowElevation = 6.dp,
-                modifier = Modifier.size(56.dp)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    if (!hostPhotoUrl.isNullOrBlank()) {
-                        AsyncImage(
-                            model = hostPhotoUrl,
-                            contentDescription = null,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize().clip(CircleShape)
-                        )
-                    } else {
-                        Text(
-                            text = hostName.firstOrNull()?.uppercase() ?: "?",
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 22.sp
-                        )
-                    }
-                }
-            }
-        }
-
-        Text(
-            text = "Waiting for friends to join…",
-            style = MaterialTheme.typography.bodyMedium,
-            color = colors.onSurfaceVariant,
-            textAlign = TextAlign.Center
-        )
     }
 }
 
@@ -1573,8 +1542,6 @@ private fun MiniEqualizerBars(color: Color) {
         verticalAlignment = Alignment.Bottom,
         modifier = Modifier.height(16.dp)
     ) {
-        // Fixed-height containers prevent the Row from remeasuring on every animation frame;
-        // only the inner bar height animates, anchored to the bottom.
         Box(modifier = Modifier.width(2.5.dp).height(16.dp), contentAlignment = Alignment.BottomCenter) {
             Box(modifier = Modifier.width(2.5.dp).height(h1.dp).clip(RoundedCornerShape(1.dp)).background(color))
         }
@@ -1631,17 +1598,6 @@ private fun HostControlBar(
                     )
                 }
             }
-
-            // Embedded progress line
-            LinearProgressIndicator(
-                progress = { 0.35f },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(4.dp)
-                    .clip(RoundedCornerShape(2.dp)),
-                color = colors.primary,
-                trackColor = colors.surfaceContainerHighest
-            )
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -1850,7 +1806,6 @@ private fun SongRequestsSection(
                         )
                     }
 
-                    // Upvote pill with animated vote bounce
                     Surface(
                         shape = RoundedCornerShape(50),
                         color = if (request.votedByMe) colors.primaryContainer else colors.surfaceContainerHighest,
@@ -2085,7 +2040,7 @@ private fun FloatingEmoji(
         coroutineScope {
             launch {
                 rise.animateTo(
-                    targetValue = -420f,
+                    targetValue = -380f,
                     animationSpec = tween(durationMillis = 2400, easing = FastOutSlowInEasing)
                 )
             }
@@ -2097,7 +2052,7 @@ private fun FloatingEmoji(
         onDone()
     }
 
-    val progress = (-rise.value / 420f).coerceIn(0f, 1f)
+    val progress = (-rise.value / 380f).coerceIn(0f, 1f)
     val curvedX = xSpread * sin(progress * PI.toFloat())
 
     Surface(
