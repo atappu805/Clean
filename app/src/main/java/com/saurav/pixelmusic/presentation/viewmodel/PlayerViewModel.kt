@@ -848,6 +848,12 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
+    val currentUserAvatarUrl: StateFlow<String> = youtubeDatastoreRepository.ytAvatarUrl
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
+
+    val currentYtUsername: StateFlow<String> = youtubeDatastoreRepository.ytUsername
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
+
     /** The room's live reaction + message feeds. */
     val listenTogetherReactions: StateFlow<List<ReactionEvent>> = listenTogetherManager.reactionEvents
     val listenTogetherMessages: StateFlow<List<ChatMessage>> = listenTogetherManager.chatMessages
