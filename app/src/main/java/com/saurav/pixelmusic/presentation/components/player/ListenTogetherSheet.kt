@@ -252,6 +252,7 @@ fun ListenTogetherSheet(
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .defaultMinSize(minHeight = 420.dp)
                         .imePadding(),
                     shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
                     color = colors.surfaceContainerLow,
