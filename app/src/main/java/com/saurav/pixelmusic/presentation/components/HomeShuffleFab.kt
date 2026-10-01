@@ -12,8 +12,13 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.rounded.Group
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
@@ -73,8 +78,10 @@ fun HomeShuffleFab(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     isExploreMode: Boolean = false,
+    isSessionActive: Boolean = false,
     onLongClick: (() -> Unit)? = null,
     onSwipeUp: (() -> Unit)? = null,
+    onListenTogetherClick: (() -> Unit)? = null,
 ) {
     val systemNavBarInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
@@ -277,6 +284,64 @@ fun HomeShuffleFab(
                         isExploreMode = isExploreMode,
                         tint = animatedContentColor
                     )
+                }
+
+                // Listen Together half: expands/collapses with a spring — no pop.
+                AnimatedVisibility(
+                    visible = onListenTogetherClick != null,
+                    enter = fadeIn(animationSpec = tween(220)) + expandHorizontally(
+                        expandFrom = Alignment.Start,
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioNoBouncy,
+                            stiffness = Spring.StiffnessMediumLow
+                        )
+                    ),
+                    exit = fadeOut(animationSpec = tween(180)) + shrinkHorizontally(
+                        shrinkTowards = Alignment.Start,
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioNoBouncy,
+                            stiffness = Spring.StiffnessMediumLow
+                        )
+                    ),
+                    label = "ltHalf"
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        VerticalDivider(
+                            modifier = Modifier.height(32.dp),
+                            thickness = 1.dp,
+                            color = animatedContentColor.copy(alpha = 0.35f)
+                        )
+                        Box(
+                            modifier = Modifier
+                                .size(64.dp)
+                                .clip(CircleShape)
+                                .clickable(
+                                    role = Role.Button,
+                                    onClick = {
+                                        hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        onListenTogetherClick?.invoke()
+                                    }
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Group,
+                                contentDescription = stringResource(R.string.listen_together),
+                                tint = if (isSessionActive) MaterialTheme.colorScheme.primary else animatedContentColor,
+                                modifier = Modifier.size(32.dp)
+                            )
+                            if (isSessionActive) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(10.dp)
+                                        .align(Alignment.TopEnd)
+                                        .offset(x = (-14).dp, y = 14.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(0xFF4CAF50))
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }

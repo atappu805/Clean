@@ -720,14 +720,20 @@ fun ExploreScreen(
                 .graphicsLayer { alpha = exploreTitleAlpha }
         )
 
+        val ltUiState by playerViewModel.listenTogetherUiState.collectAsStateWithLifecycle()
+        val isLtActive = ltUiState is com.saurav.pixelmusic.data.session.ListenTogetherUiState.Hosting ||
+            ltUiState is com.saurav.pixelmusic.data.session.ListenTogetherUiState.Guest
+
         HomeShuffleFab(
             isShuffleEnabled = false,
             isPlayerActive = isExploreFabActive,
-            baseBottomOffset = paddingValuesParent.calculateBottomPadding(), // <-- Add this line
+            baseBottomOffset = paddingValuesParent.calculateBottomPadding(),
             onClick = { navController.navigateSafely(Screen.SmartMix.route) },
             isExploreMode = true,
+            isSessionActive = isLtActive,
             onLongClick = { showRecognitionDialog = true },
             onSwipeUp = { showRecognitionDialog = true },
+            onListenTogetherClick = { playerViewModel.openListenTogetherSheet() },
             modifier = Modifier.align(Alignment.BottomEnd)
         )
     }
