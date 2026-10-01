@@ -1939,7 +1939,7 @@ private fun SocialSection(
 private fun BouncyReactionButton(emoji: String, onClick: () -> Unit) {
     var isPressed by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(
-        targetValue = if (isPressed) 1.35f else 1f,
+        targetValue = if (isPressed) 1.2f else 1f,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioMediumBouncy,
             stiffness = Spring.StiffnessMedium
@@ -1975,7 +1975,7 @@ private fun BouncyReactionButton(emoji: String, onClick: () -> Unit) {
 private fun BouncyLovedButton(onClick: () -> Unit) {
     var isPressed by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(
-        targetValue = if (isPressed) 1.4f else 1f,
+        targetValue = if (isPressed) 1.2f else 1f,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioMediumBouncy,
             stiffness = Spring.StiffnessMedium
