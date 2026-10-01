@@ -786,11 +786,6 @@ fun UnifiedPlayerSheetV2(
         onExpansionChanged = castSheetState.onCastExpansionChanged
     )
 
-    UnifiedPlayerListenTogetherLayer(
-        albumColorScheme = albumColorScheme,
-        playerViewModel = playerViewModel
-    )
-
     UnifiedPlayerSaveQueueLayer(
         pendingOverlay = pendingSaveQueueOverlay,
         onDismissOverlay = { sheetModalOverlayController.dismissSaveQueueOverlay() }

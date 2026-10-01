@@ -4,8 +4,6 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.expandHorizontally
-import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -17,7 +15,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -34,13 +31,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.GraphicEq
-import androidx.compose.material.icons.rounded.Group
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -78,10 +73,8 @@ fun HomeShuffleFab(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     isExploreMode: Boolean = false,
-    isSessionActive: Boolean = false,
     onLongClick: (() -> Unit)? = null,
     onSwipeUp: (() -> Unit)? = null,
-    onListenTogetherClick: (() -> Unit)? = null,
 ) {
     val systemNavBarInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
@@ -159,10 +152,6 @@ fun HomeShuffleFab(
         },
         label = "fabDragOffset"
     )
-
-    // Idle + Listen Together action available: the FAB becomes a dual pill
-    // (shuffle on the left, Listen Together on the right).
-    val showDualFab = onListenTogetherClick != null && (!isPlayerActiveDelayed || isSessionActive)
 
     // Swipe-up-to-recognize gesture, shared by both FAB forms.
     val fabDragModifier = if (onSwipeUp != null) {
@@ -249,11 +238,7 @@ fun HomeShuffleFab(
             }
         }
 
-        // ── FAB: one pill that morphs between dual (idle) and single (playing) ────────
-        // The Listen Together half is a pure button with NO drag detector above it,
-        // so its taps can never be swallowed by the recognize drag gesture (which now
-        // lives only on the shuffle half). The form change is a smooth width morph,
-        // not a crossfade pop.
+        // ── Shuffle FAB: tap / long-press / drag-up-to-recognize ───────────────────────
         Box(
             modifier = Modifier
                 .offset { IntOffset(0, animatedOffsetY.roundToInt()) }
@@ -292,63 +277,6 @@ fun HomeShuffleFab(
                         isExploreMode = isExploreMode,
                         tint = animatedContentColor
                     )
-                }
-                // Listen Together half: expands/collapses with a spring — no pop.
-                AnimatedVisibility(
-                    visible = showDualFab,
-                    enter = fadeIn(animationSpec = tween(220)) + expandHorizontally(
-                        expandFrom = Alignment.Start,
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioNoBouncy,
-                            stiffness = Spring.StiffnessMediumLow
-                        )
-                    ),
-                    exit = fadeOut(animationSpec = tween(180)) + shrinkHorizontally(
-                        shrinkTowards = Alignment.Start,
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioNoBouncy,
-                            stiffness = Spring.StiffnessMediumLow
-                        )
-                    ),
-                    label = "ltHalf"
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        VerticalDivider(
-                            modifier = Modifier.height(32.dp),
-                            thickness = 1.dp,
-                            color = animatedContentColor.copy(alpha = 0.35f)
-                        )
-                        Box(
-                            modifier = Modifier
-                                .size(64.dp)
-                                .clip(CircleShape)
-                                .clickable(
-                                    role = Role.Button,
-                                    onClick = {
-                                        hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                        onListenTogetherClick?.invoke()
-                                    }
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Rounded.Group,
-                                contentDescription = stringResource(R.string.listen_together),
-                                tint = if (isSessionActive) MaterialTheme.colorScheme.primary else animatedContentColor,
-                                modifier = Modifier.size(32.dp)
-                            )
-                            if (isSessionActive) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(10.dp)
-                                        .align(Alignment.TopEnd)
-                                        .offset(x = (-14).dp, y = 14.dp)
-                                        .clip(CircleShape)
-                                        .background(Color(0xFF4CAF50))
-                                )
-                            }
-                        }
-                    }
                 }
             }
         }

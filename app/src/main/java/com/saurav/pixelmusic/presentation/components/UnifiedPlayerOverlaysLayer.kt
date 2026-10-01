@@ -30,7 +30,6 @@ import com.saurav.pixelmusic.R
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.util.UnstableApi
 import com.saurav.pixelmusic.data.model.Song
-import com.saurav.pixelmusic.presentation.components.player.ListenTogetherSheet
 import com.saurav.pixelmusic.presentation.viewmodel.PlayerViewModel
 import com.saurav.pixelmusic.presentation.viewmodel.PlaylistViewModel
 import com.saurav.pixelmusic.presentation.viewmodel.StablePlayerState
@@ -490,32 +489,6 @@ internal fun UnifiedPlayerCastLayer(
                 playerViewModel = playerViewModel,
                 onDismiss = onDismiss,
                 onExpansionChanged = onExpansionChanged
-            )
-        }
-    }
-}
-
-@OptIn(UnstableApi::class)
-@Composable
-internal fun UnifiedPlayerListenTogetherLayer(
-    albumColorScheme: ColorScheme,
-    playerViewModel: PlayerViewModel
-) {
-    val showSheet by playerViewModel.showListenTogetherSheet.collectAsStateWithLifecycle()
-    // The sheet drives its own slide-up/slide-down animation
-    // (see ListenTogetherSheet), so no wrapper animation is needed here.
-    CompositionLocalProvider(
-        LocalMaterialTheme provides albumColorScheme
-    ) {
-        MaterialTheme(
-            colorScheme = LocalMaterialTheme.current,
-            typography = MaterialTheme.typography,
-            shapes = MaterialTheme.shapes
-        ) {
-            ListenTogetherSheet(
-                viewModel = playerViewModel,
-                visible = showSheet,
-                onDismiss = { playerViewModel.closeListenTogetherSheet() }
             )
         }
     }

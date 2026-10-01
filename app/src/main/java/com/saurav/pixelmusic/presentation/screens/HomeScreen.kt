@@ -720,10 +720,6 @@ fun HomeScreen(
             )
         }
 
-        val ltUiState by playerViewModel.listenTogetherUiState.collectAsStateWithLifecycle()
-        val isLtActive = ltUiState is com.saurav.pixelmusic.data.session.ListenTogetherUiState.Hosting ||
-            ltUiState is com.saurav.pixelmusic.data.session.ListenTogetherUiState.Guest
-
         HomeShuffleFab(
             isShuffleEnabled = isShuffleEnabled,
             isPlayerActive = currentSong != null,
@@ -734,10 +730,8 @@ fun HomeScreen(
                     playerViewModel.playSongsShuffled(songsToUse, "Your Mix")
                 }
             },
-            isSessionActive = isLtActive,
             onLongClick = { showRecognitionDialog = true },
             onSwipeUp = { showRecognitionDialog = true },
-            onListenTogetherClick = { playerViewModel.openListenTogetherSheet() },
             modifier = Modifier.align(Alignment.BottomEnd)
         )
     }
