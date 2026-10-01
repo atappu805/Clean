@@ -4036,7 +4036,7 @@ class PlayerViewModel @Inject constructor(
             }
 
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
-                if (isRemoteSessionControllingPlayback() || (listenTogetherManager.isGuestActive() && !sessionSyncBypass)) return
+                if (isRemoteSessionControllingPlayback()) return
                 playbackStateHolder.onPlaybackOccurrenceTransition(mediaItem?.mediaId)
                 preparePlaybackAudioMetadataForMedia(mediaItem?.mediaId)
                 transitionSchedulerJob?.cancel()
@@ -4146,12 +4146,6 @@ class PlayerViewModel @Inject constructor(
 
             override fun onPlaybackStateChanged(playbackState: Int) {
                 if (isRemoteSessionControllingPlayback()) return
-                if (listenTogetherManager.isGuestActive() && !sessionSyncBypass) {
-                    if (playbackState == Player.STATE_ENDED) {
-                        playerCtrl.pause()
-                        return
-                    }
-                }
                 refreshPlaybackAudioMetadata(playerCtrl)
                 syncDisplayedMediaItemIfChanged(playerCtrl)
 
@@ -4247,7 +4241,6 @@ class PlayerViewModel @Inject constructor(
 
     // rebuildPlayerQueue functionality moved to PlaybackStateHolder (simplified)
     fun playSongs(songsToPlay: List<Song>, startSong: Song, queueName: String = "None", playlistId: String? = null) {
-        if (blockTransportForGuest()) return
         cancelPendingFullQueuePlayback()
         val requestToken = beginDirectPlaybackRequest()
         directPlaybackJob = viewModelScope.launch {
@@ -4584,9 +4577,7 @@ class PlayerViewModel @Inject constructor(
             } else {
                 playSongsAction()
             }
-            if (!listenTogetherManager.isGuestActive()) {
-                com.saurav.pixelmusic.data.remote.youtube.AutoQueueManager.forceRefill(forceRefresh = true)
-            }
+            com.saurav.pixelmusic.data.remote.youtube.AutoQueueManager.forceRefill(forceRefresh = true)
         }
     }
 
@@ -5405,7 +5396,6 @@ class PlayerViewModel @Inject constructor(
     }
 
     fun playPause() {
-        if (blockTransportForGuest()) return
         val castSession = castStateHolder.castSession.value
         if (castSession != null && castSession.remoteMediaClient != null) {
             val remoteMediaClient = castSession.remoteMediaClient!!
@@ -5500,7 +5490,6 @@ class PlayerViewModel @Inject constructor(
     }
 
     fun seekTo(position: Long) {
-        if (blockTransportForGuest()) return
         if (mediaController == null || mediaController?.isConnected != true) {
             checkAndReconnectMediaController { seekTo(position) }
         }
@@ -5508,7 +5497,6 @@ class PlayerViewModel @Inject constructor(
     }
 
     fun nextSong() {
-        if (blockTransportForGuest()) return
         if (mediaController == null || mediaController?.isConnected != true) {
             checkAndReconnectMediaController { nextSong() }
         }
@@ -5516,7 +5504,6 @@ class PlayerViewModel @Inject constructor(
     }
 
     fun previousSong() {
-        if (blockTransportForGuest()) return
         if (mediaController == null || mediaController?.isConnected != true) {
             checkAndReconnectMediaController { previousSong() }
         }
