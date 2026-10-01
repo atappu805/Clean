@@ -860,254 +860,245 @@ fun FullPlayerContent(
                         }
                     },
                     actions = {
-                        Row(
+                        val showCastLabel = isCastConnecting || (isRemotePlaybackActive && selectedRouteName != null)
+                        val isBluetoothActive =
+                            isBluetoothEnabled && !bluetoothName.isNullOrEmpty() && !isRemotePlaybackActive && !isCastConnecting
+                        val castIconPainter = when {
+                            isCastConnecting || isRemotePlaybackActive -> painterResource(R.drawable.rounded_cast_24)
+                            isBluetoothActive -> painterResource(R.drawable.rounded_bluetooth_24)
+                            else -> painterResource(R.drawable.rounded_mobile_speaker_24)
+                        }
+
+                        Surface(
+                            shape = CircleShape,
+                            color = topBarButtonBg,
                             modifier = Modifier
-                                .padding(end = 14.dp),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                                .padding(end = 14.dp)
+                                .height(42.dp)
                         ) {
-                            val showCastLabel = isCastConnecting || (isRemotePlaybackActive && selectedRouteName != null)
-                            val isBluetoothActive =
-                                isBluetoothEnabled && !bluetoothName.isNullOrEmpty() && !isRemotePlaybackActive && !isCastConnecting
-                            val castIconPainter = when {
-                                isCastConnecting || isRemotePlaybackActive -> painterResource(R.drawable.rounded_cast_24)
-                                isBluetoothActive -> painterResource(R.drawable.rounded_bluetooth_24)
-                                else -> painterResource(R.drawable.rounded_mobile_speaker_24)
-                            }
-                            val castCornersExpanded = 50.dp
-                            val castCornersCompact = 6.dp
-                            val castTopStart = castCornersExpanded
-                            val castTopEnd by animateDpAsState(
-                                targetValue = if (showCastLabel) castCornersExpanded else castCornersCompact,
-                                animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)
-                            )
-                            val castBottomStart = castCornersExpanded
-                            val castBottomEnd by animateDpAsState(
-                                targetValue = if (showCastLabel) castCornersExpanded else castCornersCompact,
-                                animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)
-                            )
-                            Box(
+                            Row(
                                 modifier = Modifier
                                     .height(42.dp)
-                                    .align(Alignment.CenterVertically)
                                     .animateContentSize(
                                         animationSpec = spring(
                                             dampingRatio = Spring.DampingRatioMediumBouncy,
                                             stiffness = Spring.StiffnessLow
                                         )
-                                    )
-                                    .widthIn(
-                                        min = 50.dp,
-                                        max = if (showCastLabel) 190.dp else 58.dp
-                                    )
-                                    .clip(
-                                        RoundedCornerShape(
-                                            topStart = castTopStart.coerceAtLeast(0.dp),
-                                            topEnd = castTopEnd.coerceAtLeast(0.dp),
-                                            bottomStart = castBottomStart.coerceAtLeast(0.dp),
-                                            bottomEnd = castBottomEnd.coerceAtLeast(0.dp)
-                                        )
-                                    )
-                                    .background(topBarButtonBg)
-                                    .clickable { onShowCastClicked() },
-                                contentAlignment = Alignment.CenterStart
+                                    ),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Row(
+                                // 1. Output / Cast Section
+                                Box(
                                     modifier = Modifier
-                                        .padding(start = 14.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.Start
+                                        .fillMaxHeight()
+                                        .clickable { onShowCastClicked() }
+                                        .padding(horizontal = 14.dp),
+                                    contentAlignment = Alignment.Center
                                 ) {
-                                    Icon(
-                                        painter = castIconPainter,
-                                        contentDescription = when {
-                                            isCastConnecting || isRemotePlaybackActive -> stringResource(R.string.presentation_batch_g_player_cd_cast)
-                                            isBluetoothActive -> stringResource(R.string.presentation_batch_g_player_cd_bluetooth)
-                                            else -> stringResource(R.string.presentation_batch_g_player_cd_local_playback)
-                                        },
-                                        tint = topBarIconColor
-                                    )
-                                    AnimatedVisibility(visible = showCastLabel) {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Spacer(Modifier.width(8.dp))
-                                            AnimatedContent(
-                                                targetState = when {
-                                                    isCastConnecting -> stringResource(R.string.presentation_batch_g_player_connecting)
-                                                    isRemotePlaybackActive && selectedRouteName != null -> selectedRouteName
-                                                    else -> ""
-                                                },
-                                                transitionSpec = {
-                                                    fadeIn(animationSpec = tween(150)) togetherWith fadeOut(animationSpec = tween(120))
-                                                },
-                                                label = "castButtonLabel"
-                                            ) { label ->
-                                                Row(
-                                                    modifier = Modifier.padding(end = 16.dp),
-                                                    verticalAlignment = Alignment.CenterVertically,
-                                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                                ) {
-                                                    Text(
-                                                        text = label,
-                                                        style = MaterialTheme.typography.labelMedium,
-                                                        color = topBarIconColor,
-                                                        maxLines = 1,
-                                                        overflow = TextOverflow.Ellipsis,
-                                                        modifier = Modifier.weight(1f, fill = false)
-                                                    )
-                                                    AnimatedVisibility(visible = isCastConnecting) {
-                                                        CircularProgressIndicator(
-                                                            modifier = Modifier
-                                                                .size(14.dp),
-                                                            strokeWidth = 2.dp,
-                                                            color = topBarIconColor
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.Center
+                                    ) {
+                                        Icon(
+                                            painter = castIconPainter,
+                                            contentDescription = when {
+                                                isCastConnecting || isRemotePlaybackActive -> stringResource(R.string.presentation_batch_g_player_cd_cast)
+                                                isBluetoothActive -> stringResource(R.string.presentation_batch_g_player_cd_bluetooth)
+                                                else -> stringResource(R.string.presentation_batch_g_player_cd_local_playback)
+                                            },
+                                            tint = topBarIconColor,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        AnimatedVisibility(visible = showCastLabel) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Spacer(Modifier.width(8.dp))
+                                                AnimatedContent(
+                                                    targetState = when {
+                                                        isCastConnecting -> stringResource(R.string.presentation_batch_g_player_connecting)
+                                                        isRemotePlaybackActive && selectedRouteName != null -> selectedRouteName
+                                                        else -> ""
+                                                    },
+                                                    transitionSpec = {
+                                                        fadeIn(animationSpec = tween(150)) togetherWith fadeOut(animationSpec = tween(120))
+                                                    },
+                                                    label = "castButtonLabel"
+                                                ) { label ->
+                                                    Row(
+                                                        modifier = Modifier.padding(end = 4.dp),
+                                                        verticalAlignment = Alignment.CenterVertically,
+                                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                                    ) {
+                                                        Text(
+                                                            text = label,
+                                                            style = MaterialTheme.typography.labelMedium,
+                                                            color = topBarIconColor,
+                                                            maxLines = 1,
+                                                            overflow = TextOverflow.Ellipsis,
+                                                            modifier = Modifier.weight(1f, fill = false)
                                                         )
-                                                    }
-                                                    if (isRemotePlaybackActive && !isCastConnecting) {
-                                                        Box(
-                                                            modifier = Modifier
-                                                                .size(8.dp)
-                                                                .clip(CircleShape)
-                                                                .background(topBarIconColor)
-                                                        )
+                                                        AnimatedVisibility(visible = isCastConnecting) {
+                                                            CircularProgressIndicator(
+                                                                modifier = Modifier.size(14.dp),
+                                                                strokeWidth = 2.dp,
+                                                                color = topBarIconColor
+                                                            )
+                                                        }
+                                                        if (isRemotePlaybackActive && !isCastConnecting) {
+                                                            Box(
+                                                                modifier = Modifier
+                                                                    .size(8.dp)
+                                                                    .clip(CircleShape)
+                                                                    .background(topBarIconColor)
+                                                            )
+                                                        }
                                                     }
                                                 }
                                             }
                                         }
                                     }
                                 }
-                            }
 
-                            // Listen Together button
-                            val ltUiState by playerViewModel.listenTogetherUiState.collectAsStateWithLifecycle()
-                            val ltActive = ltUiState is com.saurav.pixelmusic.data.session.ListenTogetherUiState.Hosting ||
-                                ltUiState is com.saurav.pixelmusic.data.session.ListenTogetherUiState.Guest
-                            val ltMemberCount = when (val s = ltUiState) {
-                                is com.saurav.pixelmusic.data.session.ListenTogetherUiState.Hosting -> s.members.size
-                                is com.saurav.pixelmusic.data.session.ListenTogetherUiState.Guest -> s.members.size
-                                else -> 0
-                            }
-                            if (!ltActive) {
+                                // Subtle divider line
                                 Box(
                                     modifier = Modifier
-                                        .size(height = 42.dp, width = 50.dp)
-                                        .clip(RoundedCornerShape(14.dp))
-                                        .background(topBarButtonBg)
-                                        .clickable { playerViewModel.openListenTogetherSheet() },
+                                        .width(1.dp)
+                                        .height(20.dp)
+                                        .background(topBarIconColor.copy(alpha = 0.2f))
+                                )
+
+                                // 2. Listen Together Section
+                                val ltUiState by playerViewModel.listenTogetherUiState.collectAsStateWithLifecycle()
+                                val ltActive = ltUiState is com.saurav.pixelmusic.data.session.ListenTogetherUiState.Hosting ||
+                                    ltUiState is com.saurav.pixelmusic.data.session.ListenTogetherUiState.Guest
+                                val ltMemberCount = when (val s = ltUiState) {
+                                    is com.saurav.pixelmusic.data.session.ListenTogetherUiState.Hosting -> s.members.size
+                                    is com.saurav.pixelmusic.data.session.ListenTogetherUiState.Guest -> s.members.size
+                                    else -> 0
+                                }
+
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxHeight()
+                                        .clickable { playerViewModel.openListenTogetherSheet() }
+                                        .padding(horizontal = 14.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    if (!ltActive) {
+                                        Icon(
+                                            imageVector = Icons.Rounded.Group,
+                                            contentDescription = stringResource(R.string.listen_together),
+                                            tint = topBarIconColor,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    } else {
+                                        val ltInfiniteTransition = rememberInfiniteTransition(label = "ltPillPulse")
+                                        val pulseAlpha by ltInfiniteTransition.animateFloat(
+                                            initialValue = 0.4f,
+                                            targetValue = 1f,
+                                            animationSpec = infiniteRepeatable(
+                                                animation = tween(800, easing = LinearEasing),
+                                                repeatMode = RepeatMode.Reverse
+                                            ),
+                                            label = "pulseAlpha"
+                                        )
+                                        val eqBar1 by ltInfiniteTransition.animateFloat(
+                                            initialValue = 4f,
+                                            targetValue = 12f,
+                                            animationSpec = infiniteRepeatable(
+                                                animation = tween(400, easing = FastOutSlowInEasing),
+                                                repeatMode = RepeatMode.Reverse
+                                            ),
+                                            label = "eqBar1"
+                                        )
+                                        val eqBar2 by ltInfiniteTransition.animateFloat(
+                                            initialValue = 12f,
+                                            targetValue = 5f,
+                                            animationSpec = infiniteRepeatable(
+                                                animation = tween(350, easing = FastOutSlowInEasing),
+                                                repeatMode = RepeatMode.Reverse
+                                            ),
+                                            label = "eqBar2"
+                                        )
+                                        val eqBar3 by ltInfiniteTransition.animateFloat(
+                                            initialValue = 6f,
+                                            targetValue = 14f,
+                                            animationSpec = infiniteRepeatable(
+                                                animation = tween(450, easing = FastOutSlowInEasing),
+                                                repeatMode = RepeatMode.Reverse
+                                            ),
+                                            label = "eqBar3"
+                                        )
+
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(8.dp)
+                                                    .alpha(pulseAlpha)
+                                                    .clip(CircleShape)
+                                                    .background(Color(0xFF4CAF50))
+                                            )
+                                            Row(
+                                                horizontalArrangement = Arrangement.spacedBy(2.dp),
+                                                verticalAlignment = Alignment.Bottom,
+                                                modifier = Modifier.height(14.dp)
+                                            ) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .width(2.dp)
+                                                        .height(eqBar1.dp)
+                                                        .background(topBarIconColor, RoundedCornerShape(1.dp))
+                                                )
+                                                Box(
+                                                    modifier = Modifier
+                                                        .width(2.dp)
+                                                        .height(eqBar2.dp)
+                                                        .background(topBarIconColor, RoundedCornerShape(1.dp))
+                                                )
+                                                Box(
+                                                    modifier = Modifier
+                                                        .width(2.dp)
+                                                        .height(eqBar3.dp)
+                                                        .background(topBarIconColor, RoundedCornerShape(1.dp))
+                                                )
+                                            }
+                                            if (ltMemberCount > 1) {
+                                                Text(
+                                                    text = "$ltMemberCount",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = topBarIconColor
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // Subtle divider line
+                                Box(
+                                    modifier = Modifier
+                                        .width(1.dp)
+                                        .height(20.dp)
+                                        .background(topBarIconColor.copy(alpha = 0.2f))
+                                )
+
+                                // 3. Queue Section
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxHeight()
+                                        .clickable { onShowQueueClicked() }
+                                        .padding(horizontal = 14.dp),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Rounded.Group,
-                                        contentDescription = stringResource(R.string.listen_together),
-                                        tint = topBarIconColor
+                                        painter = painterResource(R.drawable.rounded_queue_music_24),
+                                        contentDescription = stringResource(R.string.presentation_batch_g_player_cd_queue),
+                                        tint = topBarIconColor,
+                                        modifier = Modifier.size(20.dp)
                                     )
                                 }
-                            } else {
-                                val ltInfiniteTransition = rememberInfiniteTransition(label = "ltPillPulse")
-                                val pulseAlpha by ltInfiniteTransition.animateFloat(
-                                    initialValue = 0.4f,
-                                    targetValue = 1f,
-                                    animationSpec = infiniteRepeatable(
-                                        animation = tween(800, easing = LinearEasing),
-                                        repeatMode = RepeatMode.Reverse
-                                    ),
-                                    label = "pulseAlpha"
-                                )
-                                val eqBar1 by ltInfiniteTransition.animateFloat(
-                                    initialValue = 4f,
-                                    targetValue = 12f,
-                                    animationSpec = infiniteRepeatable(
-                                        animation = tween(400, easing = FastOutSlowInEasing),
-                                        repeatMode = RepeatMode.Reverse
-                                    ),
-                                    label = "eqBar1"
-                                )
-                                val eqBar2 by ltInfiniteTransition.animateFloat(
-                                    initialValue = 12f,
-                                    targetValue = 5f,
-                                    animationSpec = infiniteRepeatable(
-                                        animation = tween(350, easing = FastOutSlowInEasing),
-                                        repeatMode = RepeatMode.Reverse
-                                    ),
-                                    label = "eqBar2"
-                                )
-                                val eqBar3 by ltInfiniteTransition.animateFloat(
-                                    initialValue = 6f,
-                                    targetValue = 14f,
-                                    animationSpec = infiniteRepeatable(
-                                        animation = tween(450, easing = FastOutSlowInEasing),
-                                        repeatMode = RepeatMode.Reverse
-                                    ),
-                                    label = "eqBar3"
-                                )
-
-                                Row(
-                                    modifier = Modifier
-                                        .height(42.dp)
-                                        .clip(RoundedCornerShape(21.dp))
-                                        .background(LocalMaterialTheme.current.primary.copy(alpha = 0.18f))
-                                        .clickable { playerViewModel.openListenTogetherSheet() }
-                                        .padding(horizontal = 10.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(8.dp)
-                                            .alpha(pulseAlpha)
-                                            .clip(CircleShape)
-                                            .background(Color(0xFF4CAF50))
-                                    )
-                                    Row(
-                                        horizontalArrangement = Arrangement.spacedBy(2.dp),
-                                        verticalAlignment = Alignment.Bottom,
-                                        modifier = Modifier.height(14.dp)
-                                    ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .width(2.dp)
-                                                .height(eqBar1.dp)
-                                                .background(LocalMaterialTheme.current.primary, RoundedCornerShape(1.dp))
-                                        )
-                                        Box(
-                                            modifier = Modifier
-                                                .width(2.dp)
-                                                .height(eqBar2.dp)
-                                                .background(LocalMaterialTheme.current.primary, RoundedCornerShape(1.dp))
-                                        )
-                                        Box(
-                                            modifier = Modifier
-                                                .width(2.dp)
-                                                .height(eqBar3.dp)
-                                                .background(LocalMaterialTheme.current.primary, RoundedCornerShape(1.dp))
-                                        )
-                                    }
-                                    if (ltMemberCount > 1) {
-                                        Text(
-                                            text = "$ltMemberCount",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            fontWeight = FontWeight.Bold,
-                                            color = LocalMaterialTheme.current.primary
-                                        )
-                                    }
-                                }
-                            }
-
-                            // Queue Button
-                            Box(
-                                modifier = Modifier
-                                    .size(height = 42.dp, width = 50.dp)
-                                    .clip(RoundedCornerShape(14.dp))
-                                    .background(topBarButtonBg)
-                                    .clickable {
-                                        onShowQueueClicked()
-                                    },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    painter = painterResource(R.drawable.rounded_queue_music_24),
-                                    contentDescription = stringResource(R.string.presentation_batch_g_player_cd_queue),
-                                    tint = topBarIconColor
-                                )
                             }
                         }
                     }
