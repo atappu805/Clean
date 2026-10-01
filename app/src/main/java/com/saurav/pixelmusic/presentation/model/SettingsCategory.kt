@@ -5,6 +5,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.DeveloperBoard
 import androidx.compose.material.icons.rounded.DeveloperMode
 import androidx.compose.material.icons.rounded.GraphicEq
+import androidx.compose.material.icons.rounded.Group
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.LibraryMusic
 import androidx.compose.material.icons.rounded.MusicNote
@@ -43,6 +44,12 @@ enum class SettingsCategory(
         titleRes = R.string.settings_category_playback_title,
         subtitleRes = R.string.settings_category_playback_subtitle,
         icon = Icons.Rounded.MusicNote // Using MusicNote again or maybe PlayCircle if available
+    ),
+    LISTEN_TOGETHER(
+        id = "listen_together",
+        titleRes = R.string.listen_together,
+        subtitleRes = R.string.listen_together_desc,
+        icon = Icons.Rounded.Group
     ),
     BEHAVIOR(
         id = "behavior",

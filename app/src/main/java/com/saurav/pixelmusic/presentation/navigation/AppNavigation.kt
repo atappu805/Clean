@@ -59,6 +59,7 @@ import com.saurav.pixelmusic.presentation.screens.SearchScreen
 import com.saurav.pixelmusic.presentation.screens.SettingsSearchScreen
 import com.saurav.pixelmusic.presentation.screens.StatsScreen
 import com.saurav.pixelmusic.presentation.screens.SettingsScreen
+import com.saurav.pixelmusic.presentation.screens.ListenTogetherSettingsScreen
 import com.saurav.pixelmusic.presentation.screens.SettingsCategoryScreen
 import com.saurav.pixelmusic.presentation.viewmodel.PlayerViewModel
 import com.saurav.pixelmusic.presentation.viewmodel.PlaylistViewModel
@@ -258,6 +259,17 @@ fun AppNavigation(
                             navController.popBackStack()
                         }
                     )
+                }
+            }
+            composable(
+                Screen.ListenTogetherSettings.route,
+                enterTransition = { enterTransition() },
+                exitTransition = { exitTransition() },
+                popEnterTransition = { popEnterTransition() },
+                popExitTransition = { popExitTransition() },
+            ) {
+                ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
+                    ListenTogetherSettingsScreen(navController = navController)
                 }
             }
             composable(
