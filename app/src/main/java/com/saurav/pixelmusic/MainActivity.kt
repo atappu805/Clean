@@ -484,8 +484,16 @@ class MainActivity : ComponentActivity() {
 
             intent.action == android.content.Intent.ACTION_VIEW && intent.data != null -> {
                 intent.data?.let { uri ->
-                    persistUriPermissionIfNeeded(intent, uri)
-                    playerViewModel.playExternalUri(uri)
+                    if (uri.scheme == "pixelmusic" && (uri.host == "listen_together" || uri.path?.contains("listen_together") == true)) {
+                        val roomCode = uri.getQueryParameter("code")
+                        if (!roomCode.isNullOrBlank()) {
+                            playerViewModel.setPendingListenTogetherCode(roomCode)
+                        }
+                        playerViewModel.openListenTogetherSheet()
+                    } else {
+                        persistUriPermissionIfNeeded(intent, uri)
+                        playerViewModel.playExternalUri(uri)
+                    }
                 }
                 clearExternalIntentPayload(intent)
             }
