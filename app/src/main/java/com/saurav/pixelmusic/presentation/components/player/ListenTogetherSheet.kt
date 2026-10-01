@@ -108,6 +108,7 @@ import com.saurav.pixelmusic.presentation.viewmodel.PlayerViewModel
 import com.saurav.pixelmusic.ui.theme.GoogleSansRounded
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlin.math.PI

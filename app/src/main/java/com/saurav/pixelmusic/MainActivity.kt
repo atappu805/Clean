@@ -30,10 +30,16 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import com.saurav.pixelmusic.data.model.youtube.SongItem
+import com.saurav.pixelmusic.data.remote.youtube.toNativeSong
+import com.saurav.pixelmusic.data.remote.youtube.YouTube
 import com.saurav.pixelmusic.presentation.components.HomeShuffleFab
 import com.saurav.pixelmusic.presentation.components.MusicRecognitionOverlay
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
@@ -1320,9 +1326,10 @@ class MainActivity : ComponentActivity() {
                                         navController.navigateSafely(Screen.SmartMix.route)
                                     } else {
                                         val yourMix = playerViewModel.yourMixSongs.value
-                                        val songsToUse = yourMix.ifEmpty { playerViewModel.playerUiState.value.cachedSongs }
-                                        if (songsToUse.isNotEmpty()) {
-                                            playerViewModel.playSongsShuffled(songsToUse, "Your Mix")
+                                        if (yourMix.isNotEmpty()) {
+                                            playerViewModel.playSongsShuffled(yourMix, "Your Mix")
+                                        } else {
+                                            playerViewModel.playRandomSong()
                                         }
                                     }
                                 },
@@ -1429,9 +1436,36 @@ class MainActivity : ComponentActivity() {
                             MusicRecognitionOverlay(
                                 isExternalWindow = false,
                                 onDismiss = { showRecognitionDialog = false },
-                                onPlayMusic = { recognizedSong ->
+                                onPlayMusic = { recognizedResult ->
                                     showRecognitionDialog = false
-                                    playerViewModel.playSong(recognizedSong)
+                                    scope.launch {
+                                        val songToPlay = withContext(Dispatchers.IO) {
+                                            val query = "${recognizedResult.title} ${recognizedResult.artist}"
+                                            val searchResult = YouTube.search(
+                                                query,
+                                                YouTube.SearchFilter.FILTER_SONG
+                                            ).getOrNull()
+
+                                            val topResult = searchResult?.items
+                                                ?.firstOrNull { it is SongItem } as? SongItem
+
+                                            val nativeSong = topResult?.toNativeSong()
+                                            nativeSong?.copy(
+                                                albumArtUriString = recognizedResult.coverArtHqUrl
+                                                    ?: recognizedResult.coverArtUrl
+                                                    ?: nativeSong.albumArtUriString
+                                            )
+                                        }
+
+                                        if (songToPlay != null) {
+                                            playerViewModel.playWithArchiveTuneQueueBuilder(
+                                                song = songToPlay,
+                                                queueName = "Recognized Music"
+                                            )
+                                        } else {
+                                            playerViewModel.sendToast("Could not find this track on YouTube Music.")
+                                        }
+                                    }
                                 }
                             )
                         }
