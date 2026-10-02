@@ -229,7 +229,6 @@
     <string name="cd_add_drive_folder">添加文件夹</string>
     <string name="cd_logout">退出登录</string>
     <string name="screen_netease_dashboard_title">网易云音乐</string>
-    <string name="screen_qq_music_dashboard_title">QQ 音乐</string>
     <string name="cd_sync_all_playlists">同步所有播放列表</string>
     <string name="error_with_message_format">错误：%1$s</string>
     <string name="sync_status_syncing_ellipsis">同步中……</string>
