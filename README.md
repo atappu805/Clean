@@ -79,8 +79,7 @@
 
 ### ☁️ Cloud & Self-Hosted Music Servers
 - **Subsonic API Compatibility:** Connect to Navidrome, Airsonic, and all Subsonic-compliant music servers.
-- **Jellyfin Integration:** Stream directly from your self-hosted Jellyfin media libraries.
-- **Streaming Platforms:** Sync playlists and favorites from NetEase Music, QQ Music, and YouTube Music.
+- **Streaming Platforms:** Sync playlists and favorites from NetEase Music and YouTube Music.
 
 ### 🏝️ System & OEM Integrations
 - **Dynamic Island / Capsule Integration:** Native status bar capsule support for OriginOS, HyperOS, Realme UI, OxygenOS, and ColorOS for live playback tracking.
