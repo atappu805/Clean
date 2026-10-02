@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4f1eb">
+  <meta name="description" content="PixelMusic — an open-source Android music player built around Material 3 Expressive design, powerful playback, synchronized lyrics and a community-first philosophy.">
+  <title>PixelMusic — Music, with intention.</title>
+  <link rel="icon" href="app/src/main/res/drawable/ic_launcher_custom_fg.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <canvas id="music-field" aria-hidden="true"></canvas>
+  <div class="grain" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <a class="brand" href="#" aria-label="PixelMusic home">
+      <span class="brand-mark"><img src="app/src/main/res/drawable/ic_launcher_custom_fg.png" alt=""></span>
+      <span>PixelMusic</span>
+    </a>
+    <nav class="nav" aria-label="Main navigation">
+      <a href="#features">Features</a>
+      <a href="#showcase">Showcase</a>
+      <a href="#about">About</a>
+      <a href="https://github.com/Saurav-02/PixelMusic" target="_blank" rel="noreferrer">GitHub ↗</a>
+    </nav>
+    <a class="top-action" href="https://github.com/Saurav-02/PixelMusic/releases" target="_blank" rel="noreferrer">Get PixelMusic <span>↗</span></a>
+  </header>
+
+  <main>
+    <section class="hero section-shell">
+      <div class="hero-copy reveal">
+        <div class="eyebrow"><span class="pulse-dot"></span> Open source · Android 11+</div>
+        <h1>Music,<br><em>with intention.</em></h1>
+        <p class="hero-lede">A considered music player for people who care about sound, design, and the little details that make listening feel personal.</p>
+        <div class="hero-actions">
+          <a class="button button-filled" href="https://github.com/Saurav-02/PixelMusic/releases" target="_blank" rel="noreferrer">Download PixelMusic <span>↗</span></a>
+          <a class="button button-tonal" href="#showcase">Explore the app <span>↓</span></a>
+        </div>
+        <div class="hero-meta">
+          <span><b>100%</b> Kotlin</span>
+          <span><b>Material 3</b> Expressive</span>
+          <span><b>Open</b> by design</span>
+        </div>
+      </div>
+
+      <div class="hero-stage reveal reveal-delay">
+        <div class="stage-orbit orbit-one"></div>
+        <div class="stage-orbit orbit-two"></div>
+        <div class="music-note note-a">♪</div>
+        <div class="music-note note-b">♫</div>
+        <div class="music-note note-c">·</div>
+        <div class="hero-phone phone-back">
+          <img src="assets/IMG_20260923_100325.jpg" alt="PixelMusic interface">
+        </div>
+        <div class="hero-phone phone-front">
+          <img src="assets/IMG_20260923_100233.jpg" alt="PixelMusic Now Playing screen">
+          <div class="phone-sheen"></div>
+        </div>
+        <div class="track-chip">
+          <span class="mini-art"><img src="assets/IMG_20260923_100206.jpg" alt=""></span>
+          <span><small>NOW PLAYING</small><strong>Made for the moment</strong></span>
+          <span class="mini-bars"><i></i><i></i><i></i><i></i></span>
+        </div>
+      </div>
+    </section>
+
+    <section class="marquee-wrap" aria-label="PixelMusic principles">
+      <div class="marquee">
+        <span>PLAYBACK THAT DISAPPEARS</span><b>✦</b><span>DESIGN THAT BREATHES</span><b>✦</b><span>OPEN SOURCE, COMMUNITY FIRST</span><b>✦</b><span>PLAYBACK THAT DISAPPEARS</span><b>✦</b><span>DESIGN THAT BREATHES</span><b>✦</b>
+      </div>
+    </section>
+
+    <section class="intro section-shell reveal">
+      <div class="section-kicker">01 / The idea</div>
+      <div>
+        <h2>Everything you need.<br><span>Nothing shouting for attention.</span></h2>
+        <p>PixelMusic brings a modern, expressive Android interface to a serious music player. Album art shapes the atmosphere, controls stay close, and the experience is built to feel native rather than decorated.</p>
+      </div>
+    </section>
+
+    <section id="features" class="features section-shell">
+      <div class="feature-card feature-large reveal">
+        <div class="card-number">01</div>
+        <div class="feature-visual waveform-visual">
+          <div class="wave"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        </div>
+        <div class="feature-text">
+          <span class="tag">Playback</span>
+          <h3>Fast enough to forget the loading screen.</h3>
+          <p>Direct streaming, adaptive quality, intelligent preloading and a dual-player architecture keep the next song close at hand.</p>
+        </div>
+      </div>
+
+      <div class="feature-card reveal reveal-delay">
+        <div class="card-number">02</div>
+        <div class="feature-visual color-tiles">
+          <span></span><span></span><span></span><span></span><span></span><span></span>
+        </div>
+        <div class="feature-text">
+          <span class="tag">Material 3 Expressive</span>
+          <h3>Design that responds to your music.</h3>
+          <p>Dynamic color, ambient artwork, fluid motion and tactile surfaces make the interface feel alive without becoming noisy.</p>
+        </div>
+      </div>
+
+      <div class="feature-card reveal">
+        <div class="card-number">03</div>
+        <div class="feature-visual lyrics-visual">
+          <div>we're just<br><strong>getting started</strong></div>
+          <div class="lyric-line">let the music stay</div>
+          <div class="lyric-line faint">a little longer</div>
+        </div>
+        <div class="feature-text">
+          <span class="tag">Lyrics</span>
+          <h3>Lyrics that keep time.</h3>
+          <p>Synced lyrics, karaoke-style highlights, immersive typography and an AI rescue path when sources come up short.</p>
+        </div>
+      </div>
+
+      <div class="feature-card feature-wide reveal">
+        <div class="card-number">04</div>
+        <div class="feature-visual cloud-visual">
+          <div class="cloud-node node-1">YT</div>
+          <div class="cloud-node node-2">JF</div>
+          <div class="cloud-node node-3">NV</div>
+          <div class="cloud-line line-1"></div><div class="cloud-line line-2"></div><div class="cloud-line line-3"></div>
+          <div class="cloud-center">LIBRARY</div>
+        </div>
+        <div class="feature-text">
+          <span class="tag">Your library, your way</span>
+          <h3>From local files to your own server.</h3>
+          <p>Downloads, embedded metadata, Android MediaStore, Subsonic-compatible servers, Jellyfin and streaming integrations live together in one library.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="showcase" class="showcase section-shell">
+      <div class="showcase-heading reveal">
+        <div class="section-kicker">02 / In the wild</div>
+        <h2>Designed for the<br><em>whole listening ritual.</em></h2>
+        <p>Every screen is part of the same visual language — from your library to the lyrics, downloads and the little moments between songs.</p>
+      </div>
+      <div class="gallery">
+        <figure class="shot shot-tall reveal"><img src="assets/IMG_20260923_100206.jpg" alt="PixelMusic home screen"><figcaption>Home · your library at a glance</figcaption></figure>
+        <figure class="shot shot-tall offset reveal reveal-delay"><img src="assets/IMG_20260923_100221.jpg" alt="PixelMusic music library"><figcaption>Library · built around discovery</figcaption></figure>
+        <figure class="shot shot-wide reveal"><img src="assets/IMG_20260923_100255.jpg" alt="PixelMusic player interface"><figcaption>Now Playing · album art takes the stage</figcaption></figure>
+        <figure class="shot shot-tall reveal"><img src="assets/IMG_20260923_100305.jpg" alt="PixelMusic playlist"><figcaption>Playlists · made yours</figcaption></figure>
+        <figure class="shot shot-tall offset reveal"><img src="assets/IMG_20260923_100314.jpg" alt="PixelMusic lyrics interface"><figcaption>Lyrics · right on the beat</figcaption></figure>
+        <figure class="shot shot-wide reveal"><img src="assets/IMG_20260923_100349.jpg" alt="PixelMusic settings"><figcaption>Settings · thoughtful down to the last switch</figcaption></figure>
+      </div>
+    </section>
+
+    <section class="statement section-shell reveal">
+      <div class="statement-mark">✦</div>
+      <p>“An open-source music player<br>built with its community.”</p>
+      <span>— The PixelMusic philosophy</span>
+    </section>
+
+    <section id="about" class="about section-shell">
+      <div class="about-copy reveal">
+        <div class="section-kicker">03 / About PixelMusic</div>
+        <h2>Built in the open.<br><em>Shaped by listening.</em></h2>
+        <p>PixelMusic is an open-source Android music player focused on a high-quality everyday experience. It combines expressive Material design with serious playback, downloads, lyrics, cloud integrations and system-level Android features.</p>
+        <p>The project is developed by <strong>Saurav Biswas</strong>, with UI collaboration from <strong>@Xyg901</strong>, and builds upon and credits the open-source PixelPlayer project by Theo Vilardo.</p>
+        <div class="about-actions">
+          <a class="button button-filled" href="https://github.com/Saurav-02/PixelMusic" target="_blank" rel="noreferrer">View source on GitHub ↗</a>
+          <a class="button button-tonal" href="https://t.me/Saurav124x" target="_blank" rel="noreferrer">Join the community ↗</a>
+        </div>
+      </div>
+      <div class="about-panel reveal reveal-delay">
+        <div class="panel-top"><span>PIXELMUSIC</span><span>EST. 2025</span></div>
+        <div class="panel-logo"><img src="app/src/main/res/drawable/ic_launcher_custom_fg.png" alt="PixelMusic logo"></div>
+        <div class="panel-spec">
+          <div><span>Platform</span><strong>Android 11+</strong></div>
+          <div><span>UI</span><strong>Jetpack Compose</strong></div>
+          <div><span>Language</span><strong>Kotlin</strong></div>
+          <div><span>License</span><strong>Open source</strong></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="cta section-shell reveal">
+      <div class="cta-inner">
+        <div>
+          <span class="tag">Ready when you are</span>
+          <h2>Put your music<br><em>back in focus.</em></h2>
+        </div>
+        <a class="button button-dark" href="https://github.com/Saurav-02/PixelMusic/releases" target="_blank" rel="noreferrer">Get the latest build <span>↗</span></a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer section-shell">
+    <div class="brand"><span class="brand-mark"><img src="app/src/main/res/drawable/ic_launcher_custom_fg.png" alt=""></span><span>PixelMusic</span></div>
+    <p>Open source · Community first · Made for Android</p>
+    <div class="footer-links"><a href="https://github.com/Saurav-02/PixelMusic" target="_blank" rel="noreferrer">GitHub</a><a href="https://t.me/Saurav124x" target="_blank" rel="noreferrer">Telegram</a><a href="https://www.instagram.com/holy_saurav" target="_blank" rel="noreferrer">Instagram</a></div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
