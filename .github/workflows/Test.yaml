@@ -102,10 +102,11 @@ jobs:
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
           git config --local --unset-all "http.https://github.com/.extraheader" || true
-          git checkout -b dist-tmp
-          git rm -f vz-pixelmusic.jks
-          git rm -rf .github/workflows
-          git commit -m "chore: strip signing key and workflows for test distribution [skip ci]"
+          git checkout --orphan dist-tmp
+          rm -f vz-pixelmusic.jks
+          rm -rf .github/workflows
+          git add -A
+          git commit -m "chore: sync stripped source with cleared history [skip ci]"
           git push https://x-access-token:${{ secrets.TEST_REPO_PAT }}@github.com/Test-px/PixelMusic.git dist-tmp:main --force
           git checkout main
           git branch -D dist-tmp

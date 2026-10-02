@@ -86,10 +86,11 @@ jobs:
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
           git config --local --unset-all "http.https://github.com/.extraheader" || true
-          git checkout -b dist-tmp
-          git rm -f vz-pixelmusic.jks
-          git rm -rf .github/workflows
-          git commit -m "chore: strip signing key and workflows for distribution [skip ci]"
+          git checkout --orphan dist-tmp
+          rm -f vz-pixelmusic.jks
+          rm -rf .github/workflows
+          git add -A
+          git commit -m "chore: sync stripped source with cleared history [skip ci]"
           echo "Syncing code to ${{ env.TARGET_REPO }} (master branch)..."
           git push https://x-access-token:${{ secrets.TARGET_REPO_TOKEN }}@github.com/${{ env.TARGET_REPO }}.git dist-tmp:master --force
           echo "Syncing code to ${{ env.DIST_REPO }} (main branch)..."
