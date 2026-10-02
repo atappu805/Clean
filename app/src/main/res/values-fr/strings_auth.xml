@@ -29,17 +29,7 @@
     <string name="cd_subsonic_logo">Subsonic</string>
 
     <!-- Jellyfin -->
-    <string name="auth_jellyfin_title">Jellyfin</string>
-    <string name="auth_jellyfin_info_card">Se connecte aux serveurs Jellyfin. HTTP et HTTPS sont tous deux pris en charge pour l\'accès au réseau local.</string>
-    <string name="auth_jellyfin_subtitle">Connectez-vous à votre serveur multimédia Jellyfin</string>
-    <string name="auth_jellyfin_connection_subtitle">Entrez l\'URL de votre serveur Jellyfin et vos identifiants de compte.</string>
-    <string name="auth_jellyfin_server_placeholder">http://192.168.1.100:8096</string>
-    <string name="auth_jellyfin_server_url_hint">URL complète de votre serveur Jellyfin, y compris le port.</string>
-    <string name="auth_jellyfin_username_hint">Votre nom d\'utilisateur Jellyfin.</string>
-    <string name="auth_jellyfin_password_hint">Votre mot de passe Jellyfin.</string>
     <string name="auth_prefill_http">Pré-remplir http://</string>
-    <string name="auth_jellyfin_footer">Se connecte aux serveurs Jellyfin pour diffuser votre bibliothèque musicale</string>
-    <string name="cd_jellyfin_logo">Jellyfin</string>
 
     <!-- Google Drive -->
     <string name="auth_gdrive_toast_connected">Google Drive connecté !</string>
@@ -47,12 +37,10 @@
 
     <!-- Web login (NetEase / QQ Music) — shared -->
     <string name="auth_web_exit_confirm_title_netease">Quitter la connexion NetEase ?</string>
-    <string name="auth_web_exit_confirm_title_qq">Quitter la connexion QQ Music ?</string>
     <string name="auth_web_exit_confirm_body">Vous pourrez revenir plus tard. L\'état actuel de la page sera perdu lors de la fermeture.</string>
     <string name="auth_exit">Quitter</string>
     <string name="auth_stay">Rester</string>
     <string name="auth_login_netease_title">Connexion à NetEase Music</string>
-    <string name="auth_login_qq_title">Connexion à QQ Music</string>
     <string name="auth_web_cd_web_back">Retour Web</string>
     <string name="auth_web_cd_web_forward">Avance Web</string>
     <string name="auth_web_cd_refresh">Actualiser</string>
