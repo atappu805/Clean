@@ -95,9 +95,7 @@ data class Song(
                 telegramChatId = null,
                 neteaseId = null,
                 gdriveFileId = null,
-                qqMusicMid = null,
                 navidromeId = null,
-                jellyfinId = null,
                 youtubeId = null,
                 albumBrowseId = null
             )
