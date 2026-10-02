@@ -38,7 +38,7 @@ class PlaylistsModuleHandler @Inject constructor(
     override suspend fun export(): String = withContext(Dispatchers.IO) {
         val allPlaylists = playlistPreferencesRepository.getPlaylistsOnce()
 
-        // Only export local/AI playlists — cloud playlists (Telegram, Netease, QQMusic)
+        // Only export local/AI playlists — cloud playlists (Telegram, Netease)
         // are tied to service auth and would be empty on restore
         val playlists = allPlaylists.filter { it.source in LOCAL_SOURCES }
 
