@@ -39,9 +39,7 @@ data class Song(
     val telegramChatId: Long? = null, // ID of the chat where the file is located
     val neteaseId: Long? = null, // Netease Cloud Music song ID
     val gdriveFileId: String? = null, // Google Drive file ID
-    val qqMusicMid: String? = null, // QQ Music song MID
     val navidromeId: String? = null, // Navidrome song ID
-    val jellyfinId: String? = null, // Jellyfin item ID
     val youtubeId: String? = null, // YouTube video ID for dynamic streaming
     val albumBrowseId: String? = null, // YouTube album browse ID
 ) : Parcelable {
