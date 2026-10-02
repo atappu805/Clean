@@ -39,7 +39,6 @@
     <string name="auth_jellyfin_password_hint">你的 Jellyfin 账户密码。</string>
     <string name="auth_prefill_http">预填充 http://</string>
     <string name="auth_jellyfin_footer">连接到 Jellyfin 服务器以串流你的音乐库</string>
-    <string name="cd_jellyfin_logo">Jellyfin</string>
 
     <!-- Google Drive -->
     <string name="auth_gdrive_toast_connected">Google Drive 已连接！</string>

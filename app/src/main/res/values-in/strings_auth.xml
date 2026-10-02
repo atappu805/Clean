@@ -39,7 +39,6 @@
     <string name="auth_jellyfin_password_hint">Kata sandi akun Jellyfin Anda.</string>
     <string name="auth_prefill_http">Isi otomatis http://</string>
     <string name="auth_jellyfin_footer">Terhubung ke server Jellyfin untuk mengalirkan pustaka musik Anda</string>
-    <string name="cd_jellyfin_logo">Jellyfin</string>
 
     <!-- Google Drive -->
     <string name="auth_gdrive_toast_connected">Google Drive terhubung!</string>

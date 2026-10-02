@@ -39,7 +39,6 @@
     <string name="auth_jellyfin_password_hint">La password del tuo account Jellyfin.</string>
     <string name="auth_prefill_http">Precompila http://</string>
     <string name="auth_jellyfin_footer">Si connette ai server Jellyfin per lo streaming della tua libreria musicale</string>
-    <string name="cd_jellyfin_logo">Jellyfin</string>
 
     <!-- Google Drive -->
     <string name="auth_gdrive_toast_connected">Google Drive connesso!</string>

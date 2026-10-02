@@ -39,7 +39,6 @@
     <string name="auth_jellyfin_password_hint">Пароль вашей учётной записи Jellyfin.</string>
     <string name="auth_prefill_http">Вставить http://</string>
     <string name="auth_jellyfin_footer">Подключение к серверам Jellyfin для стриминга вашей музыкальной библиотеки</string>
-    <string name="cd_jellyfin_logo">Jellyfin</string>
 
     <!-- Google Drive -->
     <string name="auth_gdrive_toast_connected">Google Drive подключён!</string>

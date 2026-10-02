@@ -39,7 +39,6 @@
     <string name="auth_jellyfin_password_hint">Ditt Jellyfin-passord.</string>
     <string name="auth_prefill_http">Fyll ut http://</string>
     <string name="auth_jellyfin_footer">Kobler til Jellyfin-servere for strømming av musikk</string>
-    <string name="cd_jellyfin_logo">Jellyfin</string>
 
     <!-- Google Drive -->
     <string name="auth_gdrive_toast_connected">Google Drive tilkoblet!</string>
