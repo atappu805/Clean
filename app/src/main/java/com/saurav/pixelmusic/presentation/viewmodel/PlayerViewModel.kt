@@ -5006,9 +5006,7 @@ class PlayerViewModel @Inject constructor(
             val scheme = startingUri.scheme
             if (
                 scheme == "netease" ||
-                scheme == "qqmusic" ||
                 scheme == "navidrome" ||
-                scheme == "jellyfin" ||
                 scheme == "gdrive" ||
                 scheme == "youtube"
             ) {
@@ -5077,9 +5075,7 @@ class PlayerViewModel @Inject constructor(
         val scheme = originalUri.scheme
         if (
             scheme != "netease" &&
-            scheme != "qqmusic" &&
             scheme != "navidrome" &&
-            scheme != "jellyfin" &&
             scheme != "gdrive" &&
             scheme != "youtube"
         ) {
