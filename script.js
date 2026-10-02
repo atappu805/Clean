@@ -1,4 +1,5 @@
 (() => {
+  // 1. Ambient musical particle field
   const canvas = document.getElementById('music-field');
   const ctx = canvas.getContext('2d');
   let width = 0, height = 0, dpr = 1, time = 0;
@@ -22,7 +23,6 @@
     time += 1;
     ctx.clearRect(0, 0, width, height);
 
-    // A quiet, paper-like musical field: thin arcs and particles rather than neon.
     const cx = width * .72, cy = height * .28;
     ctx.lineWidth = 1;
     for (let j = 0; j < 5; j++) {
@@ -50,6 +50,7 @@
   window.addEventListener('resize', resize, {passive:true});
   resize(); draw();
 
+  // 2. Scroll Reveal Observer
   const observer = new IntersectionObserver(entries => {
     entries.forEach(entry => {
       if (entry.isIntersecting) {
@@ -60,7 +61,96 @@
   }, {threshold:.12, rootMargin:'0px 0px -35px 0px'});
   document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
 
-  // Gentle pointer parallax on the hero artwork.
+  // 3. Dynamic Sticky Header Download Trigger
+  const topbar = document.getElementById('site-header');
+  const heroSection = document.getElementById('hero');
+  const headerCta = document.getElementById('header-cta');
+  const ctaText = headerCta ? headerCta.querySelector('.top-action-text') : null;
+  const ctaIcon = headerCta ? headerCta.querySelector('.top-action-icon') : null;
+
+  if (heroSection && topbar && headerCta) {
+    const heroObserver = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (!entry.isIntersecting) {
+          // Scrolled past hero: transform button to direct download trigger
+          topbar.classList.add('scrolled-past-hero');
+          if (ctaText) ctaText.textContent = 'Download APK (v4.4.6)';
+          if (ctaIcon) ctaIcon.textContent = '↓';
+          headerCta.setAttribute('title', 'Direct APK Download · v4.4.6 (Code 31)');
+        } else {
+          // In hero: return to standard Get App label
+          topbar.classList.remove('scrolled-past-hero');
+          if (ctaText) ctaText.textContent = 'Get PixelMusic';
+          if (ctaIcon) ctaIcon.textContent = '↗';
+          headerCta.removeAttribute('title');
+        }
+      });
+    }, { threshold: 0.1 });
+    heroObserver.observe(heroSection);
+  }
+
+  // 4. Interactive Showcase Screen Tabs with Smooth Crossfade
+  const tabButtons = document.querySelectorAll('.tab-pill');
+  const panels = document.querySelectorAll('.showcase-panel');
+
+  tabButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const targetId = btn.getAttribute('aria-controls');
+      const targetPanel = document.getElementById(targetId);
+
+      // Deactivate all tabs
+      tabButtons.forEach(b => {
+        b.classList.remove('active');
+        b.setAttribute('aria-selected', 'false');
+      });
+
+      // Activate clicked tab
+      btn.classList.add('active');
+      btn.setAttribute('aria-selected', 'true');
+
+      // Crossfade panels
+      panels.forEach(p => {
+        p.classList.remove('active');
+      });
+
+      if (targetPanel) {
+        targetPanel.classList.add('active');
+        // Restart video playback if it's the video tab
+        const vid = targetPanel.querySelector('video');
+        if (vid && vid.paused) {
+          vid.play().catch(() => {});
+        }
+      }
+    });
+  });
+
+  // 5. Checksum Copy Button Handler
+  const copyBtn = document.getElementById('copy-hash-btn');
+  const hashElement = document.getElementById('apk-hash');
+  if (copyBtn && hashElement) {
+    copyBtn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(hashElement.textContent.trim());
+        const originalText = copyBtn.textContent;
+        copyBtn.textContent = 'Copied!';
+        setTimeout(() => {
+          copyBtn.textContent = originalText;
+        }, 2000);
+      } catch (err) {
+        // Fallback for non-secure contexts
+        const textarea = document.createElement('textarea');
+        textarea.value = hashElement.textContent.trim();
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        copyBtn.textContent = 'Copied!';
+        setTimeout(() => { copyBtn.textContent = 'Copy'; }, 2000);
+      }
+    });
+  }
+
+  // 6. Gentle Pointer Parallax on Hero Artwork
   const stage = document.querySelector('.hero-stage');
   if (stage && !reduced && window.matchMedia('(pointer:fine)').matches) {
     stage.addEventListener('pointermove', e => {
@@ -72,11 +162,17 @@
         phone.style.marginLeft = (x * strength) + 'px';
         phone.style.marginTop = (y * strength) + 'px';
       });
+      const glow = stage.querySelector('.ambient-art-glow');
+      if (glow) {
+        glow.style.transform = `translate(${x * 20}px, ${y * 20}px)`;
+      }
     });
     stage.addEventListener('pointerleave', () => {
       stage.querySelectorAll('.hero-phone').forEach(phone => {
         phone.style.marginLeft = '0px'; phone.style.marginTop = '0px';
       });
+      const glow = stage.querySelector('.ambient-art-glow');
+      if (glow) glow.style.transform = 'none';
     });
   }
 })();
