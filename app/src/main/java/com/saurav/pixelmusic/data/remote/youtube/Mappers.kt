@@ -59,9 +59,7 @@ fun SongItem.toNativeSong(): Song {
         telegramChatId = null,
         neteaseId = null,
         gdriveFileId = null,
-        qqMusicMid = null,
         navidromeId = null,
-        jellyfinId = null,
         youtubeId = id,
         albumBrowseId = album?.id
     )
@@ -112,9 +110,7 @@ fun com.saurav.pixelmusic.data.model.youtube.Song.toNativeSong(): Song {
         telegramChatId = null,
         neteaseId = null,
         gdriveFileId = null,
-        qqMusicMid = null,
         navidromeId = null,
-        jellyfinId = null,
         youtubeId = youtubeId
     )
 }
