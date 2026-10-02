@@ -9,6 +9,7 @@ import com.saurav.pixelmusic.data.model.youtube.PlaylistInfo
 import com.saurav.pixelmusic.data.model.youtube.Song
 import com.saurav.pixelmusic.data.model.youtube.UmihiSettings
 import com.saurav.pixelmusic.data.preferences.StreamingAudioQuality
+import com.saurav.pixelmusic.data.remote.jiosaavn.JioSaavnHelper
 import com.saurav.pixelmusic.data.preferences.UserPreferencesRepository
 import com.saurav.pixelmusic.presentation.viewmodel.ConnectivityStateHolder
 import dagger.hilt.EntryPoint
@@ -405,10 +406,19 @@ object YoutubeHelper {
             if (cachedHigh != null && isYoutubeUrlValid(cachedHigh)) return cachedHigh
         }
 
-        val result = getSongUrlFromYoutube(context, song, lowQuality = false, maxBitrateKbps = maxBitrate)
-        val newUri = result.first
-        val mimeType = result.second
-        val bitrate = result.third
+        val (newUri, mimeType, bitrate) = try {
+            getSongUrlFromYoutube(context, song, lowQuality = false, maxBitrateKbps = maxBitrate)
+        } catch (e: Exception) {
+            // Fallback: resolve the stream via JioSaavn when YouTube extraction fails.
+            val fallback = JioSaavnHelper.getFallbackStreamUrl(
+                youtubeId = videoId,
+                title = song.title,
+                artist = song.artist,
+                durationMs = JioSaavnHelper.parseDurationToMs(song.duration),
+                preferKbps = if (maxBitrate >= 256) 320 else 160
+            )
+            if (fallback != null) Triple(fallback, "audio/mp4", 160) else throw e
+        }
         streamUrlLruCache.put(cacheKey, newUri)
         mimeType?.let { streamMimeTypeLruCache.put(cacheKey, it) }
         bitrate?.let { streamBitrateLruCache.put(cacheKey, it) }
