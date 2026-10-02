@@ -948,7 +948,15 @@ h1 em, h2 em {
   display: block;
 }
 .spring-overlay {
-  display: none; /* fallback canvas */
+  display: none;
+}
+.spring-overlay.is-active {
+  display: block;
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  inset: 0;
+  z-index: 2;
 }
 
 /* Ambient glow accents behind showcase device */
