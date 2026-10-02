@@ -175,4 +175,144 @@
       if (glow) glow.style.transform = 'none';
     });
   }
+
+  // 7. Live Spring Physics, Lyric Scrubbing & Monet Color Extraction Loop
+  const springCanvas = document.getElementById('spring-canvas');
+  const motionVideo = document.querySelector('.motion-video');
+  if (springCanvas) {
+    const sCtx = springCanvas.getContext('2d');
+    let sTime = 0;
+    
+    // Check if video can play; if not or error, activate spring canvas
+    if (motionVideo) {
+      motionVideo.addEventListener('error', () => {
+        springCanvas.classList.add('is-active');
+        motionVideo.style.display = 'none';
+      });
+      setTimeout(() => {
+        if (motionVideo.readyState < 2) {
+          springCanvas.classList.add('is-active');
+          motionVideo.style.display = 'none';
+        }
+      }, 1500);
+    } else {
+      springCanvas.classList.add('is-active');
+    }
+
+    function renderSpringCanvas() {
+      if (springCanvas.classList.contains('is-active')) {
+        sTime += 1;
+        const w = springCanvas.width = 300;
+        const h = springCanvas.height = 650;
+        const t = sTime * 0.03;
+        
+        // Monet-style color extraction background
+        const r = 244 + Math.sin(t * 0.5) * 6;
+        const g = 238 + Math.cos(t * 0.5) * 6;
+        const b = 232 + Math.sin(t * 0.7) * 8;
+        sCtx.fillStyle = `rgb(${r},${g},${b})`;
+        sCtx.fillRect(0, 0, w, h);
+
+        // Ambient artwork glow
+        const gGrad = sCtx.createRadialGradient(150, 180, 10, 150, 180, 140);
+        gGrad.addColorStop(0, `rgba(98, 82, 143, ${0.4 + Math.sin(t) * 0.15})`);
+        gGrad.addColorStop(0.7, `rgba(154, 106, 63, ${0.25 + Math.cos(t) * 0.1})`);
+        gGrad.addColorStop(1, 'transparent');
+        sCtx.fillStyle = gGrad;
+        sCtx.fillRect(0, 50, w, 260);
+
+        // Header and track info
+        sCtx.fillStyle = '#221f1d';
+        sCtx.font = 'bold 15px "Space Grotesk", sans-serif';
+        sCtx.textAlign = 'center';
+        sCtx.fillText('Smooth Operator', 150, 220);
+        sCtx.font = '11px "DM Sans", sans-serif';
+        sCtx.fillStyle = '#7a736a';
+        sCtx.fillText('Sade • Diamond Life', 150, 238);
+
+        // Fluid spring physics wavy slider
+        const barY = 275;
+        const progressX = 60 + ((Math.sin(t * 0.8) + 1) / 2) * 180;
+        sCtx.lineWidth = 3;
+        sCtx.strokeStyle = '#62528f';
+        sCtx.beginPath();
+        for (let x = 30; x <= progressX; x += 2) {
+          const wave = Math.sin((x * 0.08) - (t * 3)) * 4;
+          if (x === 30) sCtx.moveTo(x, barY + wave);
+          else sCtx.lineTo(x, barY + wave);
+        }
+        sCtx.stroke();
+
+        // Thumb with spring bounce
+        sCtx.fillStyle = '#62528f';
+        sCtx.beginPath();
+        sCtx.arc(progressX, barY + Math.sin((progressX * 0.08) - (t * 3)) * 4, 6 + Math.sin(t * 4), 0, Math.PI * 2);
+        sCtx.fill();
+
+        // Remaining track line
+        sCtx.strokeStyle = '#d7cfc5';
+        sCtx.beginPath();
+        sCtx.moveTo(progressX + 4, barY);
+        sCtx.lineTo(270, barY);
+        sCtx.stroke();
+
+        // Synchronized Live Lyrics Card
+        sCtx.fillStyle = 'rgba(255,255,255,0.7)';
+        sCtx.beginPath();
+        if (sCtx.roundRect) {
+          sCtx.roundRect(20, 310, 260, 270, 20);
+        } else {
+          sCtx.rect(20, 310, 260, 270);
+        }
+        sCtx.fill();
+
+        // Lyrics header
+        sCtx.fillStyle = '#58776e';
+        sCtx.font = 'bold 9px "DM Sans", sans-serif';
+        sCtx.textAlign = 'left';
+        sCtx.fillText('LIVE KARAOKE LYRICS', 36, 335);
+
+        // Animated lyric lines with vertical scrubbing
+        const scrubY = Math.sin(t * 0.7) * 8;
+        sCtx.font = '12px "DM Sans", sans-serif';
+        sCtx.fillStyle = '#9b948b';
+        sCtx.fillText('Diamond lights, call city nights', 36, 365 + scrubY);
+
+        // Active line with word-by-word reveal
+        sCtx.fillStyle = '#eadef5';
+        sCtx.beginPath();
+        if (sCtx.roundRect) {
+          sCtx.roundRect(32, 380 + scrubY, 236, 32, 10);
+        } else {
+          sCtx.rect(32, 380 + scrubY, 236, 32);
+        }
+        sCtx.fill();
+
+        sCtx.font = 'bold 13px "Space Grotesk", sans-serif';
+        sCtx.fillStyle = '#62528f';
+        sCtx.fillText('Coast to coast, LA to Chicago...', 40, 401 + scrubY);
+
+        sCtx.font = '12px "DM Sans", sans-serif';
+        sCtx.fillStyle = '#6e6760';
+        sCtx.fillText('No place for beginners', 36, 436 + scrubY);
+        sCtx.fillStyle = '#9b948b';
+        sCtx.fillText('When sentiment is left to chance', 36, 464 + scrubY);
+
+        // Equalizer bounce bars
+        for (let b = 0; b < 14; b++) {
+          const hEq = 5 + Math.abs(Math.sin(t * 2.5 + b * 0.4)) * 18;
+          sCtx.fillStyle = '#58776e';
+          sCtx.beginPath();
+          if (sCtx.roundRect) {
+            sCtx.roundRect(40 + b * 16, 530 - hEq, 6, hEq, 3);
+          } else {
+            sCtx.rect(40 + b * 16, 530 - hEq, 6, hEq);
+          }
+          sCtx.fill();
+        }
+      }
+      if (!reduced) requestAnimationFrame(renderSpringCanvas);
+    }
+    renderSpringCanvas();
+  }
 })();
