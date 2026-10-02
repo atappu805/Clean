@@ -19,9 +19,7 @@ object SourceType {
     const val TELEGRAM = 1
     const val NETEASE = 2
     const val GDRIVE = 3
-    const val QQMUSIC = 4
     const val NAVIDROME = 5
-    const val JELLYFIN = 6
     const val YOUTUBE = 7
 
     /** Derive source type from a content URI string (fallback for migration / conversion). */
@@ -29,9 +27,7 @@ object SourceType {
         uri.startsWith("telegram://") -> TELEGRAM
         uri.startsWith("netease://") -> NETEASE
         uri.startsWith("gdrive://") -> GDRIVE
-        uri.startsWith("qqmusic://") -> QQMUSIC
         uri.startsWith("navidrome://") -> NAVIDROME
-        uri.startsWith("jellyfin://") -> JELLYFIN
         uri.startsWith("youtube://") -> YOUTUBE
         else -> LOCAL
     }
