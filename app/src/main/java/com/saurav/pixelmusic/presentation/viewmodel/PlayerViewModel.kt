@@ -11,6 +11,7 @@ import androidx.work.WorkManager
 import androidx.work.workDataOf
 import androidx.work.ExistingWorkPolicy
 import com.saurav.pixelmusic.data.remote.youtube.toNativeSong
+import com.saurav.pixelmusic.data.remote.jiosaavn.JioSaavnHelper
 import com.saurav.pixelmusic.data.database.SongEntity
 import com.saurav.pixelmusic.data.database.AlbumEntity
 import com.saurav.pixelmusic.data.database.ArtistEntity
@@ -325,6 +326,9 @@ class PlayerViewModel @Inject constructor(
     private val mediaControllerFactory: com.saurav.pixelmusic.data.media.MediaControllerFactory,
     private val listenTogetherManager: ListenTogetherManager
 ) : ViewModel() {
+
+    /** MediaIds already retried via JioSaavn (prevents retry loops on persistent failures). */
+    private val jioSaavnRetriedIds = mutableSetOf<String>()
 
     private val _playerUiState = MutableStateFlow(PlayerUiState())
     val playerUiState: StateFlow<PlayerUiState> = _playerUiState.asStateFlow()
@@ -4654,6 +4658,38 @@ class PlayerViewModel @Inject constructor(
             override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
                 clearPreparingSongIfMatching()
                 playbackStateHolder.updateStablePlayerState { it.copy(isBuffering = false) }
+                // One-time JioSaavn fallback: if YouTube playback failed, try resolving
+                // the stream via JioSaavn once before giving up on this track.
+                val mediaId = playerCtrl.currentMediaItem?.mediaId
+                val song = playbackStateHolder.stablePlayerState.value.currentSong
+                if (mediaId != null && song != null && jioSaavnRetriedIds.add(mediaId)) {
+                    if (jioSaavnRetriedIds.size > 500) jioSaavnRetriedIds.clear()
+                    viewModelScope.launch {
+                        try {
+                            val fallbackUrl = JioSaavnHelper.getFallbackStreamUrl(
+                                youtubeId = song.youtubeId,
+                                title = song.title,
+                                artist = song.artist,
+                                durationMs = JioSaavnHelper.parseDurationToMs(song.duration),
+                                preferKbps = 160
+                            )
+                            val currentItem = playerCtrl.currentMediaItem
+                            if (fallbackUrl != null && currentItem != null &&
+                                playerCtrl.currentMediaItem?.mediaId == mediaId) {
+                                val newItem = currentItem.buildUpon().setUri(fallbackUrl).build()
+                                val pos = playerCtrl.currentPosition.coerceAtLeast(0L)
+                                playerCtrl.setMediaItem(newItem, pos)
+                                playerCtrl.prepare()
+                                playerCtrl.play()
+                                sendToast("Retrying via alternate source...")
+                                return@launch
+                            }
+                        } catch (_: Exception) {
+                        }
+                        sendToast("Track unavailable, skipping...")
+                    }
+                    return
+                }
                 sendToast("Track unavailable, skipping...")
             }
             override fun onTracksChanged(tracks: Tracks) {
