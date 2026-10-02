@@ -4667,10 +4667,10 @@ class PlayerViewModel @Inject constructor(
                     viewModelScope.launch {
                         try {
                             val fallbackUrl = JioSaavnHelper.getFallbackStreamUrl(
-                                youtubeId = song.youtubeId,
-                                title = song.title,
-                                artist = song.artist,
-                                durationMs = JioSaavnHelper.parseDurationToMs(song.duration),
+                                youtubeId = song.youtubeId ?: mediaId,
+                                title = song.title ?: "",
+                                artist = song.artist ?: "",
+                                durationMs = song.duration,
                                 preferKbps = 160
                             )
                             val currentItem = playerCtrl.currentMediaItem
