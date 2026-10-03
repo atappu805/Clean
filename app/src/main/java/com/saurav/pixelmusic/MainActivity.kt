@@ -868,6 +868,7 @@ class MainActivity : ComponentActivity() {
         val appHapticsConfig = remember(hapticsEnabled) {
             AppHapticsConfig(enabled = hapticsEnabled)
         }
+        val motionBlurIntensity by userPreferencesRepository.uiMotionBlurIntensityFlow.collectAsStateWithLifecycle(initialValue = 1f)
         val scopedHapticFeedback = remember(platformHapticFeedback, appHapticsConfig.enabled) {
             if (appHapticsConfig.enabled) platformHapticFeedback else NoOpHapticFeedback
         }
@@ -980,7 +981,8 @@ class MainActivity : ComponentActivity() {
 
         CompositionLocalProvider(
             LocalAppHapticsConfig provides appHapticsConfig,
-            LocalHapticFeedback provides scopedHapticFeedback
+            LocalHapticFeedback provides scopedHapticFeedback,
+            LocalMotionBlurIntensity provides motionBlurIntensity
         ) {
             AppSidebarDrawer(
                 drawerState = drawerState,
