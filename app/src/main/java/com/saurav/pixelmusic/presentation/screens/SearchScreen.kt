@@ -167,7 +167,12 @@ fun SearchScreen(
             .distinctUntilChanged()
     }.collectAsStateWithLifecycle(initialValue = SearchUiSlice())
     val currentFilter = searchUiState.selectedSearchFilter
-    val stablePlayerState by playerViewModel.stablePlayerState.collectAsStateWithLifecycle()
+    val currentPlayingSongId by remember {
+        playerViewModel.stablePlayerState.map { it.currentSong?.id }.distinctUntilChanged()
+    }.collectAsStateWithLifecycle(initialValue = null)
+    val searchListIsPlaying by remember {
+        playerViewModel.stablePlayerState.map { it.isPlaying }.distinctUntilChanged()
+    }.collectAsStateWithLifecycle(initialValue = false)
     val favoriteSongIds by playerViewModel.favoriteSongIds.collectAsStateWithLifecycle()
     val selectedSongForInfo by playerViewModel.selectedSongForInfo.collectAsStateWithLifecycle()
     val searchSource by playerViewModel.searchSource.collectAsStateWithLifecycle()
@@ -432,8 +437,8 @@ fun SearchScreen(
                                             playerViewModel.onSearchQuerySubmitted(searchQuery)
                                         }
                                     },
-                                    currentPlayingSongId = stablePlayerState.currentSong?.id,
-                                    isPlaying = stablePlayerState.isPlaying,
+                                    currentPlayingSongId = currentPlayingSongId,
+                                    isPlaying = searchListIsPlaying,
                                     onSongMoreOptionsClick = handleSongMoreOptionsClick,
                                     navController = navController
                                 )
@@ -705,7 +710,9 @@ fun SearchResultsList(
     navController: NavHostController
 ) {
     // ---> FIX: Restored the missing playerStableState reference! <---
-    val playerStableState by playerViewModel.stablePlayerState.collectAsStateWithLifecycle()
+    val searchIsShuffleEnabled by remember {
+        playerViewModel.stablePlayerState.map { it.isShuffleEnabled }.distinctUntilChanged()
+    }.collectAsStateWithLifecycle(initialValue = false)
 
     if (results.isEmpty()) {
         Box(
@@ -918,7 +925,7 @@ fun SearchResultsList(
                                                         firstPageSongs.first(),
                                                         item.playlist.name
                                                     )
-                                                    if (playerStableState.isShuffleEnabled) playerViewModel.toggleShuffle()
+                                                    if (searchIsShuffleEnabled) playerViewModel.toggleShuffle()
                                                     onItemSelected()
 
                                                     coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) {
@@ -954,7 +961,7 @@ fun SearchResultsList(
                                             val songs = playerViewModel.getSongs(item.playlist.songIds)
                                             if (songs.isNotEmpty()) {
                                                 playerViewModel.playSongs(songs, songs.first(), item.playlist.name)
-                                                if (playerStableState.isShuffleEnabled) playerViewModel.toggleShuffle()
+                                                if (searchIsShuffleEnabled) playerViewModel.toggleShuffle()
                                             } else {
                                                 playerViewModel.sendToast("Empty playlist")
                                             }
