@@ -61,15 +61,15 @@ internal class QueueSheetController(
     suspend fun syncOffsetToVisibility() {
         val hiddenOffset = hiddenOffsetProvider()
         if (hiddenOffset <= 0f) return
-        val targetOffset = if (showQueueSheetProvider()) {
-            // If open was requested before we knew the measured height, offset can still be off-range.
-            // In that case, honor the open request by snapping to fully expanded.
-            if (queueSheetOffset.value > hiddenOffset) 0f
-            else queueSheetOffset.value.coerceIn(0f, hiddenOffset)
-        } else {
-            hiddenOffset
+        // Don't yank the sheet while the user is actively dragging it.
+        if (dragOffsetCache != null) return
+        // When open was requested, always settle fully open. Preserving a stale
+        // offset here could leave the sheet visually closed while showQueueSheet
+        // is true, which sticks the scrim/blur on screen with no sheet.
+        val targetOffset = if (showQueueSheetProvider()) 0f else hiddenOffset
+        if (queueSheetOffset.value != targetOffset) {
+            queueSheetOffset.snapTo(targetOffset)
         }
-        queueSheetOffset.snapTo(targetOffset)
     }
 
     suspend fun syncCollapsedWhenHidden() {
@@ -95,35 +95,41 @@ internal class QueueSheetController(
             onShowQueueSheetChange(targetExpanded)
             return
         }
-        val target = if (targetExpanded) 0f else hiddenOffset
-        val shouldPrewarmFirstFrame = targetExpanded && !showQueueSheetProvider()
-        onShowQueueSheetChange(true)
-        if (shouldPrewarmFirstFrame) {
-            queueSheetOffset.snapTo(hiddenOffset)
-            if (coroutineContext[MonotonicFrameClock] != null) {
-                withFrameNanos { }
-            } else {
-                yield()
+        try {
+            val target = if (targetExpanded) 0f else hiddenOffset
+            val shouldPrewarmFirstFrame = targetExpanded && !showQueueSheetProvider()
+            onShowQueueSheetChange(true)
+            if (shouldPrewarmFirstFrame) {
+                queueSheetOffset.snapTo(hiddenOffset)
+                if (coroutineContext[MonotonicFrameClock] != null) {
+                    withFrameNanos { }
+                } else {
+                    yield()
+                }
             }
-        }
-        val travelFraction = if (hiddenOffset > 0f) {
-            (abs(queueSheetOffset.value - target) / hiddenOffset).coerceIn(0f, 1f)
-        } else {
-            1f
-        }
-        val durationMillis = if (targetExpanded) {
-            (220f + (120f * travelFraction)).toInt()
-        } else {
-            (190f + (110f * travelFraction)).toInt()
-        }
-        queueSheetOffset.animateTo(
-            targetValue = target,
-            animationSpec = tween(
-                durationMillis = durationMillis,
-                easing = FastOutSlowInEasing
+            val travelFraction = if (hiddenOffset > 0f) {
+                (abs(queueSheetOffset.value - target) / hiddenOffset).coerceIn(0f, 1f)
+            } else {
+                1f
+            }
+            val durationMillis = if (targetExpanded) {
+                (220f + (120f * travelFraction)).toInt()
+            } else {
+                (190f + (110f * travelFraction)).toInt()
+            }
+            queueSheetOffset.animateTo(
+                targetValue = target,
+                animationSpec = tween(
+                    durationMillis = durationMillis,
+                    easing = FastOutSlowInEasing
+                )
             )
-        )
-        onShowQueueSheetChange(targetExpanded)
+        } finally {
+            // Always settle the visible state, even if the animation was cancelled
+            // (e.g. by a rapid second tap). Otherwise showQueueSheet can stick
+            // at true with the sheet off-screen, leaving the blur scrim stuck.
+            onShowQueueSheetChange(targetExpanded)
+        }
     }
 
     fun animate(targetExpanded: Boolean) {
