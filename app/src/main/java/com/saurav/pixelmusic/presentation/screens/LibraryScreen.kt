@@ -1358,8 +1358,8 @@ onViewToggleChange = { isChecked ->
                                         val folders = playerUiState.musicFolders
                                         val currentFolder = playerUiState.currentFolder
                                         val isLoading = playerUiState.isLoadingLibraryCategories
-                                        val foldersCurrentSongId by remember(playerViewModel.stablePlayerState) {
-                                            playerViewModel.stablePlayerState.map { it.currentSong?.id }.distinctUntilChanged()
+                                        val foldersCurrentSong by remember(playerViewModel.stablePlayerState) {
+                                            playerViewModel.stablePlayerState.map { it.currentSong }.distinctUntilChanged()
                                         }.collectAsStateWithLifecycle(initialValue = null)
                                         val foldersIsPlaying by remember(playerViewModel.stablePlayerState) {
                                             playerViewModel.stablePlayerState.map { it.isPlaying }.distinctUntilChanged()
@@ -1373,7 +1373,7 @@ onViewToggleChange = { isChecked ->
                                             isLoading = isLoading,
                                             folderArtworkPreference = folderArtworkPreference,
                                             bottomBarHeight = bottomBarHeightDp,
-                                            currentSongId = foldersCurrentSongId,
+                                            currentSong = foldersCurrentSong,
                                             isPlaying = foldersIsPlaying,
                                             onNavigateBack = { playerViewModel.navigateBackFolder() },
                                             onFolderClick = { folderPath -> playerViewModel.navigateToFolder(folderPath) },
@@ -3081,7 +3081,7 @@ fun LibraryFoldersTab(
     onFolderClick: (String) -> Unit,
     onFolderAsPlaylistClick: (MusicFolder) -> Unit,
     onPlaySong: (Song, List<Song>) -> Unit,
-    currentSongId: String?,
+    currentSong: Song?,
     isPlaying: Boolean,
     bottomBarHeight: Dp,
     onMoreOptionsClick: (Song) -> Unit,
@@ -3146,6 +3146,7 @@ fun LibraryFoldersTab(
         val songsToShow = remember(activeFolder, currentSortOption) {
             sortSongsForFolderView(activeFolder?.songs ?: emptyList(), currentSortOption)
         }.toImmutableList()
+        val currentSongId = currentSong?.id
         val currentSongIndexInSongs = remember(songsToShow, currentSongId) {
             currentSongId?.let { songId -> songsToShow.indexOfFirst { it.id == songId } } ?: -1
         }
@@ -3326,8 +3327,8 @@ fun LibraryFoldersTab(
                                 itemsIndexed(songsToShow, key = { index, song -> "${song.id}_$index" }, contentType = { _, _ -> "song" }) { _, song ->
                                     EnhancedSongListItem(
                                         song = song,
-                                        isPlaying = currentSongId == song.id && isPlaying,
-                                        isCurrentSong = currentSongId == song.id,
+                                        isPlaying = currentSong?.id == song.id && isPlaying,
+                                        isCurrentSong = currentSong?.id == song.id,
                                         onMoreOptionsClick = { onMoreOptionsClick(song) },
                                         isSelected = selectedSongIds.contains(song.id),
                                         selectionIndex = if (isSelectionMode) getSelectionIndex(song.id) else null,
@@ -3344,7 +3345,7 @@ fun LibraryFoldersTab(
                                 }
                             }
 
-                            val bottomPadding = if (stablePlayerState.currentSong != null && stablePlayerState.currentSong != Song.emptySong())
+                            val bottomPadding = if (currentSong != null && currentSong != Song.emptySong())
                                 bottomBarHeight + MiniPlayerHeight + 16.dp
                             else
                                 bottomBarHeight + 16.dp
