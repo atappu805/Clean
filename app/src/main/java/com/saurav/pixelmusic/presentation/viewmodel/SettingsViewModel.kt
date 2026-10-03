@@ -1849,6 +1849,12 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun setUiMotionBlurIntensity(intensity: Float) {
+        viewModelScope.launch {
+            userPreferencesRepository.setUiMotionBlurIntensity(intensity)
+        }
+    }
+
     fun setTapBackgroundClosesPlayer(enabled: Boolean) {
         viewModelScope.launch {
             userPreferencesRepository.setTapBackgroundClosesPlayer(enabled)
