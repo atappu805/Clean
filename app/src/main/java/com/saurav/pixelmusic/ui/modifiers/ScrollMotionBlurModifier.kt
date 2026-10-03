@@ -95,10 +95,12 @@ private const val DIRECTIONAL_BLUR_AGSL = """
 
 fun Modifier.scrollMotionBlur(
     scrollState: ScrollState,
-    enabled: Boolean = LocalMotionBlurEnabled.current,
+    enabled: Boolean? = null,
     isHorizontal: Boolean = false,
-    intensity: Float = LocalMotionBlurIntensity.current,
+    intensity: Float? = null,
 ): Modifier = composed {
+    val enabled = enabled ?: LocalMotionBlurEnabled.current
+    val intensity = intensity ?: LocalMotionBlurIntensity.current
     if (!enabled || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
         return@composed Modifier
     }
@@ -162,10 +164,12 @@ fun Modifier.scrollMotionBlur(
 
 fun Modifier.scrollMotionBlur(
     lazyListState: LazyListState,
-    enabled: Boolean = LocalMotionBlurEnabled.current,
+    enabled: Boolean? = null,
     isHorizontal: Boolean = false,
-    intensity: Float = LocalMotionBlurIntensity.current,
+    intensity: Float? = null,
 ): Modifier = composed {
+    val enabled = enabled ?: LocalMotionBlurEnabled.current
+    val intensity = intensity ?: LocalMotionBlurIntensity.current
     if (!enabled || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
         return@composed Modifier
     }
@@ -234,9 +238,11 @@ fun Modifier.scrollMotionBlur(
 
 fun Modifier.scrollMotionBlur(
     gridState: LazyGridState,
-    enabled: Boolean = LocalMotionBlurEnabled.current,
-    intensity: Float = LocalMotionBlurIntensity.current,
+    enabled: Boolean? = null,
+    intensity: Float? = null,
 ): Modifier = composed {
+    val enabled = enabled ?: LocalMotionBlurEnabled.current
+    val intensity = intensity ?: LocalMotionBlurIntensity.current
     if (!enabled || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
         return@composed Modifier
     }
@@ -305,9 +311,11 @@ fun Modifier.scrollMotionBlur(
 
 fun Modifier.scrollMotionBlur(
     pagerState: PagerState,
-    enabled: Boolean = LocalMotionBlurEnabled.current,
-    intensity: Float = LocalMotionBlurIntensity.current,
+    enabled: Boolean? = null,
+    intensity: Float? = null,
 ): Modifier = composed {
+    val enabled = enabled ?: LocalMotionBlurEnabled.current
+    val intensity = intensity ?: LocalMotionBlurIntensity.current
     if (!enabled || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
         return@composed Modifier
     }
