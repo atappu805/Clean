@@ -109,6 +109,7 @@ data class SettingsUiState(
     val fullPlayerLoadingTweaks: FullPlayerLoadingTweaks = FullPlayerLoadingTweaks(),
     val showPlayerFileInfo: Boolean = true,
     val isUiMotionBlurEnabled: Boolean = true,
+    val uiMotionBlurIntensity: Float = 1f,
     // Developer Options
     val albumArtQuality: AlbumArtQuality = AlbumArtQuality.HIGH,
     val albumArtCacheLimitMb: Int = 200,
@@ -787,6 +788,12 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             userPreferencesRepository.uiMotionBlurEnabledFlow.collect { enabled ->
                 _uiState.update { it.copy(isUiMotionBlurEnabled = enabled) }
+            }
+        }
+
+        viewModelScope.launch {
+            userPreferencesRepository.uiMotionBlurIntensityFlow.collect { intensity ->
+                _uiState.update { it.copy(uiMotionBlurIntensity = intensity) }
             }
         }
 
