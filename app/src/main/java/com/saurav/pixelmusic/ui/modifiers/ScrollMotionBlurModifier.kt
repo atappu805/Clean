@@ -15,6 +15,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.asComposeRenderEffect
@@ -22,6 +23,13 @@ import androidx.compose.ui.graphics.graphicsLayer
 import kotlinx.coroutines.isActive
 import org.intellij.lang.annotations.Language
 import kotlin.math.abs
+
+/**
+ * Global motion blur intensity (0f = off, 1f = normal, 2f = extreme).
+ * Provided at the app root from user preferences; screens using scrollMotionBlur
+ * pick it up automatically without needing to thread the value through.
+ */
+val LocalMotionBlurIntensity = compositionLocalOf { 1f }
 
 @Language("AGSL")
 private const val DIRECTIONAL_BLUR_AGSL = """
@@ -83,7 +91,7 @@ fun Modifier.scrollMotionBlur(
     scrollState: ScrollState,
     enabled: Boolean = true,
     isHorizontal: Boolean = false,
-    intensity: Float = 1f,
+    intensity: Float = LocalMotionBlurIntensity.current,
 ): Modifier = composed {
     if (!enabled || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
         return@composed Modifier
@@ -150,7 +158,7 @@ fun Modifier.scrollMotionBlur(
     lazyListState: LazyListState,
     enabled: Boolean = true,
     isHorizontal: Boolean = false,
-    intensity: Float = 1f,
+    intensity: Float = LocalMotionBlurIntensity.current,
 ): Modifier = composed {
     if (!enabled || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
         return@composed Modifier
@@ -221,7 +229,7 @@ fun Modifier.scrollMotionBlur(
 fun Modifier.scrollMotionBlur(
     gridState: LazyGridState,
     enabled: Boolean = true,
-    intensity: Float = 1f,
+    intensity: Float = LocalMotionBlurIntensity.current,
 ): Modifier = composed {
     if (!enabled || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
         return@composed Modifier
@@ -292,7 +300,7 @@ fun Modifier.scrollMotionBlur(
 fun Modifier.scrollMotionBlur(
     pagerState: PagerState,
     enabled: Boolean = true,
-    intensity: Float = 1f,
+    intensity: Float = LocalMotionBlurIntensity.current,
 ): Modifier = composed {
     if (!enabled || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
         return@composed Modifier
