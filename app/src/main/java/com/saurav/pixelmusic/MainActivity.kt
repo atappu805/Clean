@@ -158,6 +158,7 @@ import androidx.compose.ui.graphics.luminance
 import racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape
 import com.saurav.pixelmusic.presentation.utils.AppHapticsConfig
 import com.saurav.pixelmusic.presentation.utils.LocalAppHapticsConfig
+import com.saurav.pixelmusic.ui.modifiers.LocalMotionBlurIntensity
 import com.saurav.pixelmusic.presentation.utils.NoOpHapticFeedback
 import com.saurav.pixelmusic.utils.CrashLogData
 import javax.annotation.concurrent.Immutable
