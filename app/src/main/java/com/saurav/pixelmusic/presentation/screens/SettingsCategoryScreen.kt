@@ -1165,6 +1165,24 @@ fun SettingsCategoryScreen(
                                                 Icon(Icons.Outlined.AutoAwesome, null, tint = MaterialTheme.colorScheme.secondary)
                                             }
                                         )
+                                        if (uiState.isUiMotionBlurEnabled) {
+                                            SliderSettingsItem(
+                                                label = "Blur Intensity",
+                                                value = uiState.uiMotionBlurIntensity,
+                                                valueRange = 0f..2f,
+                                                steps = 7,
+                                                onValueChange = { settingsViewModel.setUiMotionBlurIntensity(it) },
+                                                valueText = { v ->
+                                                    when {
+                                                        v < 0.25f -> "Off"
+                                                        v < 0.75f -> "Subtle"
+                                                        v < 1.25f -> "Normal"
+                                                        v < 1.75f -> "Strong"
+                                                        else -> "Extreme"
+                                                    }
+                                                }
+                                            )
+                                        }
                                     }
                                 }
 
