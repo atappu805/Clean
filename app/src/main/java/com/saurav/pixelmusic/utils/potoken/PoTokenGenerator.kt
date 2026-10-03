@@ -72,8 +72,20 @@ class PoTokenGenerator(context: Context) {
         }
     }
 
-    private companion object {
+    companion object {
         const val POTOKEN_TIMEOUT_MS = 8_000L
+
+        @Volatile
+        private var sharedInstance: PoTokenGenerator? = null
+
+        /**
+         * Process-wide shared generator so InnerTubeX and NewPipeExtractor mint
+         * PO tokens through one WebView instead of two.
+         */
+        fun shared(context: Context): PoTokenGenerator =
+            sharedInstance ?: synchronized(this) {
+                sharedInstance ?: PoTokenGenerator(context.applicationContext).also { sharedInstance = it }
+            }
     }
 
     private suspend fun getWebClientPoToken(videoId: String, sessionId: String, forceRecreate: Boolean): PoTokenResult {

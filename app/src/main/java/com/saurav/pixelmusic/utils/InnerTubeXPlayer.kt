@@ -246,7 +246,7 @@ object InnerTubeXPlayer {
     }
 
     private val poTokenGenerator: PoTokenGenerator by lazy {
-        PoTokenGenerator(requireNotNull(applicationContext) { "InnerTubeXPlayer is not initialized" })
+        PoTokenGenerator.shared(requireNotNull(applicationContext) { "InnerTubeXPlayer is not initialized" })
     }
 
     private val tokenProvider =

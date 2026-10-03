@@ -42,16 +42,58 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import java.util.concurrent.TimeUnit
 import com.saurav.pixelmusic.utils.UpdateWorker
+import android.os.Looper
+import com.saurav.pixelmusic.utils.potoken.PoTokenGenerator
+import kotlinx.coroutines.runBlocking
 import org.schabi.newpipe.extractor.NewPipe
 import org.schabi.newpipe.extractor.downloader.Downloader
 import org.schabi.newpipe.extractor.downloader.Request
 import org.schabi.newpipe.extractor.downloader.Response
+import org.schabi.newpipe.extractor.localization.ContentCountry
+import org.schabi.newpipe.extractor.localization.Localization
+import org.schabi.newpipe.extractor.services.youtube.PoTokenProvider as NpPoTokenProvider
+import org.schabi.newpipe.extractor.services.youtube.PoTokenResult as NpPoTokenResult
+import org.schabi.newpipe.extractor.services.youtube.extractors.YoutubeStreamExtractor
+import saurav.shru.pixelmusic.innertube.YouTube
+import java.util.Locale
 import okhttp3.OkHttpClient
 import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 
 
 
+
+private const val NEWPIPE_DESKTOP_UA =
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20100101 Firefox/140.0"
+
+/**
+ * Adapts the app's shared WebView BotGuard minter to NewPipeExtractor's
+ * PoTokenProvider, mirroring the NewPipe app's PoTokenProviderImpl.
+ */
+private object NewPipePoTokenProvider : NpPoTokenProvider {
+    private const val FALLBACK_VISITOR_DATA = "CgtPQVo1TndqTldzWSjE0bC3Bg%3D%3D"
+
+    @Volatile
+    private var generator: PoTokenGenerator? = null
+
+    fun initialize(generator: PoTokenGenerator) {
+        this.generator = generator
+    }
+
+    override fun getWebClientPoToken(videoId: String): NpPoTokenResult? {
+        val gen = generator ?: return null
+        // The extractor calls this synchronously off the main thread; never block main.
+        if (Looper.myLooper() == Looper.getMainLooper()) return null
+        val sessionId = YouTube.visitorData?.takeIf { it.isNotBlank() } ?: FALLBACK_VISITOR_DATA
+        return try {
+            val token = runBlocking { gen.getWebClientPoToken(videoId, sessionId) } ?: return null
+            NpPoTokenResult(sessionId, token.playerRequestPoToken, token.streamingDataPoToken)
+        } catch (e: Exception) {
+            Timber.tag("NewPipePoToken").w(e, "PO token minting failed")
+            null
+        }
+    }
+}
 
 @HiltAndroidApp
 class PixelMusicApplication : Application(), ImageLoaderFactory, Configuration.Provider {
@@ -148,24 +190,41 @@ startupScope.launch {
     val newPipeHttpClient = OkHttpClient.Builder()
         .addInterceptor(PixelHttpLoggingInterceptor("newpipe"))
         .build()
-NewPipe.init(object : Downloader() {
-    override fun execute(request: Request): Response {
-        val builder = okhttp3.Request.Builder().url(request.url())
-        request.headers()?.forEach { (key, values) ->
-            values.forEach { builder.addHeader(key, it) }
-        }
-        if (request.httpMethod() == "POST") {
-            val body = request.dataToSend() ?: ByteArray(0)
-            builder.post(body.toRequestBody(null))
-        }
-        val okHttpResponse = newPipeHttpClient.newCall(builder.build()).execute()
-        val headersMap = mutableMapOf<String, List<String>>()
-        okHttpResponse.headers.names().forEach { name ->
-            headersMap[name] = okHttpResponse.headers.values(name)
-        }
-        return Response(okHttpResponse.code, okHttpResponse.message, headersMap, okHttpResponse.body.string(), okHttpResponse.request.url.toString())
-    }
-})
+        // Device locale/country, mirroring the NewPipe app: the content country
+        // influences which streams YouTube considers available for this region.
+        val deviceLocale = Locale.getDefault()
+        val deviceCountry = deviceLocale.country.takeIf { it.isNotBlank() }
+        val newPipeLocalization = Localization(deviceLocale.language, deviceCountry)
+        val newPipeContentCountry = ContentCountry(deviceCountry?.uppercase() ?: "US")
+        NewPipe.init(object : Downloader() {
+            override fun execute(request: Request): Response {
+                val builder = okhttp3.Request.Builder().url(request.url())
+                var hasUserAgent = false
+                request.headers()?.forEach { (key, values) ->
+                    if (key.equals("User-Agent", ignoreCase = true)) hasUserAgent = true
+                    values.forEach { builder.addHeader(key, it) }
+                }
+                // The NewPipe app forces a desktop Firefox UA so YouTube treats the
+                // requests as a regular browser; extractor-supplied headers still win.
+                if (!hasUserAgent) {
+                    builder.header("User-Agent", NEWPIPE_DESKTOP_UA)
+                }
+                if (request.httpMethod() == "POST") {
+                    val body = request.dataToSend() ?: ByteArray(0)
+                    builder.post(body.toRequestBody(null))
+                }
+                val okHttpResponse = newPipeHttpClient.newCall(builder.build()).execute()
+                val headersMap = mutableMapOf<String, List<String>>()
+                okHttpResponse.headers.names().forEach { name ->
+                    headersMap[name] = okHttpResponse.headers.values(name)
+                }
+                return Response(okHttpResponse.code, okHttpResponse.message, headersMap, okHttpResponse.body.string(), okHttpResponse.request.url.toString())
+            }
+        }, newPipeLocalization, newPipeContentCountry)
+        // NewPipe-app-style PO tokens: without a registered provider the extractor
+        // cannot attach &pot= params to stream URLs and more of them 403.
+        NewPipePoTokenProvider.initialize(PoTokenGenerator.shared(this))
+        YoutubeStreamExtractor.setPoTokenProvider(NewPipePoTokenProvider)
 
         // Initialize Last.fm client
         com.saurav.pixelmusic.data.lastfm.LastFM.initialize(
