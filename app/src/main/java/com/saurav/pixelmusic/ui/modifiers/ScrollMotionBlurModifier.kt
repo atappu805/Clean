@@ -135,6 +135,7 @@ fun Modifier.scrollMotionBlur(
             shader.setFloatUniform("resolution", size.width, size.height)
             shader.setFloatUniform("scrollVelocity", vel)
             shader.setFloatUniform("isHorizontal", if (isHorizontal) 1.0f else 0.0f)
+            shader.setFloatUniform("blurIntensity", intensity)
 
             renderEffect = RenderEffect
                 .createRuntimeShaderEffect(shader, "composable")
@@ -206,6 +207,7 @@ fun Modifier.scrollMotionBlur(
             shader.setFloatUniform("resolution", size.width, size.height)
             shader.setFloatUniform("scrollVelocity", vel)
             shader.setFloatUniform("isHorizontal", if (isHorizontal) 1.0f else 0.0f)
+            shader.setFloatUniform("blurIntensity", intensity)
 
             renderEffect = RenderEffect
                 .createRuntimeShaderEffect(shader, "composable")
@@ -276,6 +278,7 @@ fun Modifier.scrollMotionBlur(
             shader.setFloatUniform("resolution", size.width, size.height)
             shader.setFloatUniform("scrollVelocity", vel)
             shader.setFloatUniform("isHorizontal", 0.0f)
+            shader.setFloatUniform("blurIntensity", intensity)
 
             renderEffect = RenderEffect
                 .createRuntimeShaderEffect(shader, "composable")
@@ -346,6 +349,7 @@ fun Modifier.scrollMotionBlur(
             shader.setFloatUniform("resolution", size.width, size.height)
             shader.setFloatUniform("scrollVelocity", vel)
             shader.setFloatUniform("isHorizontal", 1.0f)
+            shader.setFloatUniform("blurIntensity", intensity)
 
             renderEffect = RenderEffect
                 .createRuntimeShaderEffect(shader, "composable")
