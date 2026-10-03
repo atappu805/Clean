@@ -49,6 +49,8 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.BiasAlignment
@@ -118,7 +120,12 @@ fun AlbumDetailScreen(
     playlistViewModel: PlaylistViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val stablePlayerState by playerViewModel.stablePlayerState.collectAsStateWithLifecycle()
+    val albumCurrentSongId by remember(playerViewModel.stablePlayerState) {
+        playerViewModel.stablePlayerState.map { it.currentSong?.id }.distinctUntilChanged()
+    }.collectAsStateWithLifecycle(initialValue = null)
+    val albumIsPlaying by remember(playerViewModel.stablePlayerState) {
+        playerViewModel.stablePlayerState.map { it.isPlaying }.distinctUntilChanged()
+    }.collectAsStateWithLifecycle(initialValue = false)
     val favoriteIds by playerViewModel.favoriteSongIds.collectAsStateWithLifecycle()
     val navBarCompactMode by playerViewModel.navBarCompactMode.collectAsStateWithLifecycle()
     val isMotionBlurEnabled by playerViewModel.userPreferencesRepository.uiMotionBlurEnabledFlow.collectAsStateWithLifecycle(initialValue = true)
@@ -158,7 +165,7 @@ fun AlbumDetailScreen(
         shapes = MaterialTheme.shapes
     ) {
 
-        val isMiniPlayerVisible = stablePlayerState.currentSong != null
+        val isMiniPlayerVisible = albumCurrentSongId != null
         val fabBottomPadding by animateDpAsState(
             targetValue = if (isMiniPlayerVisible) MiniPlayerHeight + 16.dp else 16.dp,
             label = "fabPadding"
@@ -333,8 +340,8 @@ fun AlbumDetailScreen(
                             ) { song ->
                                 EnhancedSongListItem(
                                     song = song,
-                                    isCurrentSong = stablePlayerState.currentSong?.id == song.id,
-                                    isPlaying = stablePlayerState.isPlaying,
+                                    isCurrentSong = albumCurrentSongId == song.id,
+                                    isPlaying = albumIsPlaying,
                                     showAlbumArt = false,
                                     onMoreOptionsClick = {
                                         playerViewModel.selectSongForInfo(song)
