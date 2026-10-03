@@ -90,6 +90,8 @@ import com.saurav.pixelmusic.presentation.components.subcomps.EnhancedSongListIt
 import kotlin.math.roundToInt
 import androidx.compose.ui.unit.IntOffset
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextGeometricTransform
@@ -122,7 +124,12 @@ fun ArtistDetailScreen(
     playlistViewModel: PlaylistViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val stablePlayerState by playerViewModel.stablePlayerState.collectAsStateWithLifecycle()
+    val artistCurrentSongId by remember(playerViewModel.stablePlayerState) {
+        playerViewModel.stablePlayerState.map { it.currentSong?.id }.distinctUntilChanged()
+    }.collectAsStateWithLifecycle(initialValue = null)
+    val artistIsPlaying by remember(playerViewModel.stablePlayerState) {
+        playerViewModel.stablePlayerState.map { it.isPlaying }.distinctUntilChanged()
+    }.collectAsStateWithLifecycle(initialValue = false)
     val isSubscribed by viewModel.isSubscribed.collectAsStateWithLifecycle(initialValue = false)
     
     // Optimization: Defer heavy list rendering until navigation transition settles
@@ -367,8 +374,8 @@ fun ArtistDetailScreen(
                                 ArtistPopularSongItem(
                                     song = song,
                                     rank = idx + 1,
-                                    isCurrentSong = stablePlayerState.currentSong?.id == song.id,
-                                    isPlaying = stablePlayerState.isPlaying,
+                                    isCurrentSong = artistCurrentSongId == song.id,
+                                    isPlaying = artistIsPlaying,
                                     isLast = idx == popularSongs.size - 1,
                                     onSongClick = {
                                         playerViewModel.showAndPlaySong(song, popularSongs)
@@ -531,8 +538,8 @@ fun ArtistDetailScreen(
                                             song = song,
                                             songIndex = songIndex,
                                             songCount = section.songs.size,
-                                            isCurrentSong = stablePlayerState.currentSong?.id == song.id,
-                                            isPlaying = stablePlayerState.isPlaying,
+                                            isCurrentSong = artistCurrentSongId == song.id,
+                                            isPlaying = artistIsPlaying,
                                             onSongClick = {
                                                 playerViewModel.showAndPlaySong(song, section.songs)
                                             },
