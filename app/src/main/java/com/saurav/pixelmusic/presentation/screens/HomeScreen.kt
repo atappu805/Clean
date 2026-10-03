@@ -1053,10 +1053,15 @@ fun SongListItemFavsWrapper(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val stablePlayerState by playerViewModel.stablePlayerState.collectAsStateWithLifecycle()
+    val currentSongId by remember(playerViewModel.stablePlayerState) {
+        playerViewModel.stablePlayerState.map { it.currentSong?.id }.distinctUntilChanged()
+    }.collectAsStateWithLifecycle(initialValue = null)
+    val rowIsPlaying by remember(playerViewModel.stablePlayerState) {
+        playerViewModel.stablePlayerState.map { it.isPlaying }.distinctUntilChanged()
+    }.collectAsStateWithLifecycle(initialValue = false)
 
-    val isThisSongPlaying = remember(song.id, stablePlayerState.currentSong?.id, stablePlayerState.isPlaying) {
-        song.id == stablePlayerState.currentSong?.id
+    val isThisSongPlaying = remember(song.id, currentSongId) {
+        song.id == currentSongId
     }
 
     SongListItemFavs(
@@ -1065,8 +1070,8 @@ fun SongListItemFavsWrapper(
         title = song.title,
         artist = song.displayArtist,
         albumArtUrl = song.albumArtUriString,
-        isPlaying = stablePlayerState.isPlaying,
-        isCurrentSong = song.id == stablePlayerState.currentSong?.id,
+        isPlaying = rowIsPlaying,
+        isCurrentSong = song.id == currentSongId,
         onClick = onClick
     )
 }
