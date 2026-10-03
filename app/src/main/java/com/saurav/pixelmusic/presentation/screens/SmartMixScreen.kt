@@ -44,6 +44,8 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import com.saurav.pixelmusic.presentation.components.MiniPlayerHeight
 import com.saurav.pixelmusic.presentation.components.resolveNavBarOccupiedHeight
 import com.saurav.pixelmusic.presentation.navigation.Screen
@@ -215,9 +217,10 @@ private fun SmartMixConfigurator(
     playerViewModel: PlayerViewModel
 ) {
     val keyboardController = LocalSoftwareKeyboardController.current
-    val playerStableState by playerViewModel.stablePlayerState.collectAsStateWithLifecycle()
+    val isPlayerActive by remember(playerViewModel.stablePlayerState) {
+        playerViewModel.stablePlayerState.map { it.currentSong != null }.distinctUntilChanged()
+    }.collectAsStateWithLifecycle(initialValue = false)
     val navBarCompactMode by playerViewModel.navBarCompactMode.collectAsStateWithLifecycle()
-    val isPlayerActive = playerStableState.currentSong != null
 
     val systemNavBarInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val bottomBarHeightDp = systemNavBarInset
