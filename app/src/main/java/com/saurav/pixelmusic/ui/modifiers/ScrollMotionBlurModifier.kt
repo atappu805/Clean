@@ -29,13 +29,14 @@ private const val DIRECTIONAL_BLUR_AGSL = """
     uniform float2 resolution;
     uniform float scrollVelocity;
     uniform float isHorizontal;
+    uniform float blurIntensity;
 
     half4 main(float2 fragCoord) {
         const int SAMPLES = 10;
         half4 color = half4(0.0);
         float totalWeight = 0.0;
         
-        float blurMagnitude = clamp(scrollVelocity * 22.0, -40.0, 40.0);
+        float blurMagnitude = clamp(scrollVelocity * 22.0 * blurIntensity, -40.0, 40.0);
 
         // Fade blur in from the top edge so boundary pixels never get smeared.
         // smoothstep gives a natural curve; 80px ≈ status-bar height on most devices.
@@ -82,6 +83,7 @@ fun Modifier.scrollMotionBlur(
     scrollState: ScrollState,
     enabled: Boolean = true,
     isHorizontal: Boolean = false,
+    intensity: Float = 1f,
 ): Modifier = composed {
     if (!enabled || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
         return@composed Modifier
@@ -147,6 +149,7 @@ fun Modifier.scrollMotionBlur(
     lazyListState: LazyListState,
     enabled: Boolean = true,
     isHorizontal: Boolean = false,
+    intensity: Float = 1f,
 ): Modifier = composed {
     if (!enabled || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
         return@composed Modifier
@@ -216,6 +219,7 @@ fun Modifier.scrollMotionBlur(
 fun Modifier.scrollMotionBlur(
     gridState: LazyGridState,
     enabled: Boolean = true,
+    intensity: Float = 1f,
 ): Modifier = composed {
     if (!enabled || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
         return@composed Modifier
@@ -285,6 +289,7 @@ fun Modifier.scrollMotionBlur(
 fun Modifier.scrollMotionBlur(
     pagerState: PagerState,
     enabled: Boolean = true,
+    intensity: Float = 1f,
 ): Modifier = composed {
     if (!enabled || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
         return@composed Modifier
