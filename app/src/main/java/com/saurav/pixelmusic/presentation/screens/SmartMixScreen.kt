@@ -11,6 +11,8 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
+import com.saurav.pixelmusic.ui.modifiers.scrollMotionBlur
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -241,9 +243,12 @@ private fun SmartMixConfigurator(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
+        val smartMixListState = rememberLazyListState()
         LazyColumn(
+            state = smartMixListState,
             modifier = Modifier
                 .fillMaxSize()
+                .scrollMotionBlur(lazyListState = smartMixListState)
                 .padding(horizontal = 16.dp),
             contentPadding = PaddingValues(top = 8.dp, bottom = fabAreaHeight + 32.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
