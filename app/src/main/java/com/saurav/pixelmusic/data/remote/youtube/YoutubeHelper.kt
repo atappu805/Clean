@@ -75,6 +75,22 @@ object YoutubeHelper {
     val streamBitrateLruCache = LruCache<String, Int>(200)
     private val localFilePathCache = LruCache<String, String>(200)
     private val failedStreamClientsUntil = ConcurrentHashMap<String, Long>()
+    /**
+     * Remembers which InnerTube client produced each video's stream URL so a
+     * playback-time failure (e.g. HTTP 403) can exclude that client from the
+     * re-extraction, Metrolist-style.
+     */
+    internal val lastStreamClientByVideoId = ConcurrentHashMap<String, String>()
+
+    fun notePlaybackClientFailure(videoId: String) {
+        val client = lastStreamClientByVideoId.remove(videoId) ?: return
+        try {
+            InnerTubeXPlayer.markStreamClientFailed(videoId, client)
+            UmihiHelper.printd("Marked InnerTube client $client failed for $videoId")
+        } catch (e: Exception) {
+            UmihiHelper.printe("Failed to mark stream client failed: ${e.message}")
+        }
+    }
     val playbackTrackingCache = ConcurrentHashMap<String, String>()
     private const val FAILED_CLIENT_BACKOFF_MS = 10 * 60 * 1000L
     @Volatile private var lastSuccessfulClientKey: String? = null
@@ -530,6 +546,10 @@ object YoutubeHelper {
         streamMimeTypeLruCache.remove("${youtubeId}_high")
         streamBitrateLruCache.remove("${youtubeId}_low")
         streamBitrateLruCache.remove("${youtubeId}_high")
+        // Quality-suffixed variants (e.g. "<id>_q160").
+        for (cache in listOf(streamUrlLruCache, streamMimeTypeLruCache, streamBitrateLruCache)) {
+            cache.snapshot().keys.filter { it.startsWith("${youtubeId}_q") }.forEach { cache.remove(it) }
+        }
     }
 
     private fun extractDuration(songContent: JsonObject): String {
@@ -580,6 +600,7 @@ private suspend fun getSongUrlFromYoutube(
         ).getOrThrow()
 
         val streamUrl = playbackData.streamUrl
+        YoutubeHelper.lastStreamClientByVideoId[videoId] = playbackData.streamClient
         val mimeType = playbackData.format.mimeType
         val bitrate = playbackData.format.bitrate
 

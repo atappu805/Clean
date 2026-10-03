@@ -79,6 +79,7 @@ class DualPlayerEngine @Inject constructor(
 ) {
     private companion object {
         private const val AUDIO_OFFLOAD_BUFFERING_FALLBACK_MS = 4_000L
+        private const val MAX_YOUTUBE_REEXTRACT_ATTEMPTS = 2
         private const val MAX_AUXILIARY_TIMELINE_ITEMS = 200
         private val LOCAL_MEDIA_SCHEMES = setOf("content", "file", "android.resource")
         private val REMOTE_MEDIA_SCHEMES = setOf("http", "https", "gdrive", "youtube")
@@ -255,6 +256,9 @@ class DualPlayerEngine @Inject constructor(
             val uriString = currentMediaId?.let {
                 if (it.startsWith("youtube://")) it else "youtube://$it"
             }
+            val deadResolvedUrl = uriString?.let {
+                resolvedUriCache.get(it)?.toString() ?: activePlaybackResolvedUris[it]?.toString()
+            }
             if (uriString != null) {
                 resolvedUriCache.remove(uriString)
                 activePlaybackResolvedUris.remove(uriString)
@@ -262,9 +266,23 @@ class DualPlayerEngine @Inject constructor(
 
             scope.launch {
                 // If a YouTube stream URL died at playback time (e.g. HTTP 403 on an
-                // extracted URL), try the JioSaavn fallback for the same song before
-                // skipping to the next track.
+                // extracted URL), recover in order before skipping:
+                // 1. fresh YouTube extraction excluding the dead client (Metrolist-style),
+                //    which itself falls through to NewPipeExtractor, then JioSaavn;
+                // 2. direct JioSaavn fallback for the same song.
                 if (uriString != null && isFallbackableYoutubeSourceError(error, uriString)) {
+                    val videoId = uriString.substringAfter("youtube://")
+                    val resumePositionMs = playerA.currentPosition.coerceAtLeast(0L)
+                    val freshUri = tryFreshYoutubeExtraction(uriString, videoId, deadResolvedUrl)
+                    if (freshUri != null) {
+                        resolvedUriCache.put(uriString, freshUri)
+                        activePlaybackResolvedUris[uriString] = freshUri
+                        Timber.tag("DualPlayerEngine").w("Retrying %s via fresh YouTube extraction", uriString)
+                        playerA.seekTo(playerA.currentMediaItemIndex, resumePositionMs)
+                        playerA.prepare()
+                        playerA.play()
+                        return@launch
+                    }
                     val fallbackUrl = tryJioSaavnFallback(currentMediaItem, uriString)
                     if (fallbackUrl != null) {
                         val fallbackUri = Uri.parse(fallbackUrl)
@@ -346,6 +364,8 @@ class DualPlayerEngine @Inject constructor(
     private val activePlaybackResolvedUris = java.util.concurrent.ConcurrentHashMap<String, Uri>()
     /** youtube:// URIs already retried via JioSaavn — prevents fallback retry loops. */
     private val jioSaavnFallbackUris = java.util.concurrent.ConcurrentHashMap<String, Uri>()
+    /** youtube:// URIs and their fresh-extraction attempt counts — bounds the 403 recovery loop. */
+    private val youtubeReextractAttempts = java.util.concurrent.ConcurrentHashMap<String, Int>()
     private val localFilePathCache = java.util.concurrent.ConcurrentHashMap<String, String>()
 
     fun registerLocalPath(youtubeUri: String, filePath: String) {
@@ -813,6 +833,35 @@ private val inFlightResolutions = java.util.concurrent.ConcurrentHashMap<String,
             PlaybackException.ERROR_CODE_IO_READ_POSITION_OUT_OF_RANGE,
             PlaybackException.ERROR_CODE_IO_UNSPECIFIED -> true
             else -> false
+        }
+    }
+
+    /**
+     * Metrolist-style playback recovery: the extracted URL 403'd, so mark the
+     * InnerTube client that produced it as failed and re-resolve. The normal
+     * resolve chain then tries a different YouTube client, then NewPipeExtractor,
+     * then JioSaavn — whichever succeeds first wins.
+     */
+    private suspend fun tryFreshYoutubeExtraction(
+        uriString: String,
+        videoId: String,
+        deadResolvedUrl: String?,
+    ): Uri? {
+        val attempts = youtubeReextractAttempts.getOrDefault(uriString, 0)
+        if (attempts >= MAX_YOUTUBE_REEXTRACT_ATTEMPTS) return null
+        youtubeReextractAttempts[uriString] = attempts + 1
+        return try {
+            com.saurav.pixelmusic.data.remote.youtube.YoutubeHelper.notePlaybackClientFailure(videoId)
+            com.saurav.pixelmusic.data.remote.youtube.YoutubeHelper.invalidateStreamCache(videoId)
+            // resolveYoutubeUriAsync consults YoutubeHelper's URL cache, so the
+            // invalidation above forces a genuinely fresh extraction.
+            val fresh = resolveYoutubeUriAsync(uriString) ?: return null
+            // Never loop on the identical dead URL.
+            if (deadResolvedUrl != null && fresh.toString() == deadResolvedUrl) return null
+            fresh
+        } catch (e: Exception) {
+            Timber.tag("DualPlayerEngine").w(e, "Fresh YouTube extraction failed for %s", uriString)
+            null
         }
     }
 
