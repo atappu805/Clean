@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import com.saurav.pixelmusic.ui.modifiers.scrollMotionBlur
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -306,6 +307,7 @@ fun ArtistDetailScreen(
                         state = lazyListState,
                         modifier = Modifier
                             .fillMaxSize()
+                            .scrollMotionBlur(lazyListState = lazyListState)
                             .offset {
                                 val extraHeight =
                                     (topBarHeight.value - minTopBarHeightPx).roundToInt()
