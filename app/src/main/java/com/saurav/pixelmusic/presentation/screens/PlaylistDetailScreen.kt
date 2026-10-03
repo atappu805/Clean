@@ -91,6 +91,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -155,7 +157,15 @@ fun PlaylistDetailScreen(
     navController: NavController
 ) {
     val uiState by playlistViewModel.uiState.collectAsStateWithLifecycle()
-    val playerStableState by playerViewModel.stablePlayerState.collectAsStateWithLifecycle()
+    val playlistCurrentSongId by remember(playerViewModel.stablePlayerState) {
+        playerViewModel.stablePlayerState.map { it.currentSong?.id }.distinctUntilChanged()
+    }.collectAsStateWithLifecycle(initialValue = null)
+    val playlistIsPlaying by remember(playerViewModel.stablePlayerState) {
+        playerViewModel.stablePlayerState.map { it.isPlaying }.distinctUntilChanged()
+    }.collectAsStateWithLifecycle(initialValue = false)
+    val playlistIsShuffleEnabled by remember(playerViewModel.stablePlayerState) {
+        playerViewModel.stablePlayerState.map { it.isShuffleEnabled }.distinctUntilChanged()
+    }.collectAsStateWithLifecycle(initialValue = false)
     val context = LocalContext.current
     val fallbackPlaylistName = stringResource(R.string.shortcut_playlist_short)
     val sortSongsLabel = stringResource(R.string.presentation_batch_b_sort_songs)
@@ -394,7 +404,7 @@ fun PlaylistDetailScreen(
                                     currentPlaylist.name,
                                     currentPlaylist.id
                                 )
-                                if (playerStableState.isShuffleEnabled) playerViewModel.toggleShuffle()
+                                if (playlistIsShuffleEnabled) playerViewModel.toggleShuffle()
                             } else if (currentPlaylist.source == "YOUTUBE") {
                                 playerViewModel.playRadio(
                                     saurav.shru.pixelmusic.innertube.models.WatchEndpoint(playlistId = currentPlaylist.id),
@@ -686,8 +696,8 @@ fun PlaylistDetailScreen(
                                             )
                                         },
                                         song = song,
-                                        isCurrentSong = playerStableState.currentSong?.id == song.id,
-                                        isPlaying = playerStableState.isPlaying,
+                                        isCurrentSong = playlistCurrentSongId == song.id,
+                                        isPlaying = playlistIsPlaying,
                                         isDragging = isDragging,
                                         onRemoveClick = {
                                             if (!isFolderPlaylist) {
@@ -738,7 +748,7 @@ fun PlaylistDetailScreen(
                             modifier = Modifier
                                 .align(Alignment.CenterEnd)
                                 .padding(
-                                    bottom = if (playerStableState.currentSong != null) MiniPlayerHeight + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 20.dp else WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 16.dp,
+                                    bottom = if (playlistCurrentSongId != null) MiniPlayerHeight + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 20.dp else WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 16.dp,
                                     end = 14.dp,
                                     top = 18.dp 
                                 )
