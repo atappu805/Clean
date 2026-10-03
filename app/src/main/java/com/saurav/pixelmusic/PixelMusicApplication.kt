@@ -80,7 +80,15 @@ private object NewPipePoTokenProvider : NpPoTokenProvider {
         this.generator = generator
     }
 
-    override fun getWebClientPoToken(videoId: String): NpPoTokenResult? {
+    override fun getWebClientPoToken(videoId: String): NpPoTokenResult? = mintWebToken(videoId)
+
+    // v0.26.5's interface also declares embed/Android/iOS providers; the NewPipe
+    // app only mints web-client tokens, and null means "no token for this client".
+    override fun getWebEmbedClientPoToken(videoId: String): NpPoTokenResult? = null
+    override fun getAndroidClientPoToken(videoId: String): NpPoTokenResult? = null
+    override fun getIosClientPoToken(videoId: String): NpPoTokenResult? = null
+
+    private fun mintWebToken(videoId: String): NpPoTokenResult? {
         val gen = generator ?: return null
         // The extractor calls this synchronously off the main thread; never block main.
         if (Looper.myLooper() == Looper.getMainLooper()) return null
