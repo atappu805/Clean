@@ -31,6 +31,12 @@ import kotlin.math.abs
  */
 val LocalMotionBlurIntensity = compositionLocalOf { 1f }
 
+/**
+ * Whether motion blur is enabled globally. Provided at the app root from user
+ * preferences; screens without direct SettingsViewModel access can use this.
+ */
+val LocalMotionBlurEnabled = compositionLocalOf { true }
+
 @Language("AGSL")
 private const val DIRECTIONAL_BLUR_AGSL = """
     uniform shader composable;
