@@ -7,10 +7,13 @@ import com.saurav.pixelmusic.presentation.navigation.navigateSafely
 import android.Manifest
 import android.content.ActivityNotFoundException
 import android.content.Context
+import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Intent
+import android.content.IntentFilter
 import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
 import android.os.Trace
 import android.provider.Settings
 import android.util.Log
@@ -227,6 +230,21 @@ class MainActivity : ComponentActivity() {
     }
 
     /**
+     * Battery-saver state; motion blur auto-disables while it is on
+     * (same behavior as sameerasw/essentials).
+     */
+    private val isPowerSaveModeState = mutableStateOf(false)
+
+    private val powerSaveModeReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            isPowerSaveModeState.value = isPowerSaveModeActive()
+        }
+    }
+
+    private fun isPowerSaveModeActive(): Boolean =
+        (getSystemService(POWER_SERVICE) as? PowerManager)?.isPowerSaveMode == true
+
+    /**
      * Asks the OS to run this window at the display's highest supported refresh
      * rate (120Hz+ where available) instead of leaving it capped at 60Hz.
      * Compose renders on the display vsync, so without this hint some OEMs keep
@@ -275,6 +293,14 @@ class MainActivity : ComponentActivity() {
             window.isNavigationBarContrastEnforced = false
         }
         requestHighRefreshRate()
+        isPowerSaveModeState.value = isPowerSaveModeActive()
+        val powerSaveFilter = IntentFilter(PowerManager.ACTION_POWER_SAVE_MODE_CHANGED)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(powerSaveModeReceiver, powerSaveFilter, RECEIVER_NOT_EXPORTED)
+        } else {
+            @Suppress("DEPRECATION")
+            registerReceiver(powerSaveModeReceiver, powerSaveFilter)
+        }
         super.onCreate(savedInstanceState)
 
         // MD3 Optimization: Release Splash Screen immediately to render UI skeleton.
@@ -986,7 +1012,7 @@ class MainActivity : ComponentActivity() {
             LocalAppHapticsConfig provides appHapticsConfig,
             LocalHapticFeedback provides scopedHapticFeedback,
             LocalMotionBlurIntensity provides motionBlurIntensity,
-            LocalMotionBlurEnabled provides motionBlurEnabled
+            LocalMotionBlurEnabled provides (motionBlurEnabled && !isPowerSaveModeState.value)
         ) {
             AppSidebarDrawer(
                 drawerState = drawerState,
@@ -1556,6 +1582,11 @@ class MainActivity : ComponentActivity() {
         mediaControllerFuture?.let {
             MediaController.releaseFuture(it)
         }
+    }
+
+    override fun onDestroy() {
+        runCatching { unregisterReceiver(powerSaveModeReceiver) }
+        super.onDestroy()
     }
 
     override fun onResume() {
