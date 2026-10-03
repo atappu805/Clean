@@ -39,6 +39,7 @@ val LocalMotionBlurEnabled = compositionLocalOf { true }
 
 @Language("AGSL")
 private const val DIRECTIONAL_BLUR_AGSL = """
+
     uniform shader composable;
     uniform float2 resolution;
     uniform float scrollVelocity;
@@ -50,43 +51,26 @@ private const val DIRECTIONAL_BLUR_AGSL = """
         half4 color = half4(0.0);
         float totalWeight = 0.0;
         
-        float blurMagnitude = clamp(scrollVelocity * 22.0 * blurIntensity, -40.0, 40.0);
-
-        // Fade blur in from the top edge so boundary pixels never get smeared.
-        // smoothstep gives a natural curve; 80px ≈ status-bar height on most devices.
-        float topFadeHeight = 80.0;
-        float topFactor = smoothstep(0.0, topFadeHeight, fragCoord.y);
-        float effectiveMagnitude = blurMagnitude * topFactor;
-
-        // If the effective blur is negligible, just return the source pixel.
-        if (abs(effectiveMagnitude) < 0.5) {
-            return composable.eval(fragCoord);
-        }
+        // Scale velocity to pixel blur magnitude with max clamping
+        float blurMagnitude = clamp(scrollVelocity * 22.0 * blurIntensity, -60.0, 60.0);
 
         for (int i = 0; i < SAMPLES; i++) {
-            float offset = (float(i) / float(SAMPLES - 1) - 0.5) * effectiveMagnitude;
+            float offset = (float(i) / float(SAMPLES - 1) - 0.5) * blurMagnitude;
             
             float2 sampleCoord;
             if (isHorizontal > 0.5) {
-                sampleCoord = float2(fragCoord.x + offset, fragCoord.y);
+                float clampedX = clamp(fragCoord.x + offset, 0.0, resolution.x);
+                sampleCoord = float2(clampedX, fragCoord.y);
             } else {
-                sampleCoord = float2(fragCoord.x, fragCoord.y + offset);
+                float clampedY = clamp(fragCoord.y + offset, 0.0, resolution.y);
+                sampleCoord = float2(fragCoord.x, clampedY);
             }
             
-            // Skip samples that fall outside the layer bounds — this is what
-            // eliminates the horizontal "streak" artifacts at the top edge.
-            if (sampleCoord.x >= 0.0 && sampleCoord.x <= resolution.x &&
-                sampleCoord.y >= 0.0 && sampleCoord.y <= resolution.y) {
-                
-                float weight = 1.0 - abs(offset / (abs(effectiveMagnitude) + 0.001)) * 0.5;
-                color += composable.eval(sampleCoord) * weight;
-                totalWeight += weight;
-            }
-        }
-
-        // Guard: if all samples were skipped, fall back to the source pixel.
-        if (totalWeight < 0.001) {
-            return composable.eval(fragCoord);
+            // Linear decay weight for trailing effect
+            float weight = 1.0 - abs(offset / (abs(blurMagnitude) + 0.001)) * 0.5;
+            
+            color += composable.eval(sampleCoord) * weight;
+            totalWeight += weight;
         }
 
         return color / totalWeight;
