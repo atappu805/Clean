@@ -89,40 +89,175 @@
     heroObserver.observe(heroSection);
   }
 
-  // 4. Interactive Showcase Screen Tabs with Smooth Crossfade
-  const tabButtons = document.querySelectorAll('.tab-pill');
-  const panels = document.querySelectorAll('.showcase-panel');
+  // 4. Comprehensive Screen Showcase — Stack & Slide Right Controller
+  const stackCards = Array.from(document.querySelectorAll('.stack-card'));
+  const tabPills = Array.from(document.querySelectorAll('.showcase-tabs .tab-pill'));
+  const stackCounter = document.getElementById('stack-counter');
+  const nextBtn = document.getElementById('stack-next');
+  const prevBtn = document.getElementById('stack-prev');
+  let currentStackIndex = 0;
+  const totalCards = stackCards.length;
+  let isAnimating = false;
 
-  tabButtons.forEach(btn => {
-    btn.addEventListener('click', () => {
-      const targetId = btn.getAttribute('aria-controls');
-      const targetPanel = document.getElementById(targetId);
+  function updateStackPositions(direction = 'none') {
+    stackCards.forEach((card, idx) => {
+      const offset = (idx - currentStackIndex + totalCards) % totalCards;
+      
+      card.classList.remove('is-active', 'is-next-1', 'is-next-2', 'is-hidden', 'is-sliding-out-right', 'is-sliding-in-left');
+      card.style.transform = '';
 
-      // Deactivate all tabs
-      tabButtons.forEach(b => {
-        b.classList.remove('active');
-        b.setAttribute('aria-selected', 'false');
-      });
-
-      // Activate clicked tab
-      btn.classList.add('active');
-      btn.setAttribute('aria-selected', 'true');
-
-      // Crossfade panels
-      panels.forEach(p => {
-        p.classList.remove('active');
-      });
-
-      if (targetPanel) {
-        targetPanel.classList.add('active');
-        // Restart video playback if it's the video tab
-        const vid = targetPanel.querySelector('video');
+      if (offset === 0) {
+        card.classList.add('is-active');
+        const vid = card.querySelector('video');
         if (vid && vid.paused) {
           vid.play().catch(() => {});
         }
+      } else if (offset === 1) {
+        card.classList.add('is-next-1');
+      } else if (offset === 2) {
+        card.classList.add('is-next-2');
+      } else {
+        card.classList.add('is-hidden');
       }
     });
+
+    tabPills.forEach((pill, idx) => {
+      if (idx === currentStackIndex) {
+        pill.classList.add('active');
+        pill.setAttribute('aria-selected', 'true');
+      } else {
+        pill.classList.remove('active');
+        pill.setAttribute('aria-selected', 'false');
+      }
+    });
+
+    if (stackCounter) {
+      stackCounter.innerHTML = `<strong>0${currentStackIndex + 1}</strong> / 0${totalCards}`;
+    }
+  }
+
+  function slideRight() {
+    if (isAnimating || totalCards <= 1) return;
+    isAnimating = true;
+
+    const currentCard = stackCards[currentStackIndex];
+    if (currentCard) {
+      currentCard.classList.remove('is-active');
+      currentCard.classList.add('is-sliding-out-right');
+    }
+
+    currentStackIndex = (currentStackIndex + 1) % totalCards;
+
+    setTimeout(() => {
+      updateStackPositions('right');
+      isAnimating = false;
+    }, 320);
+  }
+
+  function slideLeft() {
+    if (isAnimating || totalCards <= 1) return;
+    isAnimating = true;
+
+    currentStackIndex = (currentStackIndex - 1 + totalCards) % totalCards;
+    const incomingCard = stackCards[currentStackIndex];
+    if (incomingCard) {
+      incomingCard.classList.remove('is-hidden', 'is-next-1', 'is-next-2');
+      incomingCard.classList.add('is-sliding-in-left');
+    }
+
+    setTimeout(() => {
+      updateStackPositions('left');
+      isAnimating = false;
+    }, 320);
+  }
+
+  if (nextBtn) nextBtn.addEventListener('click', slideRight);
+  if (prevBtn) prevBtn.addEventListener('click', slideLeft);
+
+  tabPills.forEach((pill, idx) => {
+    pill.addEventListener('click', () => {
+      if (isAnimating || idx === currentStackIndex) return;
+      currentStackIndex = idx;
+      updateStackPositions();
+    });
   });
+
+  document.querySelectorAll('[data-action="slide-right"]').forEach(el => {
+    el.addEventListener('click', e => {
+      e.stopPropagation();
+      slideRight();
+    });
+  });
+
+  const stackDeck = document.getElementById('showcase-stack');
+  if (stackDeck) {
+    let startX = 0, startY = 0, currentX = 0, isDragging = false;
+
+    stackDeck.addEventListener('pointerdown', e => {
+      if (isAnimating) return;
+      const activeCard = stackDeck.querySelector('.stack-card.is-active');
+      if (!activeCard || (!activeCard.contains(e.target) && activeCard !== e.target)) return;
+      if (e.target.closest('a, button, details, summary')) return;
+
+      startX = e.clientX;
+      startY = e.clientY;
+      currentX = startX;
+      isDragging = true;
+      activeCard.setPointerCapture(e.pointerId);
+    });
+
+    stackDeck.addEventListener('pointermove', e => {
+      if (!isDragging) return;
+      currentX = e.clientX;
+      const deltaX = currentX - startX;
+      const deltaY = e.clientY - startY;
+
+      if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 8) {
+        const activeCard = stackDeck.querySelector('.stack-card.is-active');
+        if (activeCard) {
+          activeCard.style.transform = `translateX(${deltaX}px) translateY(${deltaY * 0.2}px) rotate(${deltaX * 0.04}deg)`;
+        }
+      }
+    });
+
+    const finishDrag = (e) => {
+      if (!isDragging) return;
+      isDragging = false;
+      const deltaX = currentX - startX;
+      const activeCard = stackDeck.querySelector('.stack-card.is-active');
+
+      if (deltaX > 50) {
+        slideRight();
+      } else if (deltaX < -50) {
+        slideLeft();
+      } else if (activeCard) {
+        activeCard.style.transition = 'transform 0.3s ease';
+        activeCard.style.transform = '';
+        setTimeout(() => {
+          if (activeCard) activeCard.style.transition = '';
+        }, 300);
+      }
+    };
+
+    stackDeck.addEventListener('pointerup', finishDrag);
+    stackDeck.addEventListener('pointercancel', finishDrag);
+  }
+
+  window.addEventListener('keydown', e => {
+    const showcaseSection = document.getElementById('showcase');
+    if (!showcaseSection) return;
+    const rect = showcaseSection.getBoundingClientRect();
+    const inView = rect.top < window.innerHeight && rect.bottom > 0;
+    if (inView) {
+      if (e.key === 'ArrowRight') {
+        slideRight();
+      } else if (e.key === 'ArrowLeft') {
+        slideLeft();
+      }
+    }
+  });
+
+  updateStackPositions();
 
   // 5. Checksum Copy Button Handler
   const copyBtn = document.getElementById('copy-hash-btn');
