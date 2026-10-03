@@ -37,6 +37,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import com.saurav.pixelmusic.ui.modifiers.scrollMotionBlur
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -271,7 +272,8 @@ fun StatsScreen(
                 LazyColumn(
                     state = lazyListState,
                     modifier = Modifier
-                        .fillMaxSize(),
+                        .fillMaxSize()
+                        .scrollMotionBlur(lazyListState = lazyListState),
                     contentPadding = PaddingValues(
                         top = currentTopBarHeightDp + tabsHeight + tabIndicatorExtraSpacing + tabContentSpacing + 0.dp,
                         bottom = MiniPlayerHeight + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 16.dp
