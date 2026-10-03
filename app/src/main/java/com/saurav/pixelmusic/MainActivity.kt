@@ -224,6 +224,32 @@ class MainActivity : ComponentActivity() {
         // Handle the result in onResume
     }
 
+    /**
+     * Asks the OS to run this window at the display's highest supported refresh
+     * rate (120Hz+ where available) instead of leaving it capped at 60Hz.
+     * Compose renders on the display vsync, so without this hint some OEMs keep
+     * the app at 60Hz even when the system is set higher.
+     */
+    private fun requestHighRefreshRate() {
+        try {
+            val display = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                display
+            } else {
+                @Suppress("DEPRECATION")
+                windowManager.defaultDisplay
+            } ?: return
+            val bestMode = display.supportedModes.maxByOrNull { it.refreshRate } ?: return
+            if (bestMode.refreshRate > 61f) {
+                val attrs = window.attributes
+                attrs.preferredRefreshRate = bestMode.refreshRate
+                window.attributes = attrs
+                LogUtils.d(this, "Requested refresh rate: ${bestMode.refreshRate}Hz")
+            }
+        } catch (e: Exception) {
+            LogUtils.e(this, e, "Failed to request high refresh rate")
+        }
+    }
+
     @CallSuper
     override fun attachBaseContext(newBase: Context) {
         super.attachBaseContext(AppLocaleManager.wrapContext(newBase))
@@ -246,6 +272,7 @@ class MainActivity : ComponentActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             window.isNavigationBarContrastEnforced = false
         }
+        requestHighRefreshRate()
         super.onCreate(savedInstanceState)
 
         // MD3 Optimization: Release Splash Screen immediately to render UI skeleton.
