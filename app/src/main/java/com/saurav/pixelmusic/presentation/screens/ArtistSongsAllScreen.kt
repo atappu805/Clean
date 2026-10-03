@@ -31,6 +31,8 @@ import com.saurav.pixelmusic.presentation.viewmodel.PlayerViewModel
 import com.saurav.pixelmusic.presentation.viewmodel.PlaylistViewModel
 import com.saurav.pixelmusic.data.model.Song
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape
 import com.saurav.pixelmusic.ui.modifiers.scrollMotionBlur
 
@@ -46,7 +48,12 @@ fun ArtistSongsAllScreen(
     playlistViewModel: PlaylistViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val stablePlayerState by playerViewModel.stablePlayerState.collectAsStateWithLifecycle()
+    val allSongsCurrentSongId by remember(playerViewModel.stablePlayerState) {
+        playerViewModel.stablePlayerState.map { it.currentSong?.id }.distinctUntilChanged()
+    }.collectAsStateWithLifecycle(initialValue = null)
+    val allSongsIsPlaying by remember(playerViewModel.stablePlayerState) {
+        playerViewModel.stablePlayerState.map { it.isPlaying }.distinctUntilChanged()
+    }.collectAsStateWithLifecycle(initialValue = false)
     val favoriteIds by playerViewModel.favoriteSongIds.collectAsStateWithLifecycle()
     val navBarCompactMode by playerViewModel.navBarCompactMode.collectAsStateWithLifecycle()
     val isMotionBlurEnabled by viewModel.userPreferencesRepository.uiMotionBlurEnabledFlow.collectAsStateWithLifecycle(initialValue = true)
@@ -191,8 +198,8 @@ fun ArtistSongsAllScreen(
                     ) { index, song ->
                         EnhancedSongListItem(
                             song = song,
-                            isPlaying = stablePlayerState.isPlaying,
-                            isCurrentSong = stablePlayerState.currentSong?.id == song.id,
+                            isPlaying = allSongsIsPlaying,
+                            isCurrentSong = allSongsCurrentSongId == song.id,
                             onMoreOptionsClick = {
                                 playerViewModel.selectSongForInfo(song)
                                 showSongInfoBottomSheet = true
