@@ -95,7 +95,7 @@ private const val DIRECTIONAL_BLUR_AGSL = """
 
 fun Modifier.scrollMotionBlur(
     scrollState: ScrollState,
-    enabled: Boolean = true,
+    enabled: Boolean = LocalMotionBlurEnabled.current,
     isHorizontal: Boolean = false,
     intensity: Float = LocalMotionBlurIntensity.current,
 ): Modifier = composed {
@@ -162,7 +162,7 @@ fun Modifier.scrollMotionBlur(
 
 fun Modifier.scrollMotionBlur(
     lazyListState: LazyListState,
-    enabled: Boolean = true,
+    enabled: Boolean = LocalMotionBlurEnabled.current,
     isHorizontal: Boolean = false,
     intensity: Float = LocalMotionBlurIntensity.current,
 ): Modifier = composed {
@@ -234,7 +234,7 @@ fun Modifier.scrollMotionBlur(
 
 fun Modifier.scrollMotionBlur(
     gridState: LazyGridState,
-    enabled: Boolean = true,
+    enabled: Boolean = LocalMotionBlurEnabled.current,
     intensity: Float = LocalMotionBlurIntensity.current,
 ): Modifier = composed {
     if (!enabled || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
@@ -305,7 +305,7 @@ fun Modifier.scrollMotionBlur(
 
 fun Modifier.scrollMotionBlur(
     pagerState: PagerState,
-    enabled: Boolean = true,
+    enabled: Boolean = LocalMotionBlurEnabled.current,
     intensity: Float = LocalMotionBlurIntensity.current,
 ): Modifier = composed {
     if (!enabled || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
