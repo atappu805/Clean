@@ -1358,7 +1358,12 @@ onViewToggleChange = { isChecked ->
                                         val folders = playerUiState.musicFolders
                                         val currentFolder = playerUiState.currentFolder
                                         val isLoading = playerUiState.isLoadingLibraryCategories
-                                        val stablePlayerState by playerViewModel.stablePlayerState.collectAsStateWithLifecycle()
+                                        val foldersCurrentSongId by remember(playerViewModel.stablePlayerState) {
+                                            playerViewModel.stablePlayerState.map { it.currentSong?.id }.distinctUntilChanged()
+                                        }.collectAsStateWithLifecycle(initialValue = null)
+                                        val foldersIsPlaying by remember(playerViewModel.stablePlayerState) {
+                                            playerViewModel.stablePlayerState.map { it.isPlaying }.distinctUntilChanged()
+                                        }.collectAsStateWithLifecycle(initialValue = false)
                                         val defaultFolderName = stringResource(R.string.presentation_batch_d_folder_name_fallback)
 
                                         LibraryFoldersTab(
@@ -1368,7 +1373,8 @@ onViewToggleChange = { isChecked ->
                                             isLoading = isLoading,
                                             folderArtworkPreference = folderArtworkPreference,
                                             bottomBarHeight = bottomBarHeightDp,
-                                            stablePlayerState = stablePlayerState,
+                                            currentSongId = foldersCurrentSongId,
+                                            isPlaying = foldersIsPlaying,
                                             onNavigateBack = { playerViewModel.navigateBackFolder() },
                                             onFolderClick = { folderPath -> playerViewModel.navigateToFolder(folderPath) },
                                             onFolderAsPlaylistClick = { folder ->
@@ -3075,7 +3081,8 @@ fun LibraryFoldersTab(
     onFolderClick: (String) -> Unit,
     onFolderAsPlaylistClick: (MusicFolder) -> Unit,
     onPlaySong: (Song, List<Song>) -> Unit,
-    stablePlayerState: StablePlayerState,
+    currentSongId: String?,
+    isPlaying: Boolean,
     bottomBarHeight: Dp,
     onMoreOptionsClick: (Song) -> Unit,
     isPlaylistView: Boolean = false,
@@ -3139,8 +3146,6 @@ fun LibraryFoldersTab(
         val songsToShow = remember(activeFolder, currentSortOption) {
             sortSongsForFolderView(activeFolder?.songs ?: emptyList(), currentSortOption)
         }.toImmutableList()
-        val currentSong = stablePlayerState.currentSong
-        val currentSongId = currentSong?.id
         val currentSongIndexInSongs = remember(songsToShow, currentSongId) {
             currentSongId?.let { songId -> songsToShow.indexOfFirst { it.id == songId } } ?: -1
         }
@@ -3321,8 +3326,8 @@ fun LibraryFoldersTab(
                                 itemsIndexed(songsToShow, key = { index, song -> "${song.id}_$index" }, contentType = { _, _ -> "song" }) { _, song ->
                                     EnhancedSongListItem(
                                         song = song,
-                                        isPlaying = stablePlayerState.currentSong?.id == song.id && stablePlayerState.isPlaying,
-                                        isCurrentSong = stablePlayerState.currentSong?.id == song.id,
+                                        isPlaying = currentSongId == song.id && isPlaying,
+                                        isCurrentSong = currentSongId == song.id,
                                         onMoreOptionsClick = { onMoreOptionsClick(song) },
                                         isSelected = selectedSongIds.contains(song.id),
                                         selectionIndex = if (isSelectionMode) getSelectionIndex(song.id) else null,
