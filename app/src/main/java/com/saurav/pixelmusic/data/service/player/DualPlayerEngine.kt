@@ -36,6 +36,7 @@ import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.extractor.DefaultExtractorsFactory
 import androidx.media3.extractor.mp4.Mp4Extractor
 import com.saurav.pixelmusic.data.model.TransitionSettings
+import com.saurav.pixelmusic.data.remote.jiosaavn.JioSaavnHelper
 import com.saurav.pixelmusic.data.preferences.UserPreferencesRepository
 import com.saurav.pixelmusic.utils.envelope
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -248,15 +249,35 @@ class DualPlayerEngine @Inject constructor(
 
         override fun onPlayerError(error: PlaybackException) {
             Timber.tag("DualPlayerEngine").e(error, "PlayerError intercepted! Attempting auto-skip recovery.")
-            
-            val currentMediaId = playerA.currentMediaItem?.mediaId
-            if (currentMediaId != null) {
-                val uriString = if (currentMediaId.startsWith("youtube://")) currentMediaId else "youtube://$currentMediaId"
+
+            val currentMediaItem = playerA.currentMediaItem
+            val currentMediaId = currentMediaItem?.mediaId
+            val uriString = currentMediaId?.let {
+                if (it.startsWith("youtube://")) it else "youtube://$it"
+            }
+            if (uriString != null) {
                 resolvedUriCache.remove(uriString)
                 activePlaybackResolvedUris.remove(uriString)
             }
 
             scope.launch {
+                // If a YouTube stream URL died at playback time (e.g. HTTP 403 on an
+                // extracted URL), try the JioSaavn fallback for the same song before
+                // skipping to the next track.
+                if (uriString != null && isFallbackableYoutubeSourceError(error, uriString)) {
+                    val fallbackUrl = tryJioSaavnFallback(currentMediaItem, uriString)
+                    if (fallbackUrl != null) {
+                        val fallbackUri = Uri.parse(fallbackUrl)
+                        jioSaavnFallbackUris[uriString] = fallbackUri
+                        resolvedUriCache.put(uriString, fallbackUri)
+                        activePlaybackResolvedUris[uriString] = fallbackUri
+                        Timber.tag("DualPlayerEngine").w("Retrying %s via JioSaavn fallback", uriString)
+                        playerA.seekTo(playerA.currentMediaItemIndex, 0L)
+                        playerA.prepare()
+                        playerA.play()
+                        return@launch
+                    }
+                }
                 delay(300)
                 if (playerA.hasNextMediaItem()) {
                     playerA.seekToNextMediaItem()
@@ -323,6 +344,8 @@ class DualPlayerEngine @Inject constructor(
     private var isReleased = false
     internal val resolvedUriCache = LruCache<String, Uri>(100)
     private val activePlaybackResolvedUris = java.util.concurrent.ConcurrentHashMap<String, Uri>()
+    /** youtube:// URIs already retried via JioSaavn — prevents fallback retry loops. */
+    private val jioSaavnFallbackUris = java.util.concurrent.ConcurrentHashMap<String, Uri>()
     private val localFilePathCache = java.util.concurrent.ConcurrentHashMap<String, String>()
 
     fun registerLocalPath(youtubeUri: String, filePath: String) {
@@ -776,6 +799,42 @@ class DualPlayerEngine @Inject constructor(
     }
 
 private val inFlightResolutions = java.util.concurrent.ConcurrentHashMap<String, Deferred<Uri>>()
+
+    private fun isFallbackableYoutubeSourceError(error: PlaybackException, uriString: String): Boolean {
+        if (!uriString.startsWith("youtube://")) return false
+        if (jioSaavnFallbackUris.containsKey(uriString)) return false
+        return when (error.errorCode) {
+            PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS,
+            PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
+            PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT,
+            PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND,
+            PlaybackException.ERROR_CODE_IO_NO_PERMISSION,
+            PlaybackException.ERROR_CODE_IO_CLEARTEXT_NOT_PERMITTED,
+            PlaybackException.ERROR_CODE_IO_READ_POSITION_OUT_OF_RANGE,
+            PlaybackException.ERROR_CODE_IO_UNSPECIFIED -> true
+            else -> false
+        }
+    }
+
+    private suspend fun tryJioSaavnFallback(mediaItem: MediaItem?, uriString: String): String? {
+        val metadata = mediaItem?.mediaMetadata ?: return null
+        val title = metadata.title?.toString().orEmpty()
+        if (title.isBlank()) return null
+        val artist = metadata.artist?.toString().orEmpty()
+        val youtubeId = uriString.substringAfter("youtube://")
+        return try {
+            JioSaavnHelper.getFallbackStreamUrl(
+                youtubeId = youtubeId,
+                title = title,
+                artist = artist,
+                durationMs = 0L,
+                preferKbps = 160
+            )
+        } catch (e: Exception) {
+            Timber.tag("DualPlayerEngine").w(e, "JioSaavn fallback lookup failed for %s", uriString)
+            null
+        }
+    }
 
     suspend fun resolveCloudUri(uri: Uri): Uri = withContext(Dispatchers.IO + NonCancellable) {
         val uriString = uri.toString()
