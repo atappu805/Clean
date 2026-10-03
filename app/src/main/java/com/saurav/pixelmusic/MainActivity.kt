@@ -158,6 +158,7 @@ import androidx.compose.ui.graphics.luminance
 import racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape
 import com.saurav.pixelmusic.presentation.utils.AppHapticsConfig
 import com.saurav.pixelmusic.presentation.utils.LocalAppHapticsConfig
+import com.saurav.pixelmusic.ui.modifiers.LocalMotionBlurEnabled
 import com.saurav.pixelmusic.ui.modifiers.LocalMotionBlurIntensity
 import com.saurav.pixelmusic.presentation.utils.NoOpHapticFeedback
 import com.saurav.pixelmusic.utils.CrashLogData
@@ -870,6 +871,7 @@ class MainActivity : ComponentActivity() {
             AppHapticsConfig(enabled = hapticsEnabled)
         }
         val motionBlurIntensity by userPreferencesRepository.uiMotionBlurIntensityFlow.collectAsStateWithLifecycle(initialValue = 1f)
+        val motionBlurEnabled by userPreferencesRepository.uiMotionBlurEnabledFlow.collectAsStateWithLifecycle(initialValue = true)
         val scopedHapticFeedback = remember(platformHapticFeedback, appHapticsConfig.enabled) {
             if (appHapticsConfig.enabled) platformHapticFeedback else NoOpHapticFeedback
         }
@@ -983,7 +985,8 @@ class MainActivity : ComponentActivity() {
         CompositionLocalProvider(
             LocalAppHapticsConfig provides appHapticsConfig,
             LocalHapticFeedback provides scopedHapticFeedback,
-            LocalMotionBlurIntensity provides motionBlurIntensity
+            LocalMotionBlurIntensity provides motionBlurIntensity,
+            LocalMotionBlurEnabled provides motionBlurEnabled
         ) {
             AppSidebarDrawer(
                 drawerState = drawerState,
