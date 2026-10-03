@@ -384,8 +384,12 @@ fun LibraryAlbumsTab(
                                     }
                                 }
                             }
-                            val stablePlayerState by playerViewModel.stablePlayerState.collectAsStateWithLifecycle()
-                            val bottomPadding = if (stablePlayerState.currentSong != null && stablePlayerState.currentSong != Song.emptySong())
+                            val hasActiveSong by remember {
+                                playerViewModel.stablePlayerState
+                                    .map { it.currentSong != null && it.currentSong != Song.emptySong() }
+                                    .distinctUntilChanged()
+                            }.collectAsStateWithLifecycle(initialValue = false)
+                            val bottomPadding = if (hasActiveSong)
                                 bottomBarHeight + MiniPlayerHeight + 16.dp
                             else
                                 bottomBarHeight + 16.dp
@@ -456,8 +460,12 @@ fun LibraryAlbumsTab(
                                 }
                             }
 
-                            val stablePlayerState by playerViewModel.stablePlayerState.collectAsStateWithLifecycle()
-                            val bottomPadding = if (stablePlayerState.currentSong != null && stablePlayerState.currentSong != Song.emptySong())
+                            val hasActiveSong by remember {
+                                playerViewModel.stablePlayerState
+                                    .map { it.currentSong != null && it.currentSong != Song.emptySong() }
+                                    .distinctUntilChanged()
+                            }.collectAsStateWithLifecycle(initialValue = false)
+                            val bottomPadding = if (hasActiveSong)
                                 bottomBarHeight + MiniPlayerHeight + 16.dp
                             else
                                 bottomBarHeight + 16.dp
@@ -648,8 +656,12 @@ fun LibraryArtistsTab(
                             }
                         }
 
-                        val stablePlayerState by playerViewModel.stablePlayerState.collectAsStateWithLifecycle()
-                        val bottomPadding = if (stablePlayerState.currentSong != null && stablePlayerState.currentSong != Song.emptySong())
+                        val hasActiveSong by remember {
+                            playerViewModel.stablePlayerState
+                                .map { it.currentSong != null && it.currentSong != Song.emptySong() }
+                                .distinctUntilChanged()
+                        }.collectAsStateWithLifecycle(initialValue = false)
+                        val bottomPadding = if (hasActiveSong)
                             bottomBarHeight + MiniPlayerHeight + 16.dp
                         else
                             bottomBarHeight + 16.dp
