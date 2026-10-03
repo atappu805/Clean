@@ -20,6 +20,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.runtime.remember
+import com.saurav.pixelmusic.ui.modifiers.scrollMotionBlur
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -79,13 +81,15 @@ fun MashupScreen(
             )
         }
     ) { paddingValues ->
+        val mashupScrollState = rememberScrollState()
         Box(modifier = Modifier.fillMaxSize()) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
                     .padding(horizontal = 16.dp)
-                    .verticalScroll(rememberScrollState()),
+                    .scrollMotionBlur(scrollState = mashupScrollState)
+                    .verticalScroll(mashupScrollState),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
