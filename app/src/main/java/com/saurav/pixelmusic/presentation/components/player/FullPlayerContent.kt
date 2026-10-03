@@ -392,7 +392,7 @@ fun FullPlayerContent(
     val transportPlayPauseColors = expressivePlayPauseButtonColors(baseTheme)
     val transportSkipButtonColors = TransportButtonColors(container = playerAccentColor, content = playerOnAccentColor)
 
-    val topBarButtonBg = playerOnAccentColor.copy(alpha = 0.7f)
+    val topBarButtonBg = playerOnAccentColor
     val topBarIconColor = playerAccentColor
 
     val progressActiveColor = playerOnBaseColor
@@ -874,11 +874,11 @@ fun FullPlayerContent(
                             color = topBarButtonBg,
                             modifier = Modifier
                                 .padding(end = 14.dp)
-                                .height(42.dp)
+                                .height(48.dp)
                         ) {
                             Row(
                                 modifier = Modifier
-                                    .height(42.dp)
+                                    .height(48.dp)
                                     .animateContentSize(
                                         animationSpec = spring(
                                             dampingRatio = Spring.DampingRatioMediumBouncy,
