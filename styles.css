@@ -1392,8 +1392,17 @@ h1 em, h2 em {
   .features { grid-template-columns: 1fr; }
   .feature-wide { grid-column: auto; grid-template-columns: 1fr; }
   .showcase-heading { grid-template-columns: 1fr; gap: 20px; }
-  .showcase-panel { grid-template-columns: 1fr; gap: 35px; }
-  .panel-preview { justify-content: center; }
+  .showcase-stack { height: 720px; }
+  .showcase-stack-container { min-height: 740px; }
+  .stack-card-inner {
+    grid-template-columns: 1fr;
+    gap: 30px;
+    padding: 30px;
+    overflow-y: auto;
+  }
+  .stack-card-inner .panel-preview {
+    justify-content: center;
+  }
   .compat-grid { grid-template-columns: repeat(2, 1fr); }
   .about { grid-template-columns: 1fr; gap: 40px; padding-top: 90px; }
   .about-panel { min-height: 480px; }
@@ -1452,7 +1461,12 @@ h1 em, h2 em {
   .ambient-art-glow { width: 280px; height: 280px; }
   .track-chip { bottom: 12px; right: -5px; min-width: 190px; }
   
-  /* Showcase Tabs scroll on mobile */
+  /* Showcase Stack controls & cards on mobile */
+  .showcase-stack-controls {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+  }
   .showcase-tabs {
     flex-wrap: nowrap;
     overflow-x: auto;
@@ -1460,6 +1474,37 @@ h1 em, h2 em {
     -webkit-overflow-scrolling: touch;
   }
   .tab-pill { flex: 0 0 auto; font-size: 12px; padding: 8px 14px; }
+  .stack-action-bar {
+    justify-content: space-between;
+    width: 100%;
+  }
+  .showcase-stack { height: 680px; }
+  .showcase-stack-container { min-height: 700px; }
+  .stack-card {
+    border-radius: var(--radius-lg);
+  }
+  .stack-card.is-next-1 {
+    transform: translateX(12px) translateY(10px) scale(0.97) rotate(1deg);
+  }
+  .stack-card.is-next-2 {
+    transform: translateX(22px) translateY(20px) scale(0.94) rotate(2deg);
+  }
+  .stack-card-inner {
+    padding: 22px 18px;
+    gap: 20px;
+  }
+  .pixel-device {
+    width: 190px;
+  }
+  .panel-info h3 {
+    font-size: 24px;
+    margin: 6px 0 10px;
+  }
+  .panel-info p {
+    font-size: 14px;
+    line-height: 1.6;
+    margin-bottom: 14px;
+  }
   
   /* Compatibility Grid */
   .compat-grid { grid-template-columns: 1fr; }
