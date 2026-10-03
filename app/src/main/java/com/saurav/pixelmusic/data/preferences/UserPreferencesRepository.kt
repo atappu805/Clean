@@ -320,7 +320,7 @@ constructor(
         val ALBUM_ART_QUALITY = stringPreferencesKey("album_art_quality")
         val ALBUM_ART_CACHE_LIMIT_MB = intPreferencesKey("album_art_cache_limit_mb")
         val UI_MOTION_BLUR_ENABLED = booleanPreferencesKey("ui_motion_blur_enabled")
-        val UI_MOTION_BLUR_INTENSITY = floatPreferencesKey("ui_motion_blur_intensity")
+        val UI_MOTION_BLUR_INTENSITY = androidx.datastore.preferences.core.floatPreferencesKey("ui_motion_blur_intensity")
         val TAP_BACKGROUND_CLOSES_PLAYER = booleanPreferencesKey("tap_background_closes_player")
         val HAPTICS_ENABLED = booleanPreferencesKey("haptics_enabled")
         val IMMERSIVE_LYRICS_ENABLED = booleanPreferencesKey("immersive_lyrics_enabled")
