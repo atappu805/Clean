@@ -127,7 +127,7 @@ fun PlaylistBottomSheet(
         label = "fab_alpha"
     )
 
-    ModalBottomSheet(
+    SmoothModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         contentWindowInsets = { BottomSheetDefaults.modalWindowInsets } // Manejo de insets como el teclado

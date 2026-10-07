@@ -144,7 +144,7 @@ fun MultiSelectionBottomSheet(
         )
     }
     
-    ModalBottomSheet(
+    SmoothModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState
     ) {

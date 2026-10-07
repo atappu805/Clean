@@ -345,7 +345,7 @@ fun CastBottomSheet(
         onDispose { onExpansionChanged(0f) }
     }
 
-    ModalBottomSheet(
+    SmoothModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         dragHandle = { BottomSheetDefaults.DragHandle() },

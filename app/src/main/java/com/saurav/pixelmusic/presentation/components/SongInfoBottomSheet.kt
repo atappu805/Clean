@@ -222,7 +222,7 @@ fun SongInfoBottomSheet(
     val scope = androidx.compose.runtime.rememberCoroutineScope()
 
     val currentColorScheme = MaterialTheme.colorScheme
-    ModalBottomSheet(
+    SmoothModalBottomSheet(
         onDismissRequest = {
             if (!showEditSheet) {
                 onDismiss()

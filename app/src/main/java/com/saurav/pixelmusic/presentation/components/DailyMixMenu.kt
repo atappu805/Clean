@@ -34,7 +34,7 @@ fun DailyMixMenu(
     )
     var prompt by remember { mutableStateOf("") }
 
-    ModalBottomSheet(
+    SmoothModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState
     ) {

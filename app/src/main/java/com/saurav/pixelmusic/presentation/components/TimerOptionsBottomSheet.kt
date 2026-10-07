@@ -115,7 +115,7 @@ fun TimerOptionsBottomSheet(
         }
     }
 
-    ModalBottomSheet(
+    SmoothModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState
     ) {

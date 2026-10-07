@@ -240,7 +240,7 @@ fun ShareBottomSheet(
             cornerRadiusBL = 0.dp, smoothnessAsPercentTR = 60
         )
     }
-    ModalBottomSheet(
+    SmoothModalBottomSheet(
         onDismissRequest = { if (!isGeneratingVideo) onDismiss() },
         sheetState = sheetState,
         containerColor = colorScheme.surfaceContainer,

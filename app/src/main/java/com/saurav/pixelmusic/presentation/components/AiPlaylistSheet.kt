@@ -229,7 +229,7 @@ fun AiPlaylistSheet(
         else -> true
     }
 
-    ModalBottomSheet(
+    SmoothModalBottomSheet(
         sheetState = sheetState,
         onDismissRequest = onDismiss,
         containerColor = colors.surfaceContainerLow

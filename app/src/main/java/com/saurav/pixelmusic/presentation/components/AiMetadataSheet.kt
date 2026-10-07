@@ -93,7 +93,7 @@ fun AiMetadataSheet(
         label = "scale"
     )
 
-    ModalBottomSheet(
+    SmoothModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         containerColor = colors.surfaceContainerLow,

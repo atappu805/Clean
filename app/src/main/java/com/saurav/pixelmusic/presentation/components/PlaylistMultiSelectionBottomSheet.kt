@@ -97,7 +97,7 @@ fun PlaylistMultiSelectionBottomSheet(
         cornerRadiusBL = evenCornerRadius, smoothnessAsPercentTR = 60
     )
 
-    ModalBottomSheet(
+    SmoothModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState
     ) {
