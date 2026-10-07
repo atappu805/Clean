@@ -62,6 +62,10 @@ import androidx.compose.material.icons.rounded.SelectAll
 import androidx.compose.material.icons.rounded.Deselect
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.Link
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.rounded.ArrowForward
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Check
 import com.saurav.pixelmusic.data.playlist.M3uManager
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -417,7 +421,7 @@ fun LibraryScreen(
         }
     }
     var showImportSheet by remember { mutableStateOf(false) }
-    var showImportLinkDialog by remember { mutableStateOf(false) }
+    var showImportLinkSheet by remember { mutableStateOf(false) }
 
     var showReorderTabsSheet by remember { mutableStateOf(false) }
     var showTabSwitcherSheet by remember { mutableStateOf(false) }
@@ -2079,7 +2083,7 @@ onViewToggleChange = { isChecked ->
             },
             onImportLink = {
                 showImportSheet = false
-                showImportLinkDialog = true
+                showImportLinkSheet = true
             }
         )
     }
@@ -2101,11 +2105,11 @@ onViewToggleChange = { isChecked ->
         )
     }
 
-    if (showImportLinkDialog) {
-        ImportPlaylistLinkDialog(
-            isVisible = showImportLinkDialog,
+    if (showImportLinkSheet) {
+        ImportPlaylistLinkBottomSheet(
+            isVisible = showImportLinkSheet,
             playlistViewModel = playlistViewModel,
-            onDismiss = { showImportLinkDialog = false }
+            onDismiss = { showImportLinkSheet = false }
         )
     }
 }
@@ -2377,7 +2381,6 @@ private fun ImportPlaylistSheet(
     val importCsvDesc = stringResource(R.string.presentation_batch_b_export_as_csv_desc)
     val importLinkLabel = stringResource(R.string.presentation_batch_b_import_link)
     val importLinkDesc = stringResource(R.string.presentation_batch_b_import_link_desc)
-    val cancelLabel = stringResource(R.string.cancel)
 
     val sheetState = rememberBottomSheetState(
         initialValue = SheetValue.Hidden,
@@ -2387,118 +2390,202 @@ private fun ImportPlaylistSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
         containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-        tonalElevation = 4.dp,
+        tonalElevation = 2.dp,
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp)
-                .padding(bottom = 24.dp),
+                .padding(bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text(
-                text = importPlaylistTitle,
-                style = MaterialTheme.typography.headlineSmall,
-                fontFamily = GoogleSansRounded,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(top = 4.dp, bottom = 4.dp)
-            )
-
-            Row(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(18.dp))
-                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                    .clickable(onClick = onImportM3u)
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(14.dp)
+                    .padding(horizontal = 4.dp, vertical = 2.dp)
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(42.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surfaceContainerHighest),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Rounded.QueueMusic,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(importM3uLabel, style = MaterialTheme.typography.titleMedium, fontFamily = GoogleSansRounded)
-                    Text(importM3uDesc, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(18.dp))
-                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                    .clickable(onClick = onImportCsv)
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(14.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(42.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surfaceContainerHighest),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.rounded_attach_file_24),
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(importCsvLabel, style = MaterialTheme.typography.titleMedium, fontFamily = GoogleSansRounded)
-                    Text(importCsvDesc, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(18.dp))
-                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                    .clickable(onClick = onImportLink)
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(14.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(42.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surfaceContainerHighest),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Link,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(importLinkLabel, style = MaterialTheme.typography.titleMedium, fontFamily = GoogleSansRounded)
-                    Text(importLinkDesc, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+                Text(
+                    text = importPlaylistTitle,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontFamily = GoogleSansRounded,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = "Add playlists from local files or streaming links to your library",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontFamily = GoogleSansRounded,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
 
             Spacer(Modifier.height(4.dp))
-            TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) {
-                Text(cancelLabel)
+
+            // 1. Featured Option: Import from Link
+            ImportOptionCard(
+                title = importLinkLabel,
+                subtitle = importLinkDesc,
+                badgeColor = MaterialTheme.colorScheme.primaryContainer,
+                icon = {
+                    Icon(
+                        imageVector = Icons.Rounded.Link,
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                },
+                tags = {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Surface(
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.8f)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(5.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(6.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(0xFFFF0000))
+                                )
+                                Text(
+                                    text = "YouTube",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        Surface(
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.8f)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(5.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(6.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(0xFF1DB954))
+                                )
+                                Text(
+                                    text = "Spotify",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                },
+                onClick = onImportLink
+            )
+
+            // 2. Import M3U
+            ImportOptionCard(
+                title = importM3uLabel,
+                subtitle = importM3uDesc,
+                badgeColor = MaterialTheme.colorScheme.secondaryContainer,
+                icon = {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Rounded.QueueMusic,
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp),
+                        tint = MaterialTheme.colorScheme.secondary
+                    )
+                },
+                onClick = onImportM3u
+            )
+
+            // 3. Import CSV
+            ImportOptionCard(
+                title = importCsvLabel,
+                subtitle = importCsvDesc,
+                badgeColor = MaterialTheme.colorScheme.tertiaryContainer,
+                icon = {
+                    Icon(
+                        painter = painterResource(R.drawable.rounded_attach_file_24),
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp),
+                        tint = MaterialTheme.colorScheme.tertiary
+                    )
+                },
+                onClick = onImportCsv
+            )
+        }
+    }
+}
+
+@Composable
+private fun ImportOptionCard(
+    title: String,
+    subtitle: String,
+    badgeColor: Color,
+    icon: @Composable () -> Unit,
+    tags: (@Composable () -> Unit)? = null,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        onClick = onClick
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(badgeColor),
+                contentAlignment = Alignment.Center
+            ) {
+                icon()
             }
+
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontFamily = GoogleSansRounded,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                if (tags != null) {
+                    Spacer(Modifier.height(4.dp))
+                    tags()
+                }
+            }
+
+            Icon(
+                imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                modifier = Modifier.size(20.dp)
+            )
         }
     }
 }
@@ -4060,12 +4147,15 @@ fun AlbumListItem(
 
 private enum class LinkImportPhase { INPUT, FETCHING, PREVIEW, UPLOADING }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ImportPlaylistLinkDialog(
+private fun ImportPlaylistLinkBottomSheet(
     isVisible: Boolean,
     playlistViewModel: PlaylistViewModel,
     onDismiss: () -> Unit
 ) {
+    if (!isVisible) return
+
     val context = androidx.compose.ui.platform.LocalContext.current
     val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
 
@@ -4076,7 +4166,7 @@ private fun ImportPlaylistLinkDialog(
     var fetchedSongs by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<List<com.saurav.pixelmusic.data.model.Song>>(emptyList()) }
     var failedCount by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(0) }
     var sourceLabel by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
-    var showDuplicateDialog by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    var showDuplicateChoice by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
     var existingPlaylist by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<com.saurav.pixelmusic.data.model.Playlist?>(null) }
     var isProcessingDuplicate by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
     var uploadCurrent by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(0) }
@@ -4093,7 +4183,7 @@ private fun ImportPlaylistLinkDialog(
         fetchedSongs = emptyList()
         failedCount = 0
         sourceLabel = ""
-        showDuplicateDialog = false
+        showDuplicateChoice = false
         existingPlaylist = null
         isProcessingDuplicate = false
         uploadCurrent = 0
@@ -4113,7 +4203,7 @@ private fun ImportPlaylistLinkDialog(
     fun startFetch() {
         val link = playlistViewModel.m3uManager.parsePlaylistLink(linkInput)
         if (link is M3uManager.PlaylistLink.Unsupported) {
-            fetchError = "That doesn't look like a YouTube or Spotify playlist link."
+            fetchError = "Please enter a valid YouTube, YouTube Music, or Spotify playlist or album link."
             return
         }
         fetchError = null
@@ -4148,7 +4238,7 @@ private fun ImportPlaylistLinkDialog(
         val existing = playlistViewModel.findPlaylistByName(playlistNameInput.ifBlank { "Imported Playlist" })
         if (existing != null) {
             existingPlaylist = existing
-            showDuplicateDialog = true
+            showDuplicateChoice = true
         } else {
             coroutineScope.launch {
                 try {
@@ -4190,200 +4280,51 @@ private fun ImportPlaylistLinkDialog(
         }
     }
 
-    if (isVisible && !showDuplicateDialog) {
-        AlertDialog(
-            onDismissRequest = {
-                if (phase != LinkImportPhase.FETCHING && phase != LinkImportPhase.UPLOADING) {
-                    resetState()
-                    onDismiss()
-                }
-            },
-            title = {
-                Text(
-                    text = "Import from Link",
-                    fontFamily = GoogleSansRounded,
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
-                )
-            },
-            text = {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    when (phase) {
-                        LinkImportPhase.INPUT -> {
-                            Text(
-                                text = "Paste a YouTube Music, YouTube or Spotify playlist link:",
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                            OutlinedTextField(
-                                value = linkInput,
-                                onValueChange = { linkInput = it; fetchError = null },
-                                singleLine = true,
-                                placeholder = { Text("https://…") },
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                            if (fetchError != null) {
-                                Text(
-                                    text = fetchError!!,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.error
-                                )
-                            }
-                        }
-                        LinkImportPhase.FETCHING -> {
-                            val totalLabel = if (importProgress.totalTracks > 0) "${importProgress.currentTrackIndex}/${importProgress.totalTracks}" else "${importProgress.currentTrackIndex}"
-                            Text(
-                                text = "Fetching songs $totalLabel",
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                            if (importProgress.currentTrackName.isNotBlank()) {
-                                Text(
-                                    text = "${importProgress.currentTrackName} - ${importProgress.currentTrackArtist}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    maxLines = 1,
-                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(8.dp))
-                            CircularWavyProgressIndicator(
-                                modifier = Modifier.align(Alignment.CenterHorizontally)
-                            )
-                        }
-                        LinkImportPhase.PREVIEW -> {
-                            OutlinedTextField(
-                                value = playlistNameInput,
-                                onValueChange = { playlistNameInput = it },
-                                singleLine = true,
-                                label = { Text("Playlist name") },
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                            val summary = buildString {
-                                append(sourceLabel)
-                                append(" • ")
-                                append(fetchedSongs.size)
-                                append(if (fetchedSongs.size == 1) " song" else " songs")
-                                if (failedCount > 0) {
-                                    append(" • ")
-                                    append(failedCount)
-                                    append(" couldn't be matched")
-                                }
-                            }
-                            Text(
-                                text = summary,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            fetchedSongs.take(5).forEach { song ->
-                                Text(
-                                    text = "${song.title} — ${song.artist}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    maxLines = 1,
-                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                                )
-                            }
-                            if (fetchedSongs.size > 5) {
-                                Text(
-                                    text = "…and ${fetchedSongs.size - 5} more",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                        LinkImportPhase.UPLOADING -> {
-                            Text(
-                                text = "Uploading to YouTube Music $uploadCurrent/$uploadTotal",
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            CircularWavyProgressIndicator(
-                                modifier = Modifier.align(Alignment.CenterHorizontally)
-                            )
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                when (phase) {
-                    LinkImportPhase.INPUT -> {
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            TextButton(onClick = { pasteFromClipboard() }) {
-                                Text("Paste")
-                            }
-                            TextButton(
-                                enabled = linkInput.isNotBlank(),
-                                onClick = { startFetch() }
-                            ) {
-                                Text("Fetch")
-                            }
-                        }
-                    }
-                    LinkImportPhase.PREVIEW -> {
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            TextButton(onClick = { addToLibrary() }) {
-                                Text("Add to Library")
-                            }
-                            if (isLoggedIn) {
-                                TextButton(onClick = { uploadToYouTubeMusic() }) {
-                                    Text("Upload to YouTube")
-                                }
-                            }
-                        }
-                    }
-                    else -> { }
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    enabled = phase != LinkImportPhase.FETCHING && phase != LinkImportPhase.UPLOADING,
-                    onClick = {
-                        resetState()
-                        onDismiss()
-                    }
-                ) {
-                    Text("Cancel")
-                }
-            }
-        )
-    }
+    val sheetState = rememberBottomSheetState(
+        initialValue = SheetValue.Hidden,
+        enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded)
+    )
 
-    if (showDuplicateDialog && existingPlaylist != null) {
-        AlertDialog(
-            onDismissRequest = {
-                if (!isProcessingDuplicate) {
-                    showDuplicateDialog = false
-                    existingPlaylist = null
-                }
-            },
-            title = {
-                Text(
-                    text = "Playlist Already Exists",
-                    fontFamily = GoogleSansRounded,
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
-                )
-            },
-            text = {
+    ModalBottomSheet(
+        onDismissRequest = {
+            if (phase != LinkImportPhase.FETCHING && phase != LinkImportPhase.UPLOADING) {
+                resetState()
+                onDismiss()
+            }
+        },
+        sheetState = sheetState,
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        tonalElevation = 2.dp,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            if (showDuplicateChoice && existingPlaylist != null) {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
-                        text = "A playlist named \"${existingPlaylist!!.name}\" already exists in your library. What would you like to do?",
-                        style = MaterialTheme.typography.bodyMedium
+                        text = "Playlist Already Exists",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontFamily = GoogleSansRounded,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
-                    if (isProcessingDuplicate) {
-                        Spacer(modifier = Modifier.height(16.dp))
-                        CircularWavyProgressIndicator()
-                    }
-                }
-            },
-            confirmButton = {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    TextButton(
-                        enabled = !isProcessingDuplicate,
+                    Text(
+                        text = "A playlist named \"${existingPlaylist!!.name}\" already exists in your library. What would you like to do?",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Spacer(Modifier.height(4.dp))
+
+                    Button(
                         onClick = {
                             isProcessingDuplicate = true
                             coroutineScope.launch {
@@ -4404,15 +4345,18 @@ private fun ImportPlaylistLinkDialog(
                                 } catch (e: Exception) {
                                     android.widget.Toast.makeText(context, "Failed to update playlist: ${e.localizedMessage}", android.widget.Toast.LENGTH_SHORT).show()
                                     isProcessingDuplicate = false
-                                    showDuplicateDialog = false
+                                    showDuplicateChoice = false
                                 }
                             }
-                        }
-                    ) {
-                        Text("Update Existing")
-                    }
-                    TextButton(
+                        },
                         enabled = !isProcessingDuplicate,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Text("Update Existing (add new songs)")
+                    }
+
+                    OutlinedButton(
                         onClick = {
                             isProcessingDuplicate = true
                             coroutineScope.launch {
@@ -4427,27 +4371,360 @@ private fun ImportPlaylistLinkDialog(
                                 } catch (e: Exception) {
                                     android.widget.Toast.makeText(context, "Failed to import playlist: ${e.localizedMessage}", android.widget.Toast.LENGTH_SHORT).show()
                                     isProcessingDuplicate = false
-                                    showDuplicateDialog = false
+                                    showDuplicateChoice = false
+                                }
+                            }
+                        },
+                        enabled = !isProcessingDuplicate,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Text("Create as New Copy")
+                    }
+
+                    TextButton(
+                        onClick = { showDuplicateChoice = false },
+                        enabled = !isProcessingDuplicate,
+                        modifier = Modifier.align(Alignment.CenterHorizontally)
+                    ) {
+                        Text("Cancel")
+                    }
+                }
+            } else {
+                when (phase) {
+                    LinkImportPhase.INPUT -> {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(MaterialTheme.colorScheme.primaryContainer),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Link,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                            Column {
+                                Text(
+                                    text = "Import from Link",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontFamily = GoogleSansRounded,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Paste a YouTube Music, YouTube, or Spotify link",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        OutlinedTextField(
+                            value = linkInput,
+                            onValueChange = { linkInput = it; fetchError = null },
+                            singleLine = true,
+                            placeholder = { Text("https://…") },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(16.dp),
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Rounded.Link,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            },
+                            trailingIcon = {
+                                if (linkInput.isNotEmpty()) {
+                                    IconButton(onClick = { linkInput = ""; fetchError = null }) {
+                                        Icon(imageVector = Icons.Rounded.Close, contentDescription = "Clear")
+                                    }
+                                } else {
+                                    TextButton(onClick = { pasteFromClipboard() }) {
+                                        Text("Paste", fontWeight = FontWeight.SemiBold)
+                                    }
+                                }
+                            }
+                        )
+
+                        val detected = playlistViewModel.m3uManager.detectPlatform(linkInput)
+                        if (detected != null) {
+                            Surface(
+                                shape = CircleShape,
+                                color = MaterialTheme.colorScheme.surfaceContainerHigh
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    val isSpotify = detected.contains("Spotify", ignoreCase = true)
+                                    Box(
+                                        modifier = Modifier
+                                            .size(8.dp)
+                                            .clip(CircleShape)
+                                            .background(if (isSpotify) Color(0xFF1DB954) else Color(0xFFFF0000))
+                                    )
+                                    Text(
+                                        text = "$detected link detected",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Medium,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
                                 }
                             }
                         }
-                    ) {
-                        Text("Create New")
+
+                        if (fetchError != null) {
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(12.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.rounded_broken_image_24),
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Text(
+                                        text = fetchError!!,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onErrorContainer
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(Modifier.height(4.dp))
+
+                        Button(
+                            onClick = { startFetch() },
+                            enabled = linkInput.isNotBlank(),
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(16.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text("Fetch Playlist", fontWeight = FontWeight.SemiBold)
+                        }
                     }
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    enabled = !isProcessingDuplicate,
-                    onClick = {
-                        showDuplicateDialog = false
-                        existingPlaylist = null
+
+                    LinkImportPhase.FETCHING -> {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            CircularWavyProgressIndicator(
+                                modifier = Modifier.size(54.dp)
+                            )
+
+                            val totalLabel = if (importProgress.totalTracks > 0) {
+                                "${importProgress.currentTrackIndex}/${importProgress.totalTracks}"
+                            } else {
+                                "${importProgress.currentTrackIndex}"
+                            }
+
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    text = "Fetching tracks… ($totalLabel)",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontFamily = GoogleSansRounded,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                if (importProgress.currentTrackName.isNotBlank()) {
+                                    Spacer(Modifier.height(4.dp))
+                                    Text(
+                                        text = "${importProgress.currentTrackName} • ${importProgress.currentTrackArtist}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+                        }
                     }
-                ) {
-                    Text("Cancel")
+
+                    LinkImportPhase.PREVIEW -> {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Text(
+                                text = "Playlist Preview",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontFamily = GoogleSansRounded,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+
+                            OutlinedTextField(
+                                value = playlistNameInput,
+                                onValueChange = { playlistNameInput = it },
+                                singleLine = true,
+                                label = { Text("Playlist Name") },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Rounded.QueueMusic,
+                                        contentDescription = null
+                                    )
+                                },
+                                shape = RoundedCornerShape(16.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            Surface(
+                                shape = RoundedCornerShape(14.dp),
+                                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    val isSpotify = sourceLabel.contains("Spotify", ignoreCase = true)
+                                    Box(
+                                        modifier = Modifier
+                                            .size(8.dp)
+                                            .clip(CircleShape)
+                                            .background(if (isSpotify) Color(0xFF1DB954) else Color(0xFFFF0000))
+                                    )
+                                    Text(
+                                        text = "$sourceLabel • ${fetchedSongs.size} songs" + (if (failedCount > 0) " • $failedCount unmatched" else ""),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Medium,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+
+                            // Preview list (up to 5 preview rows)
+                            Surface(
+                                shape = RoundedCornerShape(16.dp),
+                                color = MaterialTheme.colorScheme.surfaceContainer,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    fetchedSongs.take(5).forEachIndexed { idx, song ->
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                        ) {
+                                            Text(
+                                                text = "${idx + 1}",
+                                                style = MaterialTheme.typography.labelMedium,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                                modifier = Modifier.width(20.dp)
+                                            )
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    text = song.title,
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    fontWeight = FontWeight.Medium,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                                Text(
+                                                    text = song.artist,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                            }
+                                        }
+                                    }
+                                    if (fetchedSongs.size > 5) {
+                                        Text(
+                                            text = "…and ${fetchedSongs.size - 5} more songs",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.padding(start = 30.dp, top = 2.dp)
+                                        )
+                                    }
+                                }
+                            }
+
+                            Spacer(Modifier.height(4.dp))
+
+                            Button(
+                                onClick = { addToLibrary() },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(16.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Check,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text("Add to Library", fontWeight = FontWeight.SemiBold)
+                            }
+
+                            if (isLoggedIn) {
+                                OutlinedButton(
+                                    onClick = { uploadToYouTubeMusic() },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(16.dp)
+                                ) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.ic_youtube),
+                                        contentDescription = null,
+                                        tint = Color(0xFFFF0000),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(Modifier.width(8.dp))
+                                    Text("Upload to YouTube Music", fontWeight = FontWeight.SemiBold)
+                                }
+                            }
+                        }
+                    }
+
+                    LinkImportPhase.UPLOADING -> {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            CircularWavyProgressIndicator(
+                                modifier = Modifier.size(54.dp)
+                            )
+                            Text(
+                                text = "Uploading to YouTube Music ($uploadCurrent/$uploadTotal)",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontFamily = GoogleSansRounded,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
                 }
             }
-        )
+        }
     }
 }
 

@@ -152,7 +152,7 @@ class M3uManager @Inject constructor(
 
     sealed interface PlaylistLink {
         data class YouTube(val playlistId: String) : PlaylistLink
-        data class Spotify(val playlistId: String) : PlaylistLink
+        data class Spotify(val playlistId: String, val isAlbum: Boolean = false) : PlaylistLink
         data object Unsupported : PlaylistLink
     }
 
@@ -167,16 +167,70 @@ class M3uManager @Inject constructor(
         val text = raw.trim()
         if (text.isEmpty()) return PlaylistLink.Unsupported
         val url = Regex("""https?://\S+""").find(text)?.value ?: text
+
+        // 1. YouTube ?list= or &list= query param
         Regex("""[?&]list=([a-zA-Z0-9_-]+)""").find(url)?.let {
             return PlaylistLink.YouTube(it.groupValues[1])
         }
-        Regex("""open\.spotify\.com/(?:intl-[a-z-]+/)?playlist/([a-zA-Z0-9]+)""").find(url)?.let {
-            return PlaylistLink.Spotify(it.groupValues[1])
+
+        // 2. YouTube Music / YouTube browse URL: /browse/VL... or /browse/MPREb_...
+        Regex("""(?:music\.)?youtube\.com/browse/(?:VL)?([a-zA-Z0-9_-]+)""").find(url)?.let {
+            return PlaylistLink.YouTube(it.groupValues[1])
         }
-        Regex("""spotify:playlist:([a-zA-Z0-9]+)""").find(text)?.let {
-            return PlaylistLink.Spotify(it.groupValues[1])
+
+        // 3. Raw YouTube playlist / album ID
+        if (text.matches(Regex("""^(?:VL)?(?:PL|OLAK|RDCLAK|CLAK|UU|FL|LL|LM)[a-zA-Z0-9_-]{8,}$""")) ||
+            text.startsWith("MPREb_")
+        ) {
+            return PlaylistLink.YouTube(text.removePrefix("VL"))
         }
+
+        // 4. Spotify playlist URL (with optional locale /intl-xx/ and query params)
+        Regex("""open\.spotify\.com/(?:[a-zA-Z0-9_-]+/)?playlist/([a-zA-Z0-9]+)""").find(url)?.let {
+            return PlaylistLink.Spotify(it.groupValues[1], isAlbum = false)
+        }
+
+        // 5. Spotify album URL
+        Regex("""open\.spotify\.com/(?:[a-zA-Z0-9_-]+/)?album/([a-zA-Z0-9]+)""").find(url)?.let {
+            return PlaylistLink.Spotify(it.groupValues[1], isAlbum = true)
+        }
+
+        // 6. Spotify URI
+        Regex("""spotify:(playlist|album):([a-zA-Z0-9]+)""").find(text)?.let {
+            val isAlbum = it.groupValues[1] == "album"
+            return PlaylistLink.Spotify(it.groupValues[2], isAlbum = isAlbum)
+        }
+
+        // 7. Spotify short link: spotify.link/...
+        if (url.contains("spotify.link/")) {
+            val resolvedUrl = try {
+                val req = okhttp3.Request.Builder().url(url).head().build()
+                YoutubeHelper.client.newCall(req).execute().use { response ->
+                    response.request.url.toString()
+                }
+            } catch (_: Exception) { url }
+            Regex("""playlist/([a-zA-Z0-9]+)""").find(resolvedUrl)?.let {
+                return PlaylistLink.Spotify(it.groupValues[1], isAlbum = false)
+            }
+            Regex("""album/([a-zA-Z0-9]+)""").find(resolvedUrl)?.let {
+                return PlaylistLink.Spotify(it.groupValues[1], isAlbum = true)
+            }
+        }
+
+        // 8. Raw Spotify ID (22 base62 alphanumeric characters)
+        if (text.matches(Regex("""^[a-zA-Z0-9]{22}$"""))) {
+            return PlaylistLink.Spotify(text, isAlbum = false)
+        }
+
         return PlaylistLink.Unsupported
+    }
+
+    fun detectPlatform(raw: String): String? {
+        return when (val link = parsePlaylistLink(raw)) {
+            is PlaylistLink.YouTube -> "YouTube Music"
+            is PlaylistLink.Spotify -> if (link.isAlbum) "Spotify Album" else "Spotify"
+            PlaylistLink.Unsupported -> null
+        }
     }
 
     suspend fun fetchPlaylistFromLink(
@@ -185,7 +239,7 @@ class M3uManager @Inject constructor(
     ): LinkImportResult = withContext(Dispatchers.IO) {
         when (link) {
             is PlaylistLink.YouTube -> fetchYouTubeLinkPlaylist(link.playlistId, onProgress)
-            is PlaylistLink.Spotify -> fetchSpotifyLinkPlaylist(link.playlistId, onProgress)
+            is PlaylistLink.Spotify -> fetchSpotifyLinkPlaylist(link.playlistId, link.isAlbum, onProgress)
             PlaylistLink.Unsupported -> throw IllegalArgumentException("Unsupported playlist link")
         }
     }
@@ -194,7 +248,20 @@ class M3uManager @Inject constructor(
         playlistId: String,
         onProgress: (Int, Int, String, String) -> Unit,
     ): LinkImportResult {
-        val first = YouTube.playlist(playlistId).getOrThrow()
+        val cleanId = playlistId.removePrefix("VL")
+        if (cleanId.startsWith("MPREb_")) {
+            val albumPage = YouTube.album(cleanId).getOrThrow()
+            val songs = albumPage.songs.map { it.toNativeSong() }
+            if (songs.isNotEmpty()) musicRepository.insertYoutubeSongs(songs)
+            return LinkImportResult(
+                name = albumPage.album.title.ifBlank { "Imported Album" },
+                songs = songs,
+                failedCount = 0,
+                sourceLabel = "YouTube Music Album"
+            )
+        }
+
+        val first = YouTube.playlist(cleanId).getOrThrow()
         val items = first.songs.toMutableList()
         onProgress(items.size, -1, first.playlist.title, "")
         var continuation = first.songsContinuation?.takeUnless { it.isBlank() }
@@ -219,12 +286,12 @@ class M3uManager @Inject constructor(
 
     private suspend fun fetchSpotifyLinkPlaylist(
         playlistId: String,
+        isAlbum: Boolean = false,
         onProgress: (Int, Int, String, String) -> Unit,
     ): LinkImportResult {
         val spotify = com.saurav.pixelmusic.data.remote.spotify.SpotifyPlaylistClient(YoutubeHelper.client)
-        val (name, tracks) = spotify.fetchPlaylist(playlistId)
+        val (name, tracks) = spotify.fetchPlaylist(playlistId, isAlbum)
         val total = tracks.size
-        val resolvedIds = arrayOfNulls<String>(total)
         val resolvedSongs = arrayOfNulls<Song>(total)
         val failedCount = java.util.concurrent.atomic.AtomicInteger(0)
         val semaphore = Semaphore(5)
@@ -237,7 +304,6 @@ class M3uManager @Inject constructor(
                         } catch (_: Exception) { null }
                         if (song != null) {
                             resolvedSongs[index] = song
-                            resolvedIds[index] = song.id
                         } else {
                             failedCount.incrementAndGet()
                         }
@@ -250,10 +316,10 @@ class M3uManager @Inject constructor(
         val songs = resolvedSongs.filterNotNull()
         if (songs.isNotEmpty()) musicRepository.insertYoutubeSongs(songs)
         return LinkImportResult(
-            name = name.ifBlank { "Spotify Playlist" },
+            name = name.ifBlank { if (isAlbum) "Spotify Album" else "Spotify Playlist" },
             songs = songs,
             failedCount = failedCount.get(),
-            sourceLabel = "Spotify",
+            sourceLabel = if (isAlbum) "Spotify Album" else "Spotify",
         )
     }
 
