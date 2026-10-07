@@ -11,7 +11,6 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
@@ -72,23 +71,21 @@ fun AlbumArtCollage(
                                 model = song.albumArtUriString,
                                 contentDescription = null,
                                 contentScale = ContentScale.Crop,
+                                crossfadeDurationMillis = 0,
                                 modifier = Modifier
                                     .size(cfg.width, cfg.height)
                                     .align(cfg.align)
                                     .offset(cfg.offsetX, cfg.offsetY)
-                                    .graphicsLayer {
-                                        rotationZ = cfg.rot
-                                        // GPU-accelerated clip: keeps the rotated+shaped art
-                                        // cached as a texture instead of re-rasterizing
-                                        // the star/squircle path on every scroll frame.
-                                        clip = true
+                                    .graphicsLayer(
+                                        rotationZ = cfg.rot,
+                                        clip = true,
                                         shape = cfg.shape
-                                    }
+                                    )
                                     .clickable(
                                         interactionSource = interactionSource,
                                         indication = null
                                     ) { onSongClick(song) }
-                                    .background(shape = cfg.shape, color = MaterialTheme.colorScheme.surfaceContainerHigh)
+                                    .background(color = MaterialTheme.colorScheme.surfaceContainerHigh)
                             )
                         }
                     }
@@ -102,23 +99,21 @@ fun AlbumArtCollage(
                                 model = song.albumArtUriString,
                                 contentDescription = null,
                                 contentScale = ContentScale.Crop,
+                                crossfadeDurationMillis = 0,
                                 modifier = Modifier
                                     .size(cfg.width, cfg.height)
                                     .align(cfg.align)
                                     .offset(cfg.offsetX, cfg.offsetY)
-                                    .graphicsLayer {
-                                        rotationZ = cfg.rot
-                                        // GPU-accelerated clip: keeps the rotated+shaped art
-                                        // cached as a texture instead of re-rasterizing
-                                        // the star/squircle path on every scroll frame.
-                                        clip = true
+                                    .graphicsLayer(
+                                        rotationZ = cfg.rot,
+                                        clip = true,
                                         shape = cfg.shape
-                                    }
+                                    )
                                     .clickable(
                                         interactionSource = interactionSource,
                                         indication = null
                                     ) { onSongClick(song) }
-                                    .background(shape = cfg.shape, color = MaterialTheme.colorScheme.surfaceContainerHigh)
+                                    .background(color = MaterialTheme.colorScheme.surfaceContainerHigh)
                             )
                         }
                     }

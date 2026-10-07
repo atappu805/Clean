@@ -910,6 +910,35 @@ private fun YourMixEmptyPlaceholder(
     }
 }
 
+@OptIn(ExperimentalTextApi::class)
+private val YourMixTitleStyle: TextStyle by lazy {
+    TextStyle(
+        fontFamily = FontFamily(
+            Font(
+                resId = R.font.gflex_variable,
+                variationSettings = FontVariation.Settings(
+                    FontVariation.weight(636),
+                    FontVariation.width(152f),
+                    FontVariation.Setting("ROND", 50f),
+                    FontVariation.Setting("XTRA", 520f),
+                    FontVariation.Setting("YOPQ", 90f),
+                    FontVariation.Setting("YTLC", 505f)
+                )
+            )
+        ),
+        fontWeight = FontWeight(760),
+        fontSize = 42.sp,
+        lineHeight = 44.sp
+    )
+}
+
+private val YourMixFeaturedShape = racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape(
+    cornerRadiusTL = 32.dp, smoothnessAsPercentTL = 100,
+    cornerRadiusTR = 12.dp, smoothnessAsPercentTR = 60,
+    cornerRadiusBL = 12.dp, smoothnessAsPercentBL = 60,
+    cornerRadiusBR = 32.dp, smoothnessAsPercentBR = 100
+)
+
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun YourMixHeader(
@@ -917,7 +946,7 @@ fun YourMixHeader(
     featuredSong: Song?,
     onSongClick: () -> Unit
 ) {
-    val titleStyle = rememberYourMixTitleStyle()
+    val titleStyle = YourMixTitleStyle
 
     Row(
         modifier = Modifier
@@ -951,19 +980,11 @@ fun YourMixHeader(
         }
 
         if (featuredSong != null) {
-            val featuredShape = remember {
-                racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape(
-                    cornerRadiusTL = 32.dp, smoothnessAsPercentTL = 100,
-                    cornerRadiusTR = 12.dp, smoothnessAsPercentTR = 60,
-                    cornerRadiusBL = 12.dp, smoothnessAsPercentBL = 60,
-                    cornerRadiusBR = 32.dp, smoothnessAsPercentBR = 100
-                )
-            }
             Surface(
                 modifier = Modifier
                     .padding(end = 8.dp)
                     .size(86.dp),
-                shape = featuredShape,
+                shape = YourMixFeaturedShape,
                 color = MaterialTheme.colorScheme.surfaceContainerHighest,
                 onClick = onSongClick
             ) {
@@ -971,7 +992,8 @@ fun YourMixHeader(
                     model = featuredSong.albumArtUriString,
                     contentDescription = featuredSong.title,
                     modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
+                    contentScale = ContentScale.Crop,
+                    crossfadeDurationMillis = 0
                 )
             }
         }
@@ -1081,30 +1103,8 @@ fun SongListItemFavsWrapper(
     )
 }
 
-@OptIn(ExperimentalTextApi::class)
 @Composable
-private fun rememberYourMixTitleStyle(): TextStyle {
-    return remember {
-        TextStyle(
-            fontFamily = FontFamily(
-                Font(
-                    resId = R.font.gflex_variable,
-                    variationSettings = FontVariation.Settings(
-                        FontVariation.weight(636),
-                        FontVariation.width(152f),
-                        FontVariation.Setting("ROND", 50f),
-                        FontVariation.Setting("XTRA", 520f),
-                        FontVariation.Setting("YOPQ", 90f),
-                        FontVariation.Setting("YTLC", 505f)
-                    )
-                )
-            ),
-            fontWeight = FontWeight(760),
-            fontSize = 42.sp,
-            lineHeight = 44.sp
-        )
-    }
-}
+private fun rememberYourMixTitleStyle(): TextStyle = YourMixTitleStyle
 
 @Composable
 fun HomeGreetingHeader(userName: String?) {

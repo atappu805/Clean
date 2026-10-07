@@ -194,8 +194,8 @@ private fun DailyMixCard(
     val headerSongs = songs.take(3).toImmutableList()
     val visibleSongs = songs.take(4).toImmutableList()
     val cornerRadius = 30.dp
-    Card(
-        shape = AbsoluteSmoothCornerShape(
+    val cardShape = remember(cornerRadius) {
+        AbsoluteSmoothCornerShape(
             cornerRadiusBR = cornerRadius,
             smoothnessAsPercentTL = 60,
             cornerRadiusTR = cornerRadius,
@@ -204,7 +204,10 @@ private fun DailyMixCard(
             smoothnessAsPercentBL = 60,
             cornerRadiusTL = cornerRadius,
             smoothnessAsPercentBR = 60
-        ),
+        )
+    }
+    Card(
+        shape = cardShape,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
         elevation = CardDefaults.elevatedCardElevation(0.dp),
         modifier = Modifier.fillMaxWidth()
@@ -290,11 +293,12 @@ fun DailyMixHeader(thumbnails: ImmutableList<Song>) {
             ) {
                 thumbnails.forEachIndexed { index, song ->
                     val modifier = shapeConditionalModifier(index)
+                    val shape = threeShapeSwitch(index)
                     Box(
                         modifier = modifier
                             //.size(48.dp)
-                            .clip(threeShapeSwitch(index))
-                            .border(2.dp, MaterialTheme.colorScheme.surface, threeShapeSwitch(index))
+                            .clip(shape)
+                            .border(2.dp, MaterialTheme.colorScheme.surface, shape)
                     ) {
                         SmartImage(
                             model = song.albumArtUriString,
@@ -310,24 +314,26 @@ fun DailyMixHeader(thumbnails: ImmutableList<Song>) {
 }
 
 @Composable
-fun threeShapeSwitch(index: Int, thirdShapeCornerRadius: Dp = 16.dp): Shape { // Ensure the function returns a Shape
-    return when (index) { // Return the result of the when expression
-        0 -> RoundedStarShape(
-            sides = 6,
-            rotation = 10f
-        )
-        1 -> CircleShape
-        2 -> AbsoluteSmoothCornerShape(
-            cornerRadiusBL = thirdShapeCornerRadius,
-            cornerRadiusTR = thirdShapeCornerRadius,
-            smoothnessAsPercentBL = 60,
-            smoothnessAsPercentTR = 60,
-            cornerRadiusTL = thirdShapeCornerRadius,
-            cornerRadiusBR = thirdShapeCornerRadius,
-            smoothnessAsPercentTL = 60,
-            smoothnessAsPercentBR = 60
-        )
-        else -> CircleShape // It's good practice to have a default case
+fun threeShapeSwitch(index: Int, thirdShapeCornerRadius: Dp = 16.dp): Shape {
+    return remember(index, thirdShapeCornerRadius) {
+        when (index) {
+            0 -> RoundedStarShape(
+                sides = 6,
+                rotation = 10f
+            )
+            1 -> CircleShape
+            2 -> AbsoluteSmoothCornerShape(
+                cornerRadiusBL = thirdShapeCornerRadius,
+                cornerRadiusTR = thirdShapeCornerRadius,
+                smoothnessAsPercentBL = 60,
+                smoothnessAsPercentTR = 60,
+                cornerRadiusTL = thirdShapeCornerRadius,
+                cornerRadiusBR = thirdShapeCornerRadius,
+                smoothnessAsPercentTL = 60,
+                smoothnessAsPercentBR = 60
+            )
+            else -> CircleShape
+        }
     }
 }
 
@@ -419,28 +425,28 @@ private fun ViewAllDailyMixButton(
 }
 
 @OptIn(ExperimentalTextApi::class)
-@Composable
-private fun rememberDailyMixTitleStyle(): TextStyle {
-    return remember {
-        TextStyle(
-            fontFamily = FontFamily(
-                Font(
-                    resId = R.font.gflex_variable,
-                    variationSettings = FontVariation.Settings(
-                        FontVariation.weight(630),
-                        FontVariation.width(136f),
-                        FontVariation.grade(40),
-                        FontVariation.Setting("ROND", 100f),
-                        FontVariation.Setting("XTRA", 520f),
-                        FontVariation.Setting("YOPQ", 90f),
-                        FontVariation.Setting("YTLC", 505f)
-                    )
+private val DailyMixTitleStyle: TextStyle by lazy {
+    TextStyle(
+        fontFamily = FontFamily(
+            Font(
+                resId = R.font.gflex_variable,
+                variationSettings = FontVariation.Settings(
+                    FontVariation.weight(630),
+                    FontVariation.width(136f),
+                    FontVariation.grade(40),
+                    FontVariation.Setting("ROND", 100f),
+                    FontVariation.Setting("XTRA", 520f),
+                    FontVariation.Setting("YOPQ", 90f),
+                    FontVariation.Setting("YTLC", 505f)
                 )
-            ),
-            fontWeight = FontWeight(630),
-            fontSize = 20.sp,
-            lineHeight = 22.sp,
-            letterSpacing = (-0.35).sp
-        )
-    }
+            )
+        ),
+        fontWeight = FontWeight(630),
+        fontSize = 20.sp,
+        lineHeight = 22.sp,
+        letterSpacing = (-0.35).sp
+    )
 }
+
+@Composable
+private fun rememberDailyMixTitleStyle(): TextStyle = DailyMixTitleStyle

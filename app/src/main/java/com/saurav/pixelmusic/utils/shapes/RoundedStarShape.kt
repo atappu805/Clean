@@ -26,45 +26,62 @@ class RoundedStarShape(
     private val curve: Double = 0.09,
     private val rotation: Float = 0f,
     iterations: Int = 360,
-
-    ) : Shape {
+) : Shape {
 
     private companion object {
         const val TWO_PI = 2 * PI
     }
 
-    private val steps = (TWO_PI) / min(iterations, 360)
+    private val effectiveIterations = min(iterations, 72).coerceAtLeast(12)
+    private val steps = TWO_PI / effectiveIterations
     private val rotationDegree = (PI / 180) * rotation
+
+    private var cachedWidth: Float = -1f
+    private var cachedHeight: Float = -1f
+    private var cachedDensity: Float = -1f
+    private var cachedOutline: Outline? = null
 
     override fun createOutline(
         size: Size,
         layoutDirection: LayoutDirection,
         density: Density
-    ): Outline = Outline.Generic(Path().apply {
+    ): Outline {
+        val currentOutline = cachedOutline
+        if (size.width == cachedWidth && size.height == cachedHeight && density.density == cachedDensity && currentOutline != null) {
+            return currentOutline
+        }
+
         val r = min(size.height, size.width) * 0.4 * mapRange(1.0, 0.0, 0.5, 1.0, curve)
+        val xCenter = size.width * 0.5f
+        val yCenter = size.height * 0.5f
 
-        val xCenter = size.width * .5f
-        val yCenter = size.height * .5f
+        val path = Path().apply {
+            val startAngle = -rotationDegree
+            val startFactor = 1.0 + curve
+            val startX = (r * (cos(startAngle) * startFactor) + xCenter).toFloat()
+            val startY = (r * (sin(startAngle) * startFactor) + yCenter).toFloat()
+            moveTo(startX, startY)
 
-        fun pointAt(t: Double): Pair<Float, Float> {
-            val x = r * (cos(t - rotationDegree) * (1 + curve * cos(sides * t)))
-            val y = r * (sin(t - rotationDegree) * (1 + curve * cos(sides * t)))
-            return (x + xCenter).toFloat() to (y + yCenter).toFloat()
+            var t = steps
+            while (t < TWO_PI) {
+                val angle = t - rotationDegree
+                val factor = 1.0 + curve * cos(sides * t)
+                val x = (r * (cos(angle) * factor) + xCenter).toFloat()
+                val y = (r * (sin(angle) * factor) + yCenter).toFloat()
+                lineTo(x, y)
+                t += steps
+            }
+
+            close()
         }
 
-        val (startX, startY) = pointAt(0.0)
-        moveTo(startX, startY)
-
-        var t = steps
-        while (t < TWO_PI) {
-            val (x, y) = pointAt(t)
-            lineTo(x, y)
-            t += steps
-        }
-
-        close()
-    })
-
+        val outline = Outline.Generic(path)
+        cachedWidth = size.width
+        cachedHeight = size.height
+        cachedDensity = density.density
+        cachedOutline = outline
+        return outline
+    }
 
     private fun mapRange(a: Double, b: Double, c: Double, d: Double, x: Double): Double {
         return (x - a) / (b - a) * (d - c) + c
