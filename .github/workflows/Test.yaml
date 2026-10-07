@@ -32,11 +32,8 @@ jobs:
 
       - name: Use local JDK for Gradle daemon
         # gradle/gradle-daemon-jvm.properties pins a JetBrains JDK via dead Foojay
-        # links; drop it and point the daemon at the setup-java JDK directly.
-        run: |
-          rm -f gradle/gradle-daemon-jvm.properties
-          echo skip
-          cat gradle.properties | grep java.home
+        # links; drop it so the daemon uses the setup-java JDK 21 directly.
+        run: rm -f gradle/gradle-daemon-jvm.properties
 
       - name: Create Keystore properties
         run: |
