@@ -61,6 +61,8 @@ import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material.icons.rounded.SelectAll
 import androidx.compose.material.icons.rounded.Deselect
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.Link
+import com.saurav.pixelmusic.data.playlist.M3uManager
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -415,6 +417,7 @@ fun LibraryScreen(
         }
     }
     var showImportSheet by remember { mutableStateOf(false) }
+    var showImportLinkDialog by remember { mutableStateOf(false) }
 
     var showReorderTabsSheet by remember { mutableStateOf(false) }
     var showTabSwitcherSheet by remember { mutableStateOf(false) }
@@ -2073,6 +2076,10 @@ onViewToggleChange = { isChecked ->
             onImportCsv = {
                 showImportSheet = false
                 csvImportLauncher.launch(arrayOf("text/csv", "text/comma-separated-values", "text/plain", "application/octet-stream", "*/*"))
+            },
+            onImportLink = {
+                showImportSheet = false
+                showImportLinkDialog = true
             }
         )
     }
@@ -2353,12 +2360,15 @@ private fun ImportPlaylistSheet(
     onDismiss: () -> Unit,
     onImportM3u: () -> Unit,
     onImportCsv: () -> Unit,
+    onImportLink: () -> Unit,
 ) {
     val importPlaylistTitle = stringResource(R.string.presentation_batch_b_import_playlist)
     val importM3uLabel = stringResource(R.string.presentation_batch_b_import_m3u)
     val importM3uDesc = stringResource(R.string.presentation_batch_b_export_as_m3u_desc)
     val importCsvLabel = stringResource(R.string.presentation_batch_b_import_csv)
     val importCsvDesc = stringResource(R.string.presentation_batch_b_export_as_csv_desc)
+    val importLinkLabel = stringResource(R.string.presentation_batch_b_import_link)
+    val importLinkDesc = stringResource(R.string.presentation_batch_b_import_link_desc)
     val cancelLabel = stringResource(R.string.cancel)
 
     val sheetState = rememberBottomSheetState(
@@ -2444,6 +2454,36 @@ private fun ImportPlaylistSheet(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(importCsvLabel, style = MaterialTheme.typography.titleMedium, fontFamily = GoogleSansRounded)
                     Text(importCsvDesc, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                    .clickable(onClick = onImportLink)
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceContainerHighest),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Link,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(importLinkLabel, style = MaterialTheme.typography.titleMedium, fontFamily = GoogleSansRounded)
+                    Text(importLinkDesc, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
 
