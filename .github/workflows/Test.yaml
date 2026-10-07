@@ -72,7 +72,7 @@ jobs:
         # assembleRelease already includes the Kotlin compilation tasks it needs.
         # Keeping this as one Gradle invocation avoids paying configuration/worker
         # startup overhead twice on every test build.
-        run: ./gradlew :app:assembleRelease -PAPP_VERSION_NAME="test-build-${{ env.NEXT_NUM }}"
+        run: ./gradlew :app:assembleRelease --stacktrace -PAPP_VERSION_NAME="test-build-${{ env.NEXT_NUM }}"
 
       - name: Diagnose daemon failure
         if: failure()
