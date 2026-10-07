@@ -52,11 +52,11 @@ private const val DIRECTIONAL_BLUR_AGSL = """
     uniform float blurIntensity;
 
     half4 main(float2 fragCoord) {
-        const int SAMPLES = 10;
+        const int SAMPLES = 6;
         half4 color = half4(0.0);
         float totalWeight = 0.0;
         
-        float blurMagnitude = clamp(scrollVelocity * 22.0 * blurIntensity, -40.0, 40.0);
+        float blurMagnitude = clamp(scrollVelocity * 18.0 * blurIntensity, -24.0, 24.0);
 
         // Fade blur in from the top edge so boundary pixels never get smeared.
         // smoothstep gives a natural curve; 80px ≈ status-bar height on most devices.
@@ -84,7 +84,7 @@ private const val DIRECTIONAL_BLUR_AGSL = """
             if (sampleCoord.x >= 0.0 && sampleCoord.x <= resolution.x &&
                 sampleCoord.y >= 0.0 && sampleCoord.y <= resolution.y) {
                 
-                float weight = 1.0 - abs(offset / (abs(effectiveMagnitude) + 0.001)) * 0.5;
+                float weight = 1.0 - abs(offset / (abs(effectiveMagnitude) + 0.001)) * 0.45;
                 color += composable.eval(sampleCoord) * weight;
                 totalWeight += weight;
             }
@@ -150,20 +150,23 @@ fun Modifier.scrollMotionBlur(
     }
 
     val shader = remember { RuntimeShader(DIRECTIONAL_BLUR_AGSL) }
+    val renderEffect = remember(shader) {
+        RenderEffect
+            .createRuntimeShaderEffect(shader, "composable")
+            .asComposeRenderEffect()
+    }
 
     Modifier.graphicsLayer {
         val vel = animatedVelocity.value
-        if (abs(vel) > 0.05f) {
+        if (abs(vel) > 0.12f) {
             shader.setFloatUniform("resolution", size.width, size.height)
             shader.setFloatUniform("scrollVelocity", vel)
             shader.setFloatUniform("isHorizontal", if (isHorizontal) 1.0f else 0.0f)
             shader.setFloatUniform("blurIntensity", intensity)
 
-            renderEffect = RenderEffect
-                .createRuntimeShaderEffect(shader, "composable")
-                .asComposeRenderEffect()
+            this.renderEffect = renderEffect
         } else {
-            renderEffect = null
+            this.renderEffect = null
         }
     }
 }
@@ -229,22 +232,25 @@ fun Modifier.scrollMotionBlur(
     }
 
     val shader = remember { RuntimeShader(DIRECTIONAL_BLUR_AGSL) }
+    val renderEffect = remember(shader) {
+        RenderEffect
+            .createRuntimeShaderEffect(shader, "composable")
+            .asComposeRenderEffect()
+    }
 
     Modifier
         .nestedScroll(nestedScrollConnection)
         .graphicsLayer {
             val vel = animatedVelocity.value
-            if (abs(vel) > 0.05f) {
+            if (abs(vel) > 0.12f) {
                 shader.setFloatUniform("resolution", size.width, size.height)
                 shader.setFloatUniform("scrollVelocity", vel)
                 shader.setFloatUniform("isHorizontal", if (isHorizontal) 1.0f else 0.0f)
                 shader.setFloatUniform("blurIntensity", intensity)
 
-                renderEffect = RenderEffect
-                    .createRuntimeShaderEffect(shader, "composable")
-                    .asComposeRenderEffect()
+                this.renderEffect = renderEffect
             } else {
-                renderEffect = null
+                this.renderEffect = null
             }
         }
 }
@@ -308,22 +314,25 @@ fun Modifier.scrollMotionBlur(
     }
 
     val shader = remember { RuntimeShader(DIRECTIONAL_BLUR_AGSL) }
+    val renderEffect = remember(shader) {
+        RenderEffect
+            .createRuntimeShaderEffect(shader, "composable")
+            .asComposeRenderEffect()
+    }
 
     Modifier
         .nestedScroll(nestedScrollConnection)
         .graphicsLayer {
             val vel = animatedVelocity.value
-            if (abs(vel) > 0.05f) {
+            if (abs(vel) > 0.12f) {
                 shader.setFloatUniform("resolution", size.width, size.height)
                 shader.setFloatUniform("scrollVelocity", vel)
                 shader.setFloatUniform("isHorizontal", 0.0f)
                 shader.setFloatUniform("blurIntensity", intensity)
 
-                renderEffect = RenderEffect
-                    .createRuntimeShaderEffect(shader, "composable")
-                    .asComposeRenderEffect()
+                this.renderEffect = renderEffect
             } else {
-                renderEffect = null
+                this.renderEffect = null
             }
         }
 }
@@ -383,20 +392,23 @@ fun Modifier.scrollMotionBlur(
     }
 
     val shader = remember { RuntimeShader(DIRECTIONAL_BLUR_AGSL) }
+    val renderEffect = remember(shader) {
+        RenderEffect
+            .createRuntimeShaderEffect(shader, "composable")
+            .asComposeRenderEffect()
+    }
 
     Modifier.graphicsLayer {
         val vel = animatedVelocity.value
-        if (abs(vel) > 0.05f) {
+        if (abs(vel) > 0.12f) {
             shader.setFloatUniform("resolution", size.width, size.height)
             shader.setFloatUniform("scrollVelocity", vel)
             shader.setFloatUniform("isHorizontal", 1.0f)
             shader.setFloatUniform("blurIntensity", intensity)
 
-            renderEffect = RenderEffect
-                .createRuntimeShaderEffect(shader, "composable")
-                .asComposeRenderEffect()
+            this.renderEffect = renderEffect
         } else {
-            renderEffect = null
+            this.renderEffect = null
         }
     }
 }
