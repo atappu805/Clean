@@ -22,11 +22,11 @@ data class FeatureCompatibilityItem(
 object AndroidVersionCompat {
 
     /**
-     * Motion blur relies on Android 13+ (API 33, TIRAMISU) AGSL RuntimeShader
+     * Motion blur relies on Android 12+ (API 31, S) RenderEffect blur
      * in [com.saurav.pixelmusic.ui.modifiers.ScrollMotionBlurModifier].
      */
     val supportsMotionBlur: Boolean
-        get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+        get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
 
     /**
      * Hardware-accelerated RenderEffect blurs and Compose [androidx.compose.ui.draw.blur]

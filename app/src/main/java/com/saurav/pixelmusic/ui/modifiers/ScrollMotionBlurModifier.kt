@@ -1,33 +1,30 @@
 package com.saurav.pixelmusic.ui.modifiers
 
 import android.graphics.RenderEffect
-import android.graphics.RuntimeShader
+import android.graphics.Shader
 import android.os.Build
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.grid.LazyGridState
+import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState
 import androidx.compose.foundation.pager.PagerState
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
-import androidx.compose.runtime.withFrameNanos
-import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
-import androidx.compose.ui.input.nestedscroll.NestedScrollSource
-import androidx.compose.ui.input.nestedscroll.nestedScroll
-import kotlinx.coroutines.isActive
-import org.intellij.lang.annotations.Language
+import kotlinx.coroutines.flow.collectLatest
 import kotlin.math.abs
 
 /**
@@ -43,373 +40,386 @@ val LocalMotionBlurIntensity = compositionLocalOf { 1f }
  */
 val LocalMotionBlurEnabled = compositionLocalOf { true }
 
-@Language("AGSL")
-private const val DIRECTIONAL_BLUR_AGSL = """
-    uniform shader composable;
-    uniform float2 resolution;
-    uniform float scrollVelocity;
-    uniform float isHorizontal;
-    uniform float blurIntensity;
-
-    half4 main(float2 fragCoord) {
-        const int SAMPLES = 6;
-        half4 color = half4(0.0);
-        float totalWeight = 0.0;
-        
-        float blurMagnitude = clamp(scrollVelocity * 18.0 * blurIntensity, -24.0, 24.0);
-
-        // Fade blur in from the top edge so boundary pixels never get smeared.
-        // smoothstep gives a natural curve; 80px ≈ status-bar height on most devices.
-        float topFadeHeight = 80.0;
-        float topFactor = smoothstep(0.0, topFadeHeight, fragCoord.y);
-        float effectiveMagnitude = blurMagnitude * topFactor;
-
-        // If the effective blur is negligible, just return the source pixel.
-        if (abs(effectiveMagnitude) < 0.5) {
-            return composable.eval(fragCoord);
-        }
-
-        for (int i = 0; i < SAMPLES; i++) {
-            float offset = (float(i) / float(SAMPLES - 1) - 0.5) * effectiveMagnitude;
-            
-            float2 sampleCoord;
-            if (isHorizontal > 0.5) {
-                sampleCoord = float2(fragCoord.x + offset, fragCoord.y);
-            } else {
-                sampleCoord = float2(fragCoord.x, fragCoord.y + offset);
-            }
-            
-            // Skip samples that fall outside the layer bounds — this is what
-            // eliminates the horizontal "streak" artifacts at the top edge.
-            if (sampleCoord.x >= 0.0 && sampleCoord.x <= resolution.x &&
-                sampleCoord.y >= 0.0 && sampleCoord.y <= resolution.y) {
-                
-                float weight = 1.0 - abs(offset / (abs(effectiveMagnitude) + 0.001)) * 0.45;
-                color += composable.eval(sampleCoord) * weight;
-                totalWeight += weight;
-            }
-        }
-
-        // Guard: if all samples were skipped, fall back to the source pixel.
-        if (totalWeight < 0.001) {
-            return composable.eval(fragCoord);
-        }
-
-        return color / totalWeight;
-    }
-"""
-
+/**
+ * Modifier that applies a dynamic vertical or horizontal motion blur based on scroll speed.
+ * Origin: Essentials (https://github.com/sameerasw/essentials)
+ */
 fun Modifier.scrollMotionBlur(
     scrollState: ScrollState,
     enabled: Boolean? = null,
     isHorizontal: Boolean = false,
     intensity: Float? = null,
+    maxBlurPx: Float = 25f,
+    velocityThreshold: Float = 50f
 ): Modifier = composed {
-    val enabled = enabled ?: LocalMotionBlurEnabled.current
-    val intensity = intensity ?: LocalMotionBlurIntensity.current
-    if (!enabled || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+    val isBlurEnabled = enabled ?: LocalMotionBlurEnabled.current
+    val currentIntensity = intensity ?: LocalMotionBlurIntensity.current
+    if (!isBlurEnabled || currentIntensity <= 0f || Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
         return@composed Modifier
     }
 
-    val animatedVelocity = remember { Animatable(0f) }
+    val effectiveMaxBlur = (maxBlurPx * currentIntensity).coerceAtLeast(1f)
+    var previousPosition by remember { mutableIntStateOf(scrollState.value) }
+    var previousTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    val blurRadius = remember { Animatable(0f) }
 
     LaunchedEffect(scrollState) {
-        var prevValue = scrollState.value
-        var prevTimeNanos = 0L
+        snapshotFlow { scrollState.value }.collectLatest { currentPosition ->
+            val currentTime = System.currentTimeMillis()
+            val timeDelta = (currentTime - previousTime).coerceAtLeast(1)
+            val positionDelta = abs(currentPosition - previousPosition)
 
-        while (isActive) {
-            var newVelocityToSnap = 0f
-            withFrameNanos { frameTimeNanos ->
-                val currentValue = scrollState.value
-                if (prevTimeNanos != 0L) {
-                    val dtMs = (frameTimeNanos - prevTimeNanos) / 1_000_000.0f
-                    if (dtMs in 1f..100f) {
-                        val delta = (currentValue - prevValue).toFloat()
-                        val targetVelocity = (delta / dtMs).coerceIn(-3f, 3f)
-                        if (abs(delta) > 0.1f && scrollState.isScrollInProgress) {
-                            newVelocityToSnap = animatedVelocity.value * 0.35f + targetVelocity * 0.65f
-                        } else {
-                            val decayed = animatedVelocity.value * 0.45f
-                            newVelocityToSnap = if (abs(decayed) < 0.01f) 0f else decayed
-                        }
-                    } else {
-                        newVelocityToSnap = 0f
-                    }
-                }
-                prevValue = currentValue
-                prevTimeNanos = frameTimeNanos
+            // Velocity in pixels per second
+            val velocity = (positionDelta.toFloat() / timeDelta) * 1000f
+
+            if (velocity > velocityThreshold) {
+                val targetBlur = ((velocity - velocityThreshold) / 2000f * effectiveMaxBlur)
+                    .coerceAtMost(effectiveMaxBlur)
+                blurRadius.snapTo(targetBlur)
             }
-            animatedVelocity.snapTo(newVelocityToSnap)
+
+            blurRadius.animateTo(
+                targetValue = 0f,
+                animationSpec = tween(durationMillis = 150, easing = LinearEasing)
+            )
+
+            previousPosition = currentPosition
+            previousTime = currentTime
         }
     }
 
     LaunchedEffect(scrollState.isScrollInProgress) {
         if (!scrollState.isScrollInProgress) {
-            animatedVelocity.animateTo(0f, animationSpec = tween(60))
+            blurRadius.animateTo(
+                targetValue = 0f,
+                animationSpec = tween(durationMillis = 100, easing = LinearEasing)
+            )
         }
     }
 
-    val shader = remember { RuntimeShader(DIRECTIONAL_BLUR_AGSL) }
-    val renderEffect = remember(shader) {
-        RenderEffect
-            .createRuntimeShaderEffect(shader, "composable")
-            .asComposeRenderEffect()
-    }
-
-    Modifier.graphicsLayer {
-        val vel = animatedVelocity.value
-        if (abs(vel) > 0.12f) {
-            shader.setFloatUniform("resolution", size.width, size.height)
-            shader.setFloatUniform("scrollVelocity", vel)
-            shader.setFloatUniform("isHorizontal", if (isHorizontal) 1.0f else 0.0f)
-            shader.setFloatUniform("blurIntensity", intensity)
-
-            this.renderEffect = renderEffect
+    this.graphicsLayer {
+        val radius = blurRadius.value
+        if (radius > 0.1f) {
+            val blurX = if (isHorizontal) radius else 0.1f
+            val blurY = if (isHorizontal) 0.1f else radius
+            renderEffect = RenderEffect.createBlurEffect(
+                blurX,
+                blurY,
+                Shader.TileMode.DECAL
+            ).asComposeRenderEffect()
         } else {
-            this.renderEffect = null
+            renderEffect = null
         }
     }
 }
 
+/**
+ * Modifier that applies a dynamic vertical or horizontal motion blur based on LazyList scroll speed.
+ * Origin: Essentials (https://github.com/sameerasw/essentials)
+ */
 fun Modifier.scrollMotionBlur(
     lazyListState: LazyListState,
     enabled: Boolean? = null,
     isHorizontal: Boolean = false,
     intensity: Float? = null,
+    maxBlurPx: Float = 25f,
+    velocityThreshold: Float = 50f
 ): Modifier = composed {
-    val enabled = enabled ?: LocalMotionBlurEnabled.current
-    val intensity = intensity ?: LocalMotionBlurIntensity.current
-    if (!enabled || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+    val isBlurEnabled = enabled ?: LocalMotionBlurEnabled.current
+    val currentIntensity = intensity ?: LocalMotionBlurIntensity.current
+    if (!isBlurEnabled || currentIntensity <= 0f || Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
         return@composed Modifier
     }
 
-    val animatedVelocity = remember { Animatable(0f) }
-    var frameDeltaAccumulator by remember { mutableFloatStateOf(0f) }
-
-    val nestedScrollConnection = remember(isHorizontal) {
-        object : NestedScrollConnection {
-            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                val delta = if (isHorizontal) available.x else available.y
-                frameDeltaAccumulator -= delta
-                return Offset.Zero
-            }
-        }
-    }
+    val effectiveMaxBlur = (maxBlurPx * currentIntensity).coerceAtLeast(1f)
+    var previousIndex by remember { mutableIntStateOf(lazyListState.firstVisibleItemIndex) }
+    var previousOffset by remember { mutableIntStateOf(lazyListState.firstVisibleItemScrollOffset) }
+    var previousTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    val blurRadius = remember { Animatable(0f) }
 
     LaunchedEffect(lazyListState) {
-        var prevTimeNanos = 0L
+        snapshotFlow {
+            Pair(lazyListState.firstVisibleItemIndex, lazyListState.firstVisibleItemScrollOffset)
+        }.collectLatest { (currentIndex, currentOffset) ->
+            val currentTime = System.currentTimeMillis()
+            val timeDelta = (currentTime - previousTime).coerceAtLeast(1)
 
-        while (isActive) {
-            var newVelocityToSnap = 0f
-            withFrameNanos { frameTimeNanos ->
-                val delta = frameDeltaAccumulator
-                frameDeltaAccumulator = 0f
-
-                if (prevTimeNanos != 0L) {
-                    val dtMs = (frameTimeNanos - prevTimeNanos) / 1_000_000.0f
-                    if (dtMs in 1f..100f) {
-                        val targetVelocity = (delta / dtMs).coerceIn(-3f, 3f)
-                        if (abs(delta) > 0.1f && lazyListState.isScrollInProgress) {
-                            newVelocityToSnap = animatedVelocity.value * 0.35f + targetVelocity * 0.65f
-                        } else {
-                            val decayed = animatedVelocity.value * 0.45f
-                            newVelocityToSnap = if (abs(decayed) < 0.01f) 0f else decayed
-                        }
-                    } else {
-                        newVelocityToSnap = 0f
-                    }
-                }
-                prevTimeNanos = frameTimeNanos
+            val positionDelta = if (currentIndex == previousIndex) {
+                abs(currentOffset - previousOffset)
+            } else {
+                abs((currentIndex - previousIndex) * 200 + (currentOffset - previousOffset))
             }
-            animatedVelocity.snapTo(newVelocityToSnap)
+
+            val velocity = (positionDelta.toFloat() / timeDelta) * 1000f
+
+            if (velocity > velocityThreshold) {
+                val targetBlur = ((velocity - velocityThreshold) / 2000f * effectiveMaxBlur)
+                    .coerceAtMost(effectiveMaxBlur)
+                blurRadius.snapTo(targetBlur)
+            }
+
+            blurRadius.animateTo(
+                targetValue = 0f,
+                animationSpec = tween(durationMillis = 150, easing = LinearEasing)
+            )
+
+            previousIndex = currentIndex
+            previousOffset = currentOffset
+            previousTime = currentTime
         }
     }
 
     LaunchedEffect(lazyListState.isScrollInProgress) {
         if (!lazyListState.isScrollInProgress) {
-            animatedVelocity.animateTo(0f, animationSpec = tween(60))
+            blurRadius.animateTo(
+                targetValue = 0f,
+                animationSpec = tween(durationMillis = 100, easing = LinearEasing)
+            )
         }
     }
 
-    val shader = remember { RuntimeShader(DIRECTIONAL_BLUR_AGSL) }
-    val renderEffect = remember(shader) {
-        RenderEffect
-            .createRuntimeShaderEffect(shader, "composable")
-            .asComposeRenderEffect()
-    }
-
-    Modifier
-        .nestedScroll(nestedScrollConnection)
-        .graphicsLayer {
-            val vel = animatedVelocity.value
-            if (abs(vel) > 0.12f) {
-                shader.setFloatUniform("resolution", size.width, size.height)
-                shader.setFloatUniform("scrollVelocity", vel)
-                shader.setFloatUniform("isHorizontal", if (isHorizontal) 1.0f else 0.0f)
-                shader.setFloatUniform("blurIntensity", intensity)
-
-                this.renderEffect = renderEffect
-            } else {
-                this.renderEffect = null
-            }
+    this.graphicsLayer {
+        val radius = blurRadius.value
+        if (radius > 0.1f) {
+            val blurX = if (isHorizontal) radius else 0.1f
+            val blurY = if (isHorizontal) 0.1f else radius
+            renderEffect = RenderEffect.createBlurEffect(
+                blurX,
+                blurY,
+                Shader.TileMode.DECAL
+            ).asComposeRenderEffect()
+        } else {
+            renderEffect = null
         }
+    }
 }
 
+/**
+ * Modifier that applies a dynamic vertical motion blur based on LazyGrid scroll speed.
+ * Origin: Essentials (https://github.com/sameerasw/essentials)
+ */
 fun Modifier.scrollMotionBlur(
     gridState: LazyGridState,
     enabled: Boolean? = null,
     intensity: Float? = null,
+    maxBlurPx: Float = 25f,
+    velocityThreshold: Float = 50f
 ): Modifier = composed {
-    val enabled = enabled ?: LocalMotionBlurEnabled.current
-    val intensity = intensity ?: LocalMotionBlurIntensity.current
-    if (!enabled || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+    val isBlurEnabled = enabled ?: LocalMotionBlurEnabled.current
+    val currentIntensity = intensity ?: LocalMotionBlurIntensity.current
+    if (!isBlurEnabled || currentIntensity <= 0f || Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
         return@composed Modifier
     }
 
-    val animatedVelocity = remember { Animatable(0f) }
-    var frameDeltaAccumulator by remember { mutableFloatStateOf(0f) }
-
-    val nestedScrollConnection = remember {
-        object : NestedScrollConnection {
-            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                frameDeltaAccumulator -= available.y
-                return Offset.Zero
-            }
-        }
-    }
+    val effectiveMaxBlur = (maxBlurPx * currentIntensity).coerceAtLeast(1f)
+    var previousIndex by remember { mutableIntStateOf(gridState.firstVisibleItemIndex) }
+    var previousOffset by remember { mutableIntStateOf(gridState.firstVisibleItemScrollOffset) }
+    var previousTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    val blurRadius = remember { Animatable(0f) }
 
     LaunchedEffect(gridState) {
-        var prevTimeNanos = 0L
+        snapshotFlow {
+            Pair(gridState.firstVisibleItemIndex, gridState.firstVisibleItemScrollOffset)
+        }.collectLatest { (currentIndex, currentOffset) ->
+            val currentTime = System.currentTimeMillis()
+            val timeDelta = (currentTime - previousTime).coerceAtLeast(1)
 
-        while (isActive) {
-            var newVelocityToSnap = 0f
-            withFrameNanos { frameTimeNanos ->
-                val delta = frameDeltaAccumulator
-                frameDeltaAccumulator = 0f
-
-                if (prevTimeNanos != 0L) {
-                    val dtMs = (frameTimeNanos - prevTimeNanos) / 1_000_000.0f
-                    if (dtMs in 1f..100f) {
-                        val targetVelocity = (delta / dtMs).coerceIn(-3f, 3f)
-                        if (abs(delta) > 0.1f && gridState.isScrollInProgress) {
-                            newVelocityToSnap = animatedVelocity.value * 0.35f + targetVelocity * 0.65f
-                        } else {
-                            val decayed = animatedVelocity.value * 0.45f
-                            newVelocityToSnap = if (abs(decayed) < 0.01f) 0f else decayed
-                        }
-                    } else {
-                        newVelocityToSnap = 0f
-                    }
-                }
-                prevTimeNanos = frameTimeNanos
+            val positionDelta = if (currentIndex == previousIndex) {
+                abs(currentOffset - previousOffset)
+            } else {
+                abs((currentIndex - previousIndex) * 200 + (currentOffset - previousOffset))
             }
-            animatedVelocity.snapTo(newVelocityToSnap)
+
+            val velocity = (positionDelta.toFloat() / timeDelta) * 1000f
+
+            if (velocity > velocityThreshold) {
+                val targetBlur = ((velocity - velocityThreshold) / 2000f * effectiveMaxBlur)
+                    .coerceAtMost(effectiveMaxBlur)
+                blurRadius.snapTo(targetBlur)
+            }
+
+            blurRadius.animateTo(
+                targetValue = 0f,
+                animationSpec = tween(durationMillis = 150, easing = LinearEasing)
+            )
+
+            previousIndex = currentIndex
+            previousOffset = currentOffset
+            previousTime = currentTime
         }
     }
 
     LaunchedEffect(gridState.isScrollInProgress) {
         if (!gridState.isScrollInProgress) {
-            animatedVelocity.animateTo(0f, animationSpec = tween(60))
+            blurRadius.animateTo(
+                targetValue = 0f,
+                animationSpec = tween(durationMillis = 100, easing = LinearEasing)
+            )
         }
     }
 
-    val shader = remember { RuntimeShader(DIRECTIONAL_BLUR_AGSL) }
-    val renderEffect = remember(shader) {
-        RenderEffect
-            .createRuntimeShaderEffect(shader, "composable")
-            .asComposeRenderEffect()
-    }
-
-    Modifier
-        .nestedScroll(nestedScrollConnection)
-        .graphicsLayer {
-            val vel = animatedVelocity.value
-            if (abs(vel) > 0.12f) {
-                shader.setFloatUniform("resolution", size.width, size.height)
-                shader.setFloatUniform("scrollVelocity", vel)
-                shader.setFloatUniform("isHorizontal", 0.0f)
-                shader.setFloatUniform("blurIntensity", intensity)
-
-                this.renderEffect = renderEffect
-            } else {
-                this.renderEffect = null
-            }
+    this.graphicsLayer {
+        val radius = blurRadius.value
+        if (radius > 0.1f) {
+            renderEffect = RenderEffect.createBlurEffect(
+                0.1f,
+                radius,
+                Shader.TileMode.DECAL
+            ).asComposeRenderEffect()
+        } else {
+            renderEffect = null
         }
+    }
 }
 
+/**
+ * Modifier that applies a dynamic vertical motion blur based on LazyStaggeredGrid scroll speed.
+ * Origin: Essentials (https://github.com/sameerasw/essentials)
+ */
+fun Modifier.scrollMotionBlur(
+    lazyStaggeredGridState: LazyStaggeredGridState,
+    enabled: Boolean? = null,
+    intensity: Float? = null,
+    maxBlurPx: Float = 25f,
+    velocityThreshold: Float = 50f
+): Modifier = composed {
+    val isBlurEnabled = enabled ?: LocalMotionBlurEnabled.current
+    val currentIntensity = intensity ?: LocalMotionBlurIntensity.current
+    if (!isBlurEnabled || currentIntensity <= 0f || Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+        return@composed Modifier
+    }
+
+    val effectiveMaxBlur = (maxBlurPx * currentIntensity).coerceAtLeast(1f)
+    var previousIndex by remember { mutableIntStateOf(lazyStaggeredGridState.firstVisibleItemIndex) }
+    var previousOffset by remember { mutableIntStateOf(lazyStaggeredGridState.firstVisibleItemScrollOffset) }
+    var previousTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    val blurRadius = remember { Animatable(0f) }
+
+    LaunchedEffect(lazyStaggeredGridState) {
+        snapshotFlow {
+            Pair(lazyStaggeredGridState.firstVisibleItemIndex, lazyStaggeredGridState.firstVisibleItemScrollOffset)
+        }.collectLatest { (currentIndex, currentOffset) ->
+            val currentTime = System.currentTimeMillis()
+            val timeDelta = (currentTime - previousTime).coerceAtLeast(1)
+
+            val positionDelta = if (currentIndex == previousIndex) {
+                abs(currentOffset - previousOffset)
+            } else {
+                abs((currentIndex - previousIndex) * 200 + (currentOffset - previousOffset))
+            }
+
+            val velocity = (positionDelta.toFloat() / timeDelta) * 1000f
+
+            if (velocity > velocityThreshold) {
+                val targetBlur = ((velocity - velocityThreshold) / 2000f * effectiveMaxBlur)
+                    .coerceAtMost(effectiveMaxBlur)
+                blurRadius.snapTo(targetBlur)
+            }
+
+            blurRadius.animateTo(
+                targetValue = 0f,
+                animationSpec = tween(durationMillis = 150, easing = LinearEasing)
+            )
+
+            previousIndex = currentIndex
+            previousOffset = currentOffset
+            previousTime = currentTime
+        }
+    }
+
+    LaunchedEffect(lazyStaggeredGridState.isScrollInProgress) {
+        if (!lazyStaggeredGridState.isScrollInProgress) {
+            blurRadius.animateTo(
+                targetValue = 0f,
+                animationSpec = tween(durationMillis = 100, easing = LinearEasing)
+            )
+        }
+    }
+
+    this.graphicsLayer {
+        val radius = blurRadius.value
+        if (radius > 0.1f) {
+            renderEffect = RenderEffect.createBlurEffect(
+                0.1f,
+                radius,
+                Shader.TileMode.DECAL
+            ).asComposeRenderEffect()
+        } else {
+            renderEffect = null
+        }
+    }
+}
+
+/**
+ * Modifier that applies a dynamic horizontal motion blur based on Pager scroll speed.
+ */
 fun Modifier.scrollMotionBlur(
     pagerState: PagerState,
     enabled: Boolean? = null,
     intensity: Float? = null,
+    maxBlurPx: Float = 25f,
+    velocityThreshold: Float = 50f
 ): Modifier = composed {
-    val enabled = enabled ?: LocalMotionBlurEnabled.current
-    val intensity = intensity ?: LocalMotionBlurIntensity.current
-    if (!enabled || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+    val isBlurEnabled = enabled ?: LocalMotionBlurEnabled.current
+    val currentIntensity = intensity ?: LocalMotionBlurIntensity.current
+    if (!isBlurEnabled || currentIntensity <= 0f || Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
         return@composed Modifier
     }
 
-    val animatedVelocity = remember { Animatable(0f) }
+    val effectiveMaxBlur = (maxBlurPx * currentIntensity).coerceAtLeast(1f)
+    var previousPage by remember { mutableIntStateOf(pagerState.currentPage) }
+    var previousOffset by remember { mutableFloatStateOf(pagerState.currentPageOffsetFraction) }
+    var previousTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    val blurRadius = remember { Animatable(0f) }
 
     LaunchedEffect(pagerState) {
-        var prevPage = pagerState.currentPage
-        var prevFraction = pagerState.currentPageOffsetFraction
-        var prevTimeNanos = 0L
+        snapshotFlow {
+            Pair(pagerState.currentPage, pagerState.currentPageOffsetFraction)
+        }.collectLatest { (currentPage, currentOffset) ->
+            val currentTime = System.currentTimeMillis()
+            val timeDelta = (currentTime - previousTime).coerceAtLeast(1)
 
-        while (isActive) {
-            var newVelocityToSnap = 0f
-            withFrameNanos { frameTimeNanos ->
-                val currentPage = pagerState.currentPage
-                val currentFraction = pagerState.currentPageOffsetFraction
-                if (prevTimeNanos != 0L) {
-                    val dtMs = (frameTimeNanos - prevTimeNanos) / 1_000_000.0f
-                    if (dtMs in 1f..100f) {
-                        val totalPos = currentPage + currentFraction
-                        val prevPos = prevPage + prevFraction
-                        val delta = (totalPos - prevPos) * 400f
-                        val targetVelocity = (delta / dtMs).coerceIn(-3f, 3f)
-                        if (abs(delta) > 0.1f && pagerState.isScrollInProgress) {
-                            newVelocityToSnap = animatedVelocity.value * 0.35f + targetVelocity * 0.65f
-                        } else {
-                            val decayed = animatedVelocity.value * 0.45f
-                            newVelocityToSnap = if (abs(decayed) < 0.01f) 0f else decayed
-                        }
-                    } else {
-                        newVelocityToSnap = 0f
-                    }
-                }
-                prevPage = currentPage
-                prevFraction = currentFraction
-                prevTimeNanos = frameTimeNanos
+            val pageDelta = (currentPage - previousPage) + (currentOffset - previousOffset)
+            val positionDelta = abs(pageDelta * 1000f)
+
+            val velocity = (positionDelta / timeDelta) * 1000f
+
+            if (velocity > velocityThreshold) {
+                val targetBlur = ((velocity - velocityThreshold) / 2000f * effectiveMaxBlur)
+                    .coerceAtMost(effectiveMaxBlur)
+                blurRadius.snapTo(targetBlur)
             }
-            animatedVelocity.snapTo(newVelocityToSnap)
+
+            blurRadius.animateTo(
+                targetValue = 0f,
+                animationSpec = tween(durationMillis = 150, easing = LinearEasing)
+            )
+
+            previousPage = currentPage
+            previousOffset = currentOffset
+            previousTime = currentTime
         }
     }
 
     LaunchedEffect(pagerState.isScrollInProgress) {
         if (!pagerState.isScrollInProgress) {
-            animatedVelocity.animateTo(0f, animationSpec = tween(60))
+            blurRadius.animateTo(
+                targetValue = 0f,
+                animationSpec = tween(durationMillis = 100, easing = LinearEasing)
+            )
         }
     }
 
-    val shader = remember { RuntimeShader(DIRECTIONAL_BLUR_AGSL) }
-    val renderEffect = remember(shader) {
-        RenderEffect
-            .createRuntimeShaderEffect(shader, "composable")
-            .asComposeRenderEffect()
-    }
-
-    Modifier.graphicsLayer {
-        val vel = animatedVelocity.value
-        if (abs(vel) > 0.12f) {
-            shader.setFloatUniform("resolution", size.width, size.height)
-            shader.setFloatUniform("scrollVelocity", vel)
-            shader.setFloatUniform("isHorizontal", 1.0f)
-            shader.setFloatUniform("blurIntensity", intensity)
-
-            this.renderEffect = renderEffect
+    this.graphicsLayer {
+        val radius = blurRadius.value
+        if (radius > 0.1f) {
+            renderEffect = RenderEffect.createBlurEffect(
+                radius,
+                0.1f,
+                Shader.TileMode.DECAL
+            ).asComposeRenderEffect()
         } else {
-            this.renderEffect = null
+            renderEffect = null
         }
     }
 }
-
