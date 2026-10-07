@@ -45,6 +45,8 @@
     <string name="presentation_batch_b_import_playlist">Import Playlist</string>
     <string name="presentation_batch_b_import_m3u">Import M3U</string>
     <string name="presentation_batch_b_import_csv">Import CSV</string>
+    <string name="presentation_batch_b_import_link">Import from Link</string>
+    <string name="presentation_batch_b_import_link_desc">YouTube Music, YouTube or Spotify playlist URL</string>
     <string name="presentation_batch_b_importing">Importing Playlist</string>
     <string name="presentation_batch_b_import_progress">Importing track %1$d of %2$d</string>
     <string name="presentation_batch_b_resolving">Resolving online metadata…</string>
