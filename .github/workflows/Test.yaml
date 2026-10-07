@@ -72,7 +72,10 @@ jobs:
         # assembleRelease already includes the Kotlin compilation tasks it needs.
         # Keeping this as one Gradle invocation avoids paying configuration/worker
         # startup overhead twice on every test build.
-        run: ./gradlew :app:assembleRelease --stacktrace -PAPP_VERSION_NAME="test-build-${{ env.NEXT_NUM }}"
+        run: |
+          ./gradlew :app:assembleRelease --stacktrace -PAPP_VERSION_NAME="test-build-${{ env.NEXT_NUM }}" > /tmp/gradle.log 2>&1
+          echo "gradle exit: $?"
+          tail -5 /tmp/gradle.log
 
       - name: Diagnose daemon failure
         if: failure()
@@ -87,6 +90,8 @@ jobs:
           find ~/.gradle/daemon -name '*.out.log' -exec sh -c 'echo "--- $1"; tail -40 "$1"' _ {} \; 2>/dev/null || true
           echo '=== jdks dir ==='
           ls -la ~/.gradle/jdks/ 2>/dev/null || true
+          echo '=== gradle stacktrace (daemon cause) ==='
+          grep -A45 'Caused by' /tmp/gradle.log | head -70 || true
 
       - name: Upload to Testing Repository
         uses: softprops/action-gh-release@v2
