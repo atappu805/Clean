@@ -223,6 +223,8 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.infiniteRepeatable
@@ -4339,9 +4341,9 @@ private fun ImportPlaylistLinkBottomSheet(
 
                     withContext(Dispatchers.IO) {
                         videoIds.forEachIndexed { index, videoId ->
-                            runCatching {
-                                saurav.shru.pixelmusic.innertube.YouTube.addToPlaylist(existing.id, videoId).getOrThrow()
-                            }
+                            try {
+                                saurav.shru.pixelmusic.innertube.YouTube.addToPlaylist(existing.id, videoId)
+                            } catch (_: Exception) { }
                             uploadCurrent = index + 1
                         }
                     }

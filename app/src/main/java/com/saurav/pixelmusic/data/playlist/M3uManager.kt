@@ -340,9 +340,9 @@ class M3uManager @Inject constructor(
                     ?: song.contentUriString.takeIf { it.startsWith("youtube://") }?.substringAfter("youtube://")
             }.distinct()
             videoIds.forEachIndexed { index, videoId ->
-                runCatching {
-                    YouTube.addToPlaylist(remoteId, videoId).getOrThrow()
-                }
+                try {
+                    YouTube.addToPlaylist(remoteId, videoId)
+                } catch (_: Exception) { }
                 onProgress(index + 1, videoIds.size)
             }
             remoteId
