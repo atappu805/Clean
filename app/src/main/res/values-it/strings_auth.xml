@@ -1,3 +1,4 @@
+[lines 1-72 of 72; 5328 chars in file; FULL]
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Shared login / streaming auth -->
@@ -28,17 +29,7 @@
     <string name="cd_navidrome_logo">Navidrome</string>
     <string name="cd_subsonic_logo">Subsonic</string>
 
-    <!-- Jellyfin -->
-    <string name="auth_jellyfin_title">Jellyfin</string>
-    <string name="auth_jellyfin_info_card">Si connette ai server Jellyfin. Sono supportati sia HTTP che HTTPS per l\'accesso alla rete locale.</string>
-    <string name="auth_jellyfin_subtitle">Connettiti al tuo server multimediale Jellyfin</string>
-    <string name="auth_jellyfin_connection_subtitle">Inserisci l\'URL del server Jellyfin e le credenziali del tuo account.</string>
-    <string name="auth_jellyfin_server_placeholder">http://192.168.1.100:8096</string>
-    <string name="auth_jellyfin_server_url_hint">URL completo del tuo server Jellyfin, inclusa la porta.</string>
-    <string name="auth_jellyfin_username_hint">Il nome utente del tuo account Jellyfin.</string>
-    <string name="auth_jellyfin_password_hint">La password del tuo account Jellyfin.</string>
     <string name="auth_prefill_http">Precompila http://</string>
-    <string name="auth_jellyfin_footer">Si connette ai server Jellyfin per lo streaming della tua libreria musicale</string>
 
     <!-- Google Drive -->
     <string name="auth_gdrive_toast_connected">Google Drive connesso!</string>
