@@ -72,26 +72,9 @@ jobs:
         # assembleRelease already includes the Kotlin compilation tasks it needs.
         # Keeping this as one Gradle invocation avoids paying configuration/worker
         # startup overhead twice on every test build.
-        run: |
-          ./gradlew :app:assembleRelease --stacktrace -PAPP_VERSION_NAME="test-build-${{ env.NEXT_NUM }}" > /tmp/gradle.log 2>&1
-          echo "gradle exit: $?"
-          tail -5 /tmp/gradle.log
-
-      - name: Diagnose daemon failure
-        if: failure()
-        run: |
-          echo '=== daemon-jvm.properties ==='
-          cat gradle/gradle-daemon-jvm.properties || true
-          echo '=== java version ==='
-          java -version 2>&1 || true
-          echo '=== gradle daemon dir ==='
-          ls -la ~/.gradle/daemon/ 2>/dev/null || true
-          echo '=== daemon logs tail ==='
-          find ~/.gradle/daemon -name '*.out.log' -exec sh -c 'echo "--- $1"; tail -40 "$1"' _ {} \; 2>/dev/null || true
-          echo '=== jdks dir ==='
-          ls -la ~/.gradle/jdks/ 2>/dev/null || true
-          echo '=== gradle failure section ==='
-          grep -B2 -A60 'What went wrong' /tmp/gradle.log | head -80 || true
+        # --no-daemon: CI runners are fresh VMs (no daemon reuse benefit), and this
+        # bypasses the broken gradle-daemon-jvm.properties toolchain spec entirely.
+        run: ./gradlew :app:assembleRelease --no-daemon -PAPP_VERSION_NAME="test-build-${{ env.NEXT_NUM }}"
 
       - name: Upload to Testing Repository
         uses: softprops/action-gh-release@v2

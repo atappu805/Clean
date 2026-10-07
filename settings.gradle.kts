@@ -33,7 +33,6 @@ dependencyResolutionManagement {
     }
 }
 
-// cache-bust 2026-10-07: setup-java gradle cache suspected poisoned
 rootProject.name = "PixelMusic"
 include(":app")
 include(":baselineprofile")
