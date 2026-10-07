@@ -74,6 +74,20 @@ jobs:
         # startup overhead twice on every test build.
         run: ./gradlew :app:assembleRelease -PAPP_VERSION_NAME="test-build-${{ env.NEXT_NUM }}"
 
+      - name: Diagnose daemon failure
+        if: failure()
+        run: |
+          echo '=== daemon-jvm.properties ==='
+          cat gradle/gradle-daemon-jvm.properties || true
+          echo '=== java version ==='
+          java -version 2>&1 || true
+          echo '=== gradle daemon dir ==='
+          ls -la ~/.gradle/daemon/ 2>/dev/null || true
+          echo '=== daemon logs tail ==='
+          find ~/.gradle/daemon -name '*.out.log' -exec sh -c 'echo "--- $1"; tail -40 "$1"' _ {} \; 2>/dev/null || true
+          echo '=== jdks dir ==='
+          ls -la ~/.gradle/jdks/ 2>/dev/null || true
+
       - name: Upload to Testing Repository
         uses: softprops/action-gh-release@v2
         with:
