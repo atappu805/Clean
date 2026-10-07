@@ -4174,6 +4174,7 @@ private fun ImportPlaylistLinkBottomSheet(
     var uploadCurrent by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(0) }
     var uploadTotal by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(0) }
     var uploadJob by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<kotlinx.coroutines.Job?>(null) }
+    var isUploadDuplicate by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
 
     val importProgress by playlistViewModel.importProgress.collectAsStateWithLifecycle()
     val isLoggedIn = androidx.compose.runtime.remember { saurav.shru.pixelmusic.innertube.YouTube.hasLoginCookie() }
@@ -4191,6 +4192,7 @@ private fun ImportPlaylistLinkBottomSheet(
         showDuplicateChoice = false
         existingPlaylist = null
         isProcessingDuplicate = false
+        isUploadDuplicate = false
         uploadCurrent = 0
         uploadTotal = 0
     }
@@ -4238,11 +4240,12 @@ private fun ImportPlaylistLinkBottomSheet(
         }
     }
 
-    fun addToLibrary() {
+    fun addToLibrary(forceNew: Boolean = false) {
         val songIds = fetchedSongs.map { it.id }
         val existing = playlistViewModel.findPlaylistByName(playlistNameInput.ifBlank { "Imported Playlist" })
-        if (existing != null) {
+        if (existing != null && !forceNew) {
             existingPlaylist = existing
+            isUploadDuplicate = false
             showDuplicateChoice = true
         } else {
             coroutineScope.launch {
@@ -4260,7 +4263,15 @@ private fun ImportPlaylistLinkBottomSheet(
         }
     }
 
-    fun uploadToYouTubeMusic() {
+    fun uploadToYouTubeMusic(forceNew: Boolean = false) {
+        val existing = playlistViewModel.findPlaylistByName(playlistNameInput.ifBlank { "Imported Playlist" })
+        if (existing != null && !forceNew) {
+            existingPlaylist = existing
+            isUploadDuplicate = true
+            showDuplicateChoice = true
+            return
+        }
+
         phase = LinkImportPhase.UPLOADING
         uploadCurrent = 0
         uploadTotal = fetchedSongs.size
@@ -4303,6 +4314,60 @@ private fun ImportPlaylistLinkBottomSheet(
         }
     }
 
+    fun updateExistingOnYouTube() {
+        val existing = existingPlaylist ?: return
+        phase = LinkImportPhase.UPLOADING
+        uploadJob = coroutineScope.launch {
+            try {
+                val existingSongIds = existing.songIds.toSet()
+                val songsToAdd = fetchedSongs.filterNot { it.id in existingSongIds }
+                if (songsToAdd.isEmpty()) {
+                    android.widget.Toast.makeText(context, "Playlist is already up to date", android.widget.Toast.LENGTH_SHORT).show()
+                    resetState()
+                    onDismiss()
+                    return@launch
+                }
+                uploadCurrent = 0
+                uploadTotal = songsToAdd.size
+
+                if (existing.source == "YOUTUBE") {
+                    val videoIds = songsToAdd.mapNotNull { song ->
+                        song.youtubeId
+                            ?: song.id.takeIf { it.startsWith("youtube_") }?.substringAfter("youtube_")
+                            ?: song.contentUriString.takeIf { it.startsWith("youtube://") }?.substringAfter("youtube://")
+                    }.distinct()
+
+                    withContext(Dispatchers.IO) {
+                        videoIds.forEachIndexed { index, videoId ->
+                            runCatching {
+                                saurav.shru.pixelmusic.innertube.YouTube.addToPlaylist(existing.id, videoId).getOrThrow()
+                            }
+                            uploadCurrent = index + 1
+                        }
+                    }
+                }
+
+                val newSongIds = songsToAdd.map { it.id }
+                playlistViewModel.playlistPreferencesRepository.updatePlaylist(
+                    existing.copy(songIds = existing.songIds + newSongIds)
+                )
+
+                android.widget.Toast.makeText(
+                    context,
+                    "Added ${newSongIds.size} new songs to \"${existing.name}\"",
+                    android.widget.Toast.LENGTH_SHORT
+                ).show()
+
+                resetState()
+                onDismiss()
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) return@launch
+                android.widget.Toast.makeText(context, "Update failed: ${e.localizedMessage}", android.widget.Toast.LENGTH_SHORT).show()
+                phase = LinkImportPhase.PREVIEW
+            }
+        }
+    }
+
     val sheetState = rememberBottomSheetState(
         initialValue = SheetValue.Hidden,
         enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded)
@@ -4328,6 +4393,7 @@ private fun ImportPlaylistLinkBottomSheet(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             if (showDuplicateChoice && existingPlaylist != null) {
+                val isYouTube = isUploadDuplicate || existingPlaylist!!.source == "YOUTUBE"
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -4340,7 +4406,11 @@ private fun ImportPlaylistLinkBottomSheet(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "A playlist named \"${existingPlaylist!!.name}\" already exists in your library. What would you like to do?",
+                        text = if (isYouTube) {
+                            "A playlist named \"${existingPlaylist!!.name}\" already exists in your library. Would you like to add new tracks to it, or create a new playlist on YouTube Music?"
+                        } else {
+                            "A playlist named \"${existingPlaylist!!.name}\" already exists in your library. What would you like to do?"
+                        },
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -4349,26 +4419,30 @@ private fun ImportPlaylistLinkBottomSheet(
 
                     Button(
                         onClick = {
-                            isProcessingDuplicate = true
-                            coroutineScope.launch {
-                                try {
-                                    val songIds = fetchedSongs.map { it.id }
-                                    val existingSongIds = existingPlaylist!!.songIds.toSet()
-                                    val newSongIds = songIds.filterNot { it in existingSongIds }
-                                    if (newSongIds.isEmpty()) {
-                                        android.widget.Toast.makeText(context, "Playlist is already up to date", android.widget.Toast.LENGTH_SHORT).show()
-                                    } else {
-                                        playlistViewModel.playlistPreferencesRepository.updatePlaylist(
-                                            existingPlaylist!!.copy(songIds = existingPlaylist!!.songIds + newSongIds)
-                                        )
-                                        android.widget.Toast.makeText(context, "Playlist updated with ${newSongIds.size} new songs", android.widget.Toast.LENGTH_SHORT).show()
+                            if (isUploadDuplicate) {
+                                updateExistingOnYouTube()
+                            } else {
+                                isProcessingDuplicate = true
+                                coroutineScope.launch {
+                                    try {
+                                        val songIds = fetchedSongs.map { it.id }
+                                        val existingSongIds = existingPlaylist!!.songIds.toSet()
+                                        val newSongIds = songIds.filterNot { it in existingSongIds }
+                                        if (newSongIds.isEmpty()) {
+                                            android.widget.Toast.makeText(context, "Playlist is already up to date", android.widget.Toast.LENGTH_SHORT).show()
+                                        } else {
+                                            playlistViewModel.playlistPreferencesRepository.updatePlaylist(
+                                                existingPlaylist!!.copy(songIds = existingPlaylist!!.songIds + newSongIds)
+                                            )
+                                            android.widget.Toast.makeText(context, "Playlist updated with ${newSongIds.size} new songs", android.widget.Toast.LENGTH_SHORT).show()
+                                        }
+                                        resetState()
+                                        onDismiss()
+                                    } catch (e: Exception) {
+                                        android.widget.Toast.makeText(context, "Failed to update playlist: ${e.localizedMessage}", android.widget.Toast.LENGTH_SHORT).show()
+                                        isProcessingDuplicate = false
+                                        showDuplicateChoice = false
                                     }
-                                    resetState()
-                                    onDismiss()
-                                } catch (e: Exception) {
-                                    android.widget.Toast.makeText(context, "Failed to update playlist: ${e.localizedMessage}", android.widget.Toast.LENGTH_SHORT).show()
-                                    isProcessingDuplicate = false
-                                    showDuplicateChoice = false
                                 }
                             }
                         },
@@ -4376,25 +4450,30 @@ private fun ImportPlaylistLinkBottomSheet(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp)
                     ) {
-                        Text("Update Existing (add new songs)")
+                        Text(if (isYouTube) "Update Existing (add new songs)" else "Update Existing (add new songs)")
                     }
 
                     OutlinedButton(
                         onClick = {
-                            isProcessingDuplicate = true
-                            coroutineScope.launch {
-                                try {
-                                    playlistViewModel.playlistPreferencesRepository.createPlaylist(
-                                        playlistNameInput.ifBlank { "Imported Playlist" },
-                                        fetchedSongs.map { it.id }
-                                    )
-                                    android.widget.Toast.makeText(context, "Playlist imported as a new copy", android.widget.Toast.LENGTH_SHORT).show()
-                                    resetState()
-                                    onDismiss()
-                                } catch (e: Exception) {
-                                    android.widget.Toast.makeText(context, "Failed to import playlist: ${e.localizedMessage}", android.widget.Toast.LENGTH_SHORT).show()
-                                    isProcessingDuplicate = false
-                                    showDuplicateChoice = false
+                            if (isUploadDuplicate) {
+                                showDuplicateChoice = false
+                                uploadToYouTubeMusic(forceNew = true)
+                            } else {
+                                isProcessingDuplicate = true
+                                coroutineScope.launch {
+                                    try {
+                                        playlistViewModel.playlistPreferencesRepository.createPlaylist(
+                                            playlistNameInput.ifBlank { "Imported Playlist" },
+                                            fetchedSongs.map { it.id }
+                                        )
+                                        android.widget.Toast.makeText(context, "Playlist imported as a new copy", android.widget.Toast.LENGTH_SHORT).show()
+                                        resetState()
+                                        onDismiss()
+                                    } catch (e: Exception) {
+                                        android.widget.Toast.makeText(context, "Failed to import playlist: ${e.localizedMessage}", android.widget.Toast.LENGTH_SHORT).show()
+                                        isProcessingDuplicate = false
+                                        showDuplicateChoice = false
+                                    }
                                 }
                             }
                         },
@@ -4402,7 +4481,7 @@ private fun ImportPlaylistLinkBottomSheet(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp)
                     ) {
-                        Text("Create as New Copy")
+                        Text(if (isYouTube) "Create as New on YouTube Music" else "Create as New Copy")
                     }
 
                     TextButton(
