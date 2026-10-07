@@ -333,12 +333,28 @@ fun HomeScreen(
     var savedScrollOffset by rememberSaveable { mutableIntStateOf(0) }
     var needsScrollRestore by rememberSaveable { mutableStateOf(false) }
 
+    val isCollageAutoRotate = settingsUiState.collageAutoRotate
+    val baseCollagePattern = settingsUiState.collagePattern
+    val collagePatterns = remember { CollagePattern.entries }
+    var collageAutoRotateIndex by rememberSaveable { mutableIntStateOf(0) }
+
+    val activeCollagePattern = remember(isCollageAutoRotate, baseCollagePattern, collageAutoRotateIndex) {
+        if (isCollageAutoRotate) {
+            collagePatterns[collageAutoRotateIndex.coerceAtLeast(0) % collagePatterns.size]
+        } else {
+            baseCollagePattern
+        }
+    }
+
     DisposableEffect(lifecycleOwner, listState) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_PAUSE) {
                 savedScrollIndex = listState.firstVisibleItemIndex
                 savedScrollOffset = listState.firstVisibleItemScrollOffset
                 needsScrollRestore = true
+                if (settingsUiState.collageAutoRotate) {
+                    collageAutoRotateIndex++
+                }
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -577,26 +593,12 @@ fun HomeScreen(
                             key = "album_art_collage",
                             contentType = "album_art_collage"
                         ) {
-                            val basePattern = settingsUiState.collagePattern
-                            val isAutoRotate = settingsUiState.collageAutoRotate
-                            val patterns = remember { CollagePattern.entries }
-
-                            val activePattern = if (isAutoRotate) {
-                                var rotationIndex by rememberSaveable { mutableIntStateOf(-1) }
-                                LaunchedEffect(Unit) { rotationIndex++ }
-                                remember(rotationIndex) {
-                                    patterns[rotationIndex.coerceAtLeast(0) % patterns.size]
-                                }
-                            } else {
-                                basePattern
-                            }
-
                             AlbumArtCollage(
                                 modifier = Modifier.fillMaxWidth(),
                                 songs = yourMixSongs,
                                 padding = 14.dp,
                                 height = 400.dp,
-                                pattern = activePattern,
+                                pattern = activeCollagePattern,
                                 onSongClick = { song ->
                                     if (usesFallbackHomeMix) {
                                         playerViewModel.showAndPlaySongFromLibrary(song, queueName = "Your Mix")
@@ -949,16 +951,19 @@ fun YourMixHeader(
         }
 
         if (featuredSong != null) {
-            Surface(
-                modifier = Modifier
-                    .padding(end = 8.dp)
-                    .size(86.dp),
-                shape = racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape(
+            val featuredShape = remember {
+                racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape(
                     cornerRadiusTL = 32.dp, smoothnessAsPercentTL = 100,
                     cornerRadiusTR = 12.dp, smoothnessAsPercentTR = 60,
                     cornerRadiusBL = 12.dp, smoothnessAsPercentBL = 60,
                     cornerRadiusBR = 32.dp, smoothnessAsPercentBR = 100
-                ),
+                )
+            }
+            Surface(
+                modifier = Modifier
+                    .padding(end = 8.dp)
+                    .size(86.dp),
+                shape = featuredShape,
                 color = MaterialTheme.colorScheme.surfaceContainerHighest,
                 onClick = onSongClick
             ) {

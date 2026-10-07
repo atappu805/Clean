@@ -8,8 +8,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -25,8 +23,6 @@ import com.saurav.pixelmusic.data.model.Song
 import com.saurav.pixelmusic.data.preferences.CollagePattern
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 @Stable
 data class Config(val size: Dp, val width: Dp, val height: Dp, val align: Alignment, val rot: Float, val shape: Shape, val offsetX: Dp, val offsetY: Dp)
@@ -36,7 +32,6 @@ data class Config(val size: Dp, val width: Dp, val height: Dp, val align: Alignm
  * Las formas se dividen en dos grupos (superior e inferior) para evitar superposición.
  * Incluye una píldora central, círculo, squircle y estrella, con disposición ajustada.
  * Ajusta tamaños, rotaciones y posiciones para crear un look dinámico.
- * Utiliza BoxWithConstraints para adaptar las dimensiones al contenedor.
  */
 @Composable
 fun AlbumArtCollage(
@@ -51,27 +46,28 @@ fun AlbumArtCollage(
         (songs.take(6) + List(6 - songs.size.coerceAtMost(6)) { null }).toImmutableList()
     }
 
-    BoxWithConstraints(
+    val contentHeight = remember(height, padding) { maxOf(0.dp, height - (padding * 2)) }
+    val min = remember(height) { minOf(300.dp, height) }
+    val shapeConfigs = remember(pattern, min, contentHeight) {
+        buildCollageConfigs(pattern, min, contentHeight)
+    }
+
+    Box(
         modifier = modifier
             .fillMaxWidth()
             .height(height)
             .padding(padding)
     ) {
-        val boxMaxHeight = maxHeight
-        val shapeConfigs by produceState<List<Config>>(initialValue = emptyList(), songsToShow, boxMaxHeight, pattern) {
-            value = withContext(Dispatchers.Default) {
-                val min = minOf(300.dp, height)
-                buildCollageConfigs(pattern, min, boxMaxHeight)
-            }
-        }
-
         if (shapeConfigs.isNotEmpty()) {
-            val (topConfigs, bottomConfigs) = shapeConfigs.take(3) to shapeConfigs.drop(3)
+            val (topConfigs, bottomConfigs) = remember(shapeConfigs) {
+                shapeConfigs.take(3) to shapeConfigs.drop(3)
+            }
 
             Column(Modifier.fillMaxSize()) {
-                Box(Modifier.fillMaxWidth().height(boxMaxHeight * 0.6f)) {
+                Box(Modifier.fillMaxWidth().height(contentHeight * 0.6f)) {
                     topConfigs.forEachIndexed { idx, cfg ->
                         songsToShow.getOrNull(idx)?.let { song ->
+                            val interactionSource = remember(song.id) { MutableInteractionSource() }
                             SmartImage(
                                 model = song.albumArtUriString,
                                 contentDescription = null,
@@ -89,7 +85,7 @@ fun AlbumArtCollage(
                                         shape = cfg.shape
                                     }
                                     .clickable(
-                                        interactionSource = remember { MutableInteractionSource() },
+                                        interactionSource = interactionSource,
                                         indication = null
                                     ) { onSongClick(song) }
                                     .background(shape = cfg.shape, color = MaterialTheme.colorScheme.surfaceContainerHigh)
@@ -97,9 +93,11 @@ fun AlbumArtCollage(
                         }
                     }
                 }
-                Box(Modifier.fillMaxWidth().height(boxMaxHeight * 0.4f)) {
+                Box(Modifier.fillMaxWidth().height(contentHeight * 0.4f)) {
                     bottomConfigs.forEachIndexed { j, cfg ->
-                        songsToShow.getOrNull(j + 3)?.let { song ->
+                        val idx = j + 3
+                        songsToShow.getOrNull(idx)?.let { song ->
+                            val interactionSource = remember(song.id) { MutableInteractionSource() }
                             SmartImage(
                                 model = song.albumArtUriString,
                                 contentDescription = null,
@@ -117,9 +115,10 @@ fun AlbumArtCollage(
                                         shape = cfg.shape
                                     }
                                     .clickable(
-                                        interactionSource = remember { MutableInteractionSource() },
+                                        interactionSource = interactionSource,
                                         indication = null
                                     ) { onSongClick(song) }
+                                    .background(shape = cfg.shape, color = MaterialTheme.colorScheme.surfaceContainerHigh)
                             )
                         }
                     }
