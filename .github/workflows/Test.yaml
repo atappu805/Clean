@@ -30,6 +30,14 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      - name: Use local JDK for Gradle daemon
+        # gradle/gradle-daemon-jvm.properties pins a JetBrains JDK via dead Foojay
+        # links; drop it and point the daemon at the setup-java JDK directly.
+        run: |
+          rm -f gradle/gradle-daemon-jvm.properties
+          echo "org.gradle.java.home=$JAVA_HOME" >> gradle.properties
+          cat gradle.properties | grep java.home
+
       - name: Create Keystore properties
         run: |
           echo "storePassword=${{ secrets.KEYSTORE_PASSWORD }}" > keystore.properties
