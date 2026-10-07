@@ -1,3 +1,4 @@
+[lines 1-73 of 73; 5235 chars in file; FULL]
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Shared login / streaming auth -->
@@ -28,17 +29,7 @@
     <string name="cd_navidrome_logo">Navidrome</string>
     <string name="cd_subsonic_logo">Subsonic</string>
 
-    <!-- Jellyfin -->
-    <string name="auth_jellyfin_title">Jellyfin</string>
-    <string name="auth_jellyfin_info_card">Terhubung ke server Jellyfin. HTTP dan HTTPS didukung untuk akses jaringan lokal.</string>
-    <string name="auth_jellyfin_subtitle">Hubungkan ke server media Jellyfin Anda</string>
-    <string name="auth_jellyfin_connection_subtitle">Masukkan URL server Jellyfin dan kredensial akun Anda.</string>
-    <string name="auth_jellyfin_server_placeholder">http://192.168.1.100:8096</string>
-    <string name="auth_jellyfin_server_url_hint">URL lengkap server Jellyfin Anda, termasuk port.</string>
-    <string name="auth_jellyfin_username_hint">Nama pengguna akun Jellyfin Anda.</string>
-    <string name="auth_jellyfin_password_hint">Kata sandi akun Jellyfin Anda.</string>
     <string name="auth_prefill_http">Isi otomatis http://</string>
-    <string name="auth_jellyfin_footer">Terhubung ke server Jellyfin untuk mengalirkan pustaka musik Anda</string>
 
     <!-- Google Drive -->
     <string name="auth_gdrive_toast_connected">Google Drive terhubung!</string>
