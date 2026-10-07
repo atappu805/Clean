@@ -80,13 +80,19 @@ fun AlbumArtCollage(
                                     .size(cfg.width, cfg.height)
                                     .align(cfg.align)
                                     .offset(cfg.offsetX, cfg.offsetY)
-                                    .graphicsLayer { rotationZ = cfg.rot }
+                                    .graphicsLayer {
+                                        rotationZ = cfg.rot
+                                        // GPU-accelerated clip: keeps the rotated+shaped art
+                                        // cached as a texture instead of re-rasterizing
+                                        // the star/squircle path on every scroll frame.
+                                        clip = true
+                                        shape = cfg.shape
+                                    }
                                     .clickable(
                                         interactionSource = remember { MutableInteractionSource() },
                                         indication = null
                                     ) { onSongClick(song) }
                                     .background(shape = cfg.shape, color = MaterialTheme.colorScheme.surfaceContainerHigh)
-                                    .clip(cfg.shape)
                             )
                         }
                     }
