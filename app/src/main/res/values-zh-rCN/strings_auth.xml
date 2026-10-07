@@ -1,3 +1,4 @@
+[lines 1-73 of 73; 4216 chars in file; FULL]
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Shared login / streaming auth -->
@@ -28,17 +29,7 @@
     <string name="cd_navidrome_logo">Navidrome</string>
     <string name="cd_subsonic_logo">Subsonic</string>
 
-    <!-- Jellyfin -->
-    <string name="auth_jellyfin_title">Jellyfin</string>
-    <string name="auth_jellyfin_info_card">连接到 Jellyfin 服务器。对于局域网访问，同时支持 HTTP 和 HTTPS。</string>
-    <string name="auth_jellyfin_subtitle">连接到你的 Jellyfin 媒体服务器</string>
-    <string name="auth_jellyfin_connection_subtitle">输入你的 Jellyfin 服务器 URL 和账户凭据。</string>
-    <string name="auth_jellyfin_server_placeholder">http://192.168.1.100:8096</string>
-    <string name="auth_jellyfin_server_url_hint">你的 Jellyfin 服务器完整 URL，包括端口。</string>
-    <string name="auth_jellyfin_username_hint">你的 Jellyfin 账户用户名。</string>
-    <string name="auth_jellyfin_password_hint">你的 Jellyfin 账户密码。</string>
     <string name="auth_prefill_http">预填充 http://</string>
-    <string name="auth_jellyfin_footer">连接到 Jellyfin 服务器以串流你的音乐库</string>
 
     <!-- Google Drive -->
     <string name="auth_gdrive_toast_connected">Google Drive 已连接！</string>
