@@ -408,15 +408,18 @@ fun UnifiedPlayerSheetV2(
         showPlayerContentArea = showPlayerContentArea,
         currentSheetContentState = currentSheetContentState
     )
+    val showListenTogetherSheet by playerViewModel.showListenTogetherSheet.collectAsStateWithLifecycle()
     val canHandlePlayerBack by remember(
         sheetBackAndDragState.predictiveBackEnabled,
         showQueueSheet,
-        castSheetState.showCastSheet
+        castSheetState.showCastSheet,
+        showListenTogetherSheet
     ) {
         derivedStateOf {
             sheetBackAndDragState.predictiveBackEnabled &&
                 !showQueueSheet &&
-                !castSheetState.showCastSheet
+                !castSheetState.showCastSheet &&
+                !showListenTogetherSheet
         }
     }
     val velocityTracker = remember { VelocityTracker() }

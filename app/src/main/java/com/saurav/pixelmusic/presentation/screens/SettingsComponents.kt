@@ -432,7 +432,7 @@ fun ThemeSelectorItem(
     }
 
     if (showSheet) {
-        androidx.compose.material3.ModalBottomSheet(
+        com.saurav.pixelmusic.presentation.components.SmoothModalBottomSheet(
             onDismissRequest = { showSheet = false },
             containerColor = MaterialTheme.colorScheme.surface,
             contentColor = MaterialTheme.colorScheme.onSurface

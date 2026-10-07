@@ -81,6 +81,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.material3.rememberBottomSheetState
+import com.saurav.pixelmusic.presentation.components.SmoothModalBottomSheet
 import androidx.compose.material3.SheetValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
@@ -1410,7 +1411,7 @@ fun FullPlayerContent(
         )
 
         val sheetShape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
-        ModalBottomSheet(
+        SmoothModalBottomSheet(
             onDismissRequest = { showSongInfoBottomSheet = false },
             sheetState = songOptionsSheetState,
             dragHandle = null,

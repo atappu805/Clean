@@ -33,6 +33,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import com.saurav.pixelmusic.presentation.components.SmoothModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
@@ -137,7 +138,7 @@ fun MashupScreen(
             }
 
             if (mashupUiState.showSongPickerForDeck != null) {
-                ModalBottomSheet(
+                SmoothModalBottomSheet(
                     onDismissRequest = { mashupViewModel.closeSongPicker() },
                     sheetState = sheetState
                 ) {

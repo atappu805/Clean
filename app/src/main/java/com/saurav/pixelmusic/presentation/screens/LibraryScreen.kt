@@ -234,6 +234,7 @@ import androidx.compose.animation.core.animateDp
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material.icons.automirrored.rounded.QueueMusic
 import androidx.compose.material3.ModalBottomSheet
+import com.saurav.pixelmusic.presentation.components.SmoothModalBottomSheet
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
@@ -1673,7 +1674,7 @@ onViewToggleChange = { isChecked ->
             enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded)
         )
 
-        ModalBottomSheet(
+        SmoothModalBottomSheet(
             onDismissRequest = { showSinglePlaylistOptionsSheet = false },
             sheetState = sheetState,
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -2391,7 +2392,7 @@ private fun ImportPlaylistSheet(
         enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded)
     )
 
-    ModalBottomSheet(
+    SmoothModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
@@ -3015,7 +3016,7 @@ private fun LibraryTabSwitcherSheet(
         enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded)
     )
 
-    ModalBottomSheet(
+    SmoothModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         containerColor = MaterialTheme.colorScheme.surface,
@@ -4375,7 +4376,7 @@ private fun ImportPlaylistLinkBottomSheet(
         enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded)
     )
 
-    ModalBottomSheet(
+    SmoothModalBottomSheet(
         onDismissRequest = {
             if (phase != LinkImportPhase.FETCHING && phase != LinkImportPhase.UPLOADING) {
                 resetState()

@@ -125,6 +125,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
+import com.saurav.pixelmusic.presentation.components.SmoothModalBottomSheet
 import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.material3.SheetValue
 import androidx.compose.runtime.Composable
@@ -2321,7 +2322,7 @@ fun SettingsCategoryScreen(
     )
 
     if (showPaletteRegenerateSheet) {
-        ModalBottomSheet(
+        SmoothModalBottomSheet(
             onDismissRequest = {
                 if (!isAnyPaletteRegenerateRunning) {
                     showPaletteRegenerateSheet = false

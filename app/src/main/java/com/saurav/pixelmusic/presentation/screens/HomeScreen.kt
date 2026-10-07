@@ -58,6 +58,7 @@ import androidx.compose.material3.LargeExtendedFloatingActionButton
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import com.saurav.pixelmusic.presentation.components.SmoothModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -725,7 +726,7 @@ fun HomeScreen(
     }
 
     if (showOptionsBottomSheet) {
-        ModalBottomSheet(
+        SmoothModalBottomSheet(
             onDismissRequest = { showOptionsBottomSheet = false },
             sheetState = sheetState
         ) {
@@ -772,7 +773,7 @@ fun HomeScreen(
     }
 
     if (showChangelogBottomSheet) {
-        ModalBottomSheet(
+        SmoothModalBottomSheet(
             onDismissRequest = { showChangelogBottomSheet = false },
             sheetState = sheetState
         ) {
@@ -780,7 +781,7 @@ fun HomeScreen(
         }
     }
     if (showBetaInfoBottomSheet) {
-        ModalBottomSheet(
+        SmoothModalBottomSheet(
             onDismissRequest = { showBetaInfoBottomSheet = false },
             sheetState = betaSheetState,
         ) {
