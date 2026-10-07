@@ -2453,14 +2453,14 @@ private fun ImportPlaylistSheet(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(5.dp)
                             ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(6.dp)
-                                        .clip(CircleShape)
-                                        .background(Color(0xFFFF0000))
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_yt_music),
+                                    contentDescription = "YouTube Music",
+                                    tint = Color.Unspecified,
+                                    modifier = Modifier.size(14.dp)
                                 )
                                 Text(
-                                    text = "YouTube",
+                                    text = "YT Music",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -2475,11 +2475,11 @@ private fun ImportPlaylistSheet(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(5.dp)
                             ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(6.dp)
-                                        .clip(CircleShape)
-                                        .background(Color(0xFF1DB954))
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_spotify),
+                                    contentDescription = "Spotify",
+                                    tint = Color.Unspecified,
+                                    modifier = Modifier.size(14.dp)
                                 )
                                 Text(
                                     text = "Spotify",
@@ -4173,11 +4173,14 @@ private fun ImportPlaylistLinkBottomSheet(
     var isProcessingDuplicate by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
     var uploadCurrent by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(0) }
     var uploadTotal by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(0) }
+    var uploadJob by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<kotlinx.coroutines.Job?>(null) }
 
     val importProgress by playlistViewModel.importProgress.collectAsStateWithLifecycle()
     val isLoggedIn = androidx.compose.runtime.remember { saurav.shru.pixelmusic.innertube.YouTube.hasLoginCookie() }
 
     fun resetState() {
+        uploadJob?.cancel()
+        uploadJob = null
         linkInput = ""
         phase = LinkImportPhase.INPUT
         fetchError = null
@@ -4261,22 +4264,40 @@ private fun ImportPlaylistLinkBottomSheet(
         phase = LinkImportPhase.UPLOADING
         uploadCurrent = 0
         uploadTotal = fetchedSongs.size
-        playlistViewModel.setImportingState(true, playlistNameInput, false)
-        coroutineScope.launch {
+        uploadJob = coroutineScope.launch {
             try {
-                playlistViewModel.m3uManager.uploadPlaylistToYouTubeMusic(
+                val remoteId = playlistViewModel.m3uManager.uploadPlaylistToYouTubeMusic(
                     playlistNameInput.ifBlank { "Imported Playlist" },
                     fetchedSongs
                 ) { current, total ->
                     uploadCurrent = current
                     uploadTotal = total
-                    playlistViewModel.updateImportProgress(playlistNameInput, current, total, "Uploading to YouTube Music", "")
                 }.getOrThrow()
-                android.widget.Toast.makeText(context, "Uploaded to your YouTube Music account", android.widget.Toast.LENGTH_SHORT).show()
+
+                // Save locally as a YouTube-synced playlist so it appears in the library
+                val songIds = fetchedSongs.map { it.id }
+                playlistViewModel.playlistPreferencesRepository.createPlaylist(
+                    name = playlistNameInput.ifBlank { "Imported Playlist" },
+                    songIds = songIds,
+                    customId = remoteId,
+                    source = "YOUTUBE"
+                )
+
+                android.widget.Toast.makeText(
+                    context,
+                    "Playlist added to your YouTube Music library",
+                    android.widget.Toast.LENGTH_SHORT
+                ).show()
+
+                resetState()
+                onDismiss()
             } catch (e: Exception) {
-                android.widget.Toast.makeText(context, "Upload failed: ${e.localizedMessage}", android.widget.Toast.LENGTH_SHORT).show()
-            } finally {
-                playlistViewModel.setImportingState(false)
+                if (e is kotlinx.coroutines.CancellationException) return@launch
+                android.widget.Toast.makeText(
+                    context,
+                    "Upload failed: ${e.localizedMessage}",
+                    android.widget.Toast.LENGTH_SHORT
+                ).show()
                 phase = LinkImportPhase.PREVIEW
             }
         }
@@ -4463,16 +4484,17 @@ private fun ImportPlaylistLinkBottomSheet(
                                 color = MaterialTheme.colorScheme.surfaceContainerHigh
                             ) {
                                 Row(
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                                 ) {
                                     val isSpotify = detected.contains("Spotify", ignoreCase = true)
-                                    Box(
-                                        modifier = Modifier
-                                            .size(8.dp)
-                                            .clip(CircleShape)
-                                            .background(if (isSpotify) Color(0xFF1DB954) else Color(0xFFFF0000))
+                                    val logoRes = if (isSpotify) R.drawable.ic_spotify else R.drawable.ic_yt_music
+                                    Icon(
+                                        painter = painterResource(logoRes),
+                                        contentDescription = null,
+                                        tint = Color.Unspecified,
+                                        modifier = Modifier.size(16.dp)
                                     )
                                     Text(
                                         text = "$detected link detected",
@@ -4607,11 +4629,12 @@ private fun ImportPlaylistLinkBottomSheet(
                                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
                                     val isSpotify = sourceLabel.contains("Spotify", ignoreCase = true)
-                                    Box(
-                                        modifier = Modifier
-                                            .size(8.dp)
-                                            .clip(CircleShape)
-                                            .background(if (isSpotify) Color(0xFF1DB954) else Color(0xFFFF0000))
+                                    val logoRes = if (isSpotify) R.drawable.ic_spotify else R.drawable.ic_yt_music
+                                    Icon(
+                                        painter = painterResource(logoRes),
+                                        contentDescription = null,
+                                        tint = Color.Unspecified,
+                                        modifier = Modifier.size(18.dp)
                                     )
                                     Text(
                                         text = "$sourceLabel • ${fetchedSongs.size} songs" + (if (failedCount > 0) " • $failedCount unmatched" else ""),
@@ -4692,10 +4715,10 @@ private fun ImportPlaylistLinkBottomSheet(
                                     shape = RoundedCornerShape(16.dp)
                                 ) {
                                     Icon(
-                                        painter = painterResource(R.drawable.ic_youtube),
+                                        painter = painterResource(R.drawable.ic_yt_music),
                                         contentDescription = null,
-                                        tint = Color(0xFFFF0000),
-                                        modifier = Modifier.size(18.dp)
+                                        tint = Color.Unspecified,
+                                        modifier = Modifier.size(20.dp)
                                     )
                                     Spacer(Modifier.width(8.dp))
                                     Text("Upload to YouTube Music", fontWeight = FontWeight.SemiBold)
@@ -4708,20 +4731,40 @@ private fun ImportPlaylistLinkBottomSheet(
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 16.dp),
+                                .padding(vertical = 20.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_yt_music),
+                                contentDescription = null,
+                                tint = Color.Unspecified,
+                                modifier = Modifier.size(44.dp)
+                            )
                             CircularWavyProgressIndicator(
                                 modifier = Modifier.size(54.dp)
                             )
-                            Text(
-                                text = "Uploading to YouTube Music ($uploadCurrent/$uploadTotal)",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontFamily = GoogleSansRounded,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    text = "Uploading to YouTube Music",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontFamily = GoogleSansRounded,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    text = "$uploadCurrent of $uploadTotal songs added",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            TextButton(onClick = {
+                                uploadJob?.cancel()
+                                phase = LinkImportPhase.PREVIEW
+                            }) {
+                                Text("Cancel")
+                            }
                         }
                     }
                 }
