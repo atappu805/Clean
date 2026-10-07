@@ -4058,6 +4058,399 @@ fun AlbumListItem(
     }
 }
 
+private enum class LinkImportPhase { INPUT, FETCHING, PREVIEW, UPLOADING }
+
+@Composable
+private fun ImportPlaylistLinkDialog(
+    isVisible: Boolean,
+    playlistViewModel: PlaylistViewModel,
+    onDismiss: () -> Unit
+) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
+
+    var linkInput by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
+    var phase by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(LinkImportPhase.INPUT) }
+    var fetchError by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<String?>(null) }
+    var playlistNameInput by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
+    var fetchedSongs by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<List<com.saurav.pixelmusic.data.model.Song>>(emptyList()) }
+    var failedCount by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(0) }
+    var sourceLabel by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
+    var showDuplicateDialog by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    var existingPlaylist by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<com.saurav.pixelmusic.data.model.Playlist?>(null) }
+    var isProcessingDuplicate by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    var uploadCurrent by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(0) }
+    var uploadTotal by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(0) }
+
+    val importProgress by playlistViewModel.importProgress.collectAsStateWithLifecycle()
+    val isLoggedIn = androidx.compose.runtime.remember { saurav.shru.pixelmusic.innertube.YouTube.hasLoginCookie() }
+
+    fun resetState() {
+        linkInput = ""
+        phase = LinkImportPhase.INPUT
+        fetchError = null
+        playlistNameInput = ""
+        fetchedSongs = emptyList()
+        failedCount = 0
+        sourceLabel = ""
+        showDuplicateDialog = false
+        existingPlaylist = null
+        isProcessingDuplicate = false
+        uploadCurrent = 0
+        uploadTotal = 0
+    }
+
+    fun pasteFromClipboard() {
+        try {
+            val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+            clipboard.primaryClip?.getItemAt(0)?.text?.toString()?.takeIf { it.isNotBlank() }?.let {
+                linkInput = it.trim()
+                fetchError = null
+            }
+        } catch (_: Exception) { }
+    }
+
+    fun startFetch() {
+        val link = playlistViewModel.m3uManager.parsePlaylistLink(linkInput)
+        if (link is M3uManager.PlaylistLink.Unsupported) {
+            fetchError = "That doesn't look like a YouTube or Spotify playlist link."
+            return
+        }
+        fetchError = null
+        phase = LinkImportPhase.FETCHING
+        playlistViewModel.setImportingState(true, "Fetching playlist", false)
+        coroutineScope.launch {
+            try {
+                val result = playlistViewModel.m3uManager.fetchPlaylistFromLink(link) { current, total, title, artist ->
+                    playlistViewModel.updateImportProgress("Fetching playlist", current, total, title, artist)
+                }
+                if (result.songs.isEmpty()) {
+                    android.widget.Toast.makeText(context, "No playable songs found in that playlist", android.widget.Toast.LENGTH_SHORT).show()
+                    phase = LinkImportPhase.INPUT
+                    return@launch
+                }
+                playlistNameInput = result.name
+                fetchedSongs = result.songs
+                failedCount = result.failedCount
+                sourceLabel = result.sourceLabel
+                phase = LinkImportPhase.PREVIEW
+            } catch (e: Exception) {
+                fetchError = e.message ?: "Couldn't fetch that playlist."
+                phase = LinkImportPhase.INPUT
+            } finally {
+                playlistViewModel.setImportingState(false)
+            }
+        }
+    }
+
+    fun addToLibrary() {
+        val songIds = fetchedSongs.map { it.id }
+        val existing = playlistViewModel.findPlaylistByName(playlistNameInput.ifBlank { "Imported Playlist" })
+        if (existing != null) {
+            existingPlaylist = existing
+            showDuplicateDialog = true
+        } else {
+            coroutineScope.launch {
+                try {
+                    playlistViewModel.playlistPreferencesRepository.createPlaylist(
+                        playlistNameInput.ifBlank { "Imported Playlist" }, songIds
+                    )
+                    android.widget.Toast.makeText(context, "Playlist added to your library", android.widget.Toast.LENGTH_SHORT).show()
+                    resetState()
+                    onDismiss()
+                } catch (e: Exception) {
+                    android.widget.Toast.makeText(context, "Couldn't save playlist: ${e.localizedMessage}", android.widget.Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    fun uploadToYouTubeMusic() {
+        phase = LinkImportPhase.UPLOADING
+        uploadCurrent = 0
+        uploadTotal = fetchedSongs.size
+        playlistViewModel.setImportingState(true, playlistNameInput, false)
+        coroutineScope.launch {
+            try {
+                playlistViewModel.m3uManager.uploadPlaylistToYouTubeMusic(
+                    playlistNameInput.ifBlank { "Imported Playlist" },
+                    fetchedSongs
+                ) { current, total ->
+                    uploadCurrent = current
+                    uploadTotal = total
+                    playlistViewModel.updateImportProgress(playlistNameInput, current, total, "Uploading to YouTube Music", "")
+                }.getOrThrow()
+                android.widget.Toast.makeText(context, "Uploaded to your YouTube Music account", android.widget.Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                android.widget.Toast.makeText(context, "Upload failed: ${e.localizedMessage}", android.widget.Toast.LENGTH_SHORT).show()
+            } finally {
+                playlistViewModel.setImportingState(false)
+                phase = LinkImportPhase.PREVIEW
+            }
+        }
+    }
+
+    if (isVisible && !showDuplicateDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                if (phase != LinkImportPhase.FETCHING && phase != LinkImportPhase.UPLOADING) {
+                    resetState()
+                    onDismiss()
+                }
+            },
+            title = {
+                Text(
+                    text = "Import from Link",
+                    fontFamily = GoogleSansRounded,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                )
+            },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    when (phase) {
+                        LinkImportPhase.INPUT -> {
+                            Text(
+                                text = "Paste a YouTube Music, YouTube or Spotify playlist link:",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            OutlinedTextField(
+                                value = linkInput,
+                                onValueChange = { linkInput = it; fetchError = null },
+                                singleLine = true,
+                                placeholder = { Text("https://…") },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            if (fetchError != null) {
+                                Text(
+                                    text = fetchError!!,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            }
+                        }
+                        LinkImportPhase.FETCHING -> {
+                            val totalLabel = if (importProgress.totalTracks > 0) "${importProgress.currentTrackIndex}/${importProgress.totalTracks}" else "${importProgress.currentTrackIndex}"
+                            Text(
+                                text = "Fetching songs $totalLabel",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            if (importProgress.currentTrackName.isNotBlank()) {
+                                Text(
+                                    text = "${importProgress.currentTrackName} - ${importProgress.currentTrackArtist}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            CircularWavyProgressIndicator(
+                                modifier = Modifier.align(Alignment.CenterHorizontally)
+                            )
+                        }
+                        LinkImportPhase.PREVIEW -> {
+                            OutlinedTextField(
+                                value = playlistNameInput,
+                                onValueChange = { playlistNameInput = it },
+                                singleLine = true,
+                                label = { Text("Playlist name") },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            val summary = buildString {
+                                append(sourceLabel)
+                                append(" • ")
+                                append(fetchedSongs.size)
+                                append(if (fetchedSongs.size == 1) " song" else " songs")
+                                if (failedCount > 0) {
+                                    append(" • ")
+                                    append(failedCount)
+                                    append(" couldn't be matched")
+                                }
+                            }
+                            Text(
+                                text = summary,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            fetchedSongs.take(5).forEach { song ->
+                                Text(
+                                    text = "${song.title} — ${song.artist}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    maxLines = 1,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                )
+                            }
+                            if (fetchedSongs.size > 5) {
+                                Text(
+                                    text = "…and ${fetchedSongs.size - 5} more",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        LinkImportPhase.UPLOADING -> {
+                            Text(
+                                text = "Uploading to YouTube Music $uploadCurrent/$uploadTotal",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            CircularWavyProgressIndicator(
+                                modifier = Modifier.align(Alignment.CenterHorizontally)
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                when (phase) {
+                    LinkImportPhase.INPUT -> {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            TextButton(onClick = { pasteFromClipboard() }) {
+                                Text("Paste")
+                            }
+                            TextButton(
+                                enabled = linkInput.isNotBlank(),
+                                onClick = { startFetch() }
+                            ) {
+                                Text("Fetch")
+                            }
+                        }
+                    }
+                    LinkImportPhase.PREVIEW -> {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            TextButton(onClick = { addToLibrary() }) {
+                                Text("Add to Library")
+                            }
+                            if (isLoggedIn) {
+                                TextButton(onClick = { uploadToYouTubeMusic() }) {
+                                    Text("Upload to YouTube")
+                                }
+                            }
+                        }
+                    }
+                    else -> { }
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    enabled = phase != LinkImportPhase.FETCHING && phase != LinkImportPhase.UPLOADING,
+                    onClick = {
+                        resetState()
+                        onDismiss()
+                    }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (showDuplicateDialog && existingPlaylist != null) {
+        AlertDialog(
+            onDismissRequest = {
+                if (!isProcessingDuplicate) {
+                    showDuplicateDialog = false
+                    existingPlaylist = null
+                }
+            },
+            title = {
+                Text(
+                    text = "Playlist Already Exists",
+                    fontFamily = GoogleSansRounded,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                )
+            },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "A playlist named \"${existingPlaylist!!.name}\" already exists in your library. What would you like to do?",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    if (isProcessingDuplicate) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        CircularWavyProgressIndicator()
+                    }
+                }
+            },
+            confirmButton = {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    TextButton(
+                        enabled = !isProcessingDuplicate,
+                        onClick = {
+                            isProcessingDuplicate = true
+                            coroutineScope.launch {
+                                try {
+                                    val songIds = fetchedSongs.map { it.id }
+                                    val existingSongIds = existingPlaylist!!.songIds.toSet()
+                                    val newSongIds = songIds.filterNot { it in existingSongIds }
+                                    if (newSongIds.isEmpty()) {
+                                        android.widget.Toast.makeText(context, "Playlist is already up to date", android.widget.Toast.LENGTH_SHORT).show()
+                                    } else {
+                                        playlistViewModel.playlistPreferencesRepository.updatePlaylist(
+                                            existingPlaylist!!.copy(songIds = existingPlaylist!!.songIds + newSongIds)
+                                        )
+                                        android.widget.Toast.makeText(context, "Playlist updated with ${newSongIds.size} new songs", android.widget.Toast.LENGTH_SHORT).show()
+                                    }
+                                    resetState()
+                                    onDismiss()
+                                } catch (e: Exception) {
+                                    android.widget.Toast.makeText(context, "Failed to update playlist: ${e.localizedMessage}", android.widget.Toast.LENGTH_SHORT).show()
+                                    isProcessingDuplicate = false
+                                    showDuplicateDialog = false
+                                }
+                            }
+                        }
+                    ) {
+                        Text("Update Existing")
+                    }
+                    TextButton(
+                        enabled = !isProcessingDuplicate,
+                        onClick = {
+                            isProcessingDuplicate = true
+                            coroutineScope.launch {
+                                try {
+                                    playlistViewModel.playlistPreferencesRepository.createPlaylist(
+                                        playlistNameInput.ifBlank { "Imported Playlist" },
+                                        fetchedSongs.map { it.id }
+                                    )
+                                    android.widget.Toast.makeText(context, "Playlist imported as a new copy", android.widget.Toast.LENGTH_SHORT).show()
+                                    resetState()
+                                    onDismiss()
+                                } catch (e: Exception) {
+                                    android.widget.Toast.makeText(context, "Failed to import playlist: ${e.localizedMessage}", android.widget.Toast.LENGTH_SHORT).show()
+                                    isProcessingDuplicate = false
+                                    showDuplicateDialog = false
+                                }
+                            }
+                        }
+                    ) {
+                        Text("Create New")
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    enabled = !isProcessingDuplicate,
+                    onClick = {
+                        showDuplicateDialog = false
+                        existingPlaylist = null
+                    }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+}
+
 @Composable
 private fun ImportPlaylistFileDialog(
     isVisible: Boolean,
