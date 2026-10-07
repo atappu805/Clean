@@ -148,6 +148,139 @@ class M3uManager @Inject constructor(
         )
     }
 
+    // ---------- Playlist link import ----------
+
+    sealed interface PlaylistLink {
+        data class YouTube(val playlistId: String) : PlaylistLink
+        data class Spotify(val playlistId: String) : PlaylistLink
+        data object Unsupported : PlaylistLink
+    }
+
+    data class LinkImportResult(
+        val name: String,
+        val songs: List<Song>,
+        val failedCount: Int,
+        val sourceLabel: String,
+    )
+
+    fun parsePlaylistLink(raw: String): PlaylistLink {
+        val text = raw.trim()
+        if (text.isEmpty()) return PlaylistLink.Unsupported
+        val url = Regex("""https?://\S+""").find(text)?.value ?: text
+        Regex("""[?&]list=([a-zA-Z0-9_-]+)""").find(url)?.let {
+            return PlaylistLink.YouTube(it.groupValues[1])
+        }
+        Regex("""open\.spotify\.com/(?:intl-[a-z-]+/)?playlist/([a-zA-Z0-9]+)""").find(url)?.let {
+            return PlaylistLink.Spotify(it.groupValues[1])
+        }
+        Regex("""spotify:playlist:([a-zA-Z0-9]+)""").find(text)?.let {
+            return PlaylistLink.Spotify(it.groupValues[1])
+        }
+        return PlaylistLink.Unsupported
+    }
+
+    suspend fun fetchPlaylistFromLink(
+        link: PlaylistLink,
+        onProgress: (current: Int, total: Int, title: String, artist: String) -> Unit = { _, _, _, _ -> },
+    ): LinkImportResult = withContext(Dispatchers.IO) {
+        when (link) {
+            is PlaylistLink.YouTube -> fetchYouTubeLinkPlaylist(link.playlistId, onProgress)
+            is PlaylistLink.Spotify -> fetchSpotifyLinkPlaylist(link.playlistId, onProgress)
+            PlaylistLink.Unsupported -> throw IllegalArgumentException("Unsupported playlist link")
+        }
+    }
+
+    private suspend fun fetchYouTubeLinkPlaylist(
+        playlistId: String,
+        onProgress: (Int, Int, String, String) -> Unit,
+    ): LinkImportResult {
+        val first = YouTube.playlist(playlistId).getOrThrow()
+        val items = first.songs.toMutableList()
+        onProgress(items.size, -1, first.playlist.title, "")
+        var continuation = first.songsContinuation?.takeUnless { it.isBlank() }
+            ?: first.continuation?.takeUnless { it.isBlank() }
+        var pages = 1
+        while (continuation != null && pages < 20) {
+            val page = YouTube.playlistContinuation(continuation).getOrThrow()
+            items += page.songs
+            onProgress(items.size, -1, first.playlist.title, "")
+            continuation = page.continuation?.takeUnless { it.isBlank() }
+            pages++
+        }
+        val songs = items.map { it.toNativeSong() }
+        if (songs.isNotEmpty()) musicRepository.insertYoutubeSongs(songs)
+        return LinkImportResult(
+            name = first.playlist.title.ifBlank { "Imported Playlist" },
+            songs = songs,
+            failedCount = 0,
+            sourceLabel = "YouTube Music",
+        )
+    }
+
+    private suspend fun fetchSpotifyLinkPlaylist(
+        playlistId: String,
+        onProgress: (Int, Int, String, String) -> Unit,
+    ): LinkImportResult {
+        val spotify = com.saurav.pixelmusic.data.remote.spotify.SpotifyPlaylistClient(YoutubeHelper.client)
+        val (name, tracks) = spotify.fetchPlaylist(playlistId)
+        val total = tracks.size
+        val resolvedIds = arrayOfNulls<String>(total)
+        val resolvedSongs = arrayOfNulls<Song>(total)
+        val failedCount = java.util.concurrent.atomic.AtomicInteger(0)
+        val semaphore = Semaphore(5)
+        withContext(Dispatchers.IO) {
+            val deferreds = tracks.mapIndexed { index, track ->
+                async {
+                    semaphore.withPermit {
+                        val song = try {
+                            searchAndFetchYoutubeSong(track.title, track.artist, track.durationMs)
+                        } catch (_: Exception) { null }
+                        if (song != null) {
+                            resolvedSongs[index] = song
+                            resolvedIds[index] = song.id
+                        } else {
+                            failedCount.incrementAndGet()
+                        }
+                        onProgress(index + 1, total, track.title, track.artist)
+                    }
+                }
+            }
+            deferreds.awaitAll()
+        }
+        val songs = resolvedSongs.filterNotNull()
+        if (songs.isNotEmpty()) musicRepository.insertYoutubeSongs(songs)
+        return LinkImportResult(
+            name = name.ifBlank { "Spotify Playlist" },
+            songs = songs,
+            failedCount = failedCount.get(),
+            sourceLabel = "Spotify",
+        )
+    }
+
+    /**
+     * Uploads an imported playlist to the logged-in YouTube Music account.
+     * Returns the remote playlist ID.
+     */
+    suspend fun uploadPlaylistToYouTubeMusic(
+        name: String,
+        songs: List<Song>,
+        onProgress: (current: Int, total: Int) -> Unit = { _, _ -> },
+    ): Result<String> = withContext(Dispatchers.IO) {
+        runCatching {
+            val remoteId = YouTube.createPlaylist(name).getOrThrow()
+            val videoIds = songs.mapNotNull { song ->
+                song.youtubeId
+                    ?: song.id.takeIf { it.startsWith("youtube_") }?.substringAfter("youtube_")
+                    ?: song.contentUriString.takeIf { it.startsWith("youtube://") }?.substringAfter("youtube://")
+            }.distinct()
+            videoIds.forEachIndexed { index, videoId ->
+                YouTube.addToPlaylist(remoteId, videoId).getOrThrow()
+                onProgress(index + 1, videoIds.size)
+            }
+            remoteId
+        }
+    }
+
     suspend fun parseM3u(
         uri: Uri,
         onProgress: (current: Int, total: Int, title: String, artist: String) -> Unit = { _, _, _, _ -> }
