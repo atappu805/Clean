@@ -90,8 +90,8 @@ jobs:
           find ~/.gradle/daemon -name '*.out.log' -exec sh -c 'echo "--- $1"; tail -40 "$1"' _ {} \; 2>/dev/null || true
           echo '=== jdks dir ==='
           ls -la ~/.gradle/jdks/ 2>/dev/null || true
-          echo '=== gradle stacktrace (daemon cause) ==='
-          grep -A45 'Caused by' /tmp/gradle.log | head -70 || true
+          echo '=== gradle failure section ==='
+          grep -B2 -A60 'What went wrong' /tmp/gradle.log | head -80 || true
 
       - name: Upload to Testing Repository
         uses: softprops/action-gh-release@v2
