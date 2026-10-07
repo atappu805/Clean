@@ -2100,6 +2100,14 @@ onViewToggleChange = { isChecked ->
             }
         )
     }
+
+    if (showImportLinkDialog) {
+        ImportPlaylistLinkDialog(
+            isVisible = showImportLinkDialog,
+            playlistViewModel = playlistViewModel,
+            onDismiss = { showImportLinkDialog = false }
+        )
+    }
 }
 
 @OptIn(ExperimentalAnimationApi::class)
