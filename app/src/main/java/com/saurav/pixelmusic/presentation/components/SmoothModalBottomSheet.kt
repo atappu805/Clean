@@ -51,8 +51,7 @@ fun SmoothModalBottomSheet(
     modifier: Modifier = Modifier,
     sheetState: SheetState = rememberBottomSheetState(
         initialValue = SheetValue.Hidden,
-        enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded),
-        confirmValueChange = { true }
+        enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded)
     ),
     sheetMaxWidth: Dp = BottomSheetDefaults.SheetMaxWidth,
     shape: Shape = BottomSheetDefaults.ExpandedShape,
@@ -62,7 +61,7 @@ fun SmoothModalBottomSheet(
     scrimColor: Color = BottomSheetDefaults.ScrimColor,
     dragHandle: @Composable (() -> Unit)? = { BottomSheetDefaults.DragHandle() },
     contentWindowInsets: @Composable () -> WindowInsets = { BottomSheetDefaults.modalWindowInsets },
-    properties: ModalBottomSheetProperties = ModalBottomSheetDefaults.properties,
+    properties: ModalBottomSheetProperties = ModalBottomSheetDefaults.properties(shouldDismissOnBackPress = false),
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val scope = rememberCoroutineScope()
@@ -70,7 +69,6 @@ fun SmoothModalBottomSheet(
 
     fun dismissSmoothly(afterDismiss: (() -> Unit)? = null) {
         if (isDismissing) return
-        if (!sheetState.confirmValueChange(SheetValue.Hidden)) return
         isDismissing = true
         scope.launch {
             try {
@@ -110,11 +108,7 @@ fun SmoothModalBottomSheet(
         scrimColor = scrimColor,
         dragHandle = dragHandle,
         contentWindowInsets = contentWindowInsets,
-        properties = ModalBottomSheetDefaults.properties(
-            securePolicy = properties.securePolicy,
-            isFocusable = properties.isFocusable,
-            shouldDismissOnBackPress = false
-        ),
+        properties = properties,
         content = {
             CompositionLocalProvider(
                 LocalSmoothDismiss provides { afterDismiss -> dismissSmoothly(afterDismiss) }
