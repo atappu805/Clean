@@ -33,7 +33,10 @@ jobs:
       - name: Use local JDK for Gradle daemon
         # gradle/gradle-daemon-jvm.properties pins a JetBrains JDK via dead Foojay
         # links; drop it so the daemon uses the setup-java JDK 21 directly.
-        run: rm -f gradle/gradle-daemon-jvm.properties
+        # Also disable toolchain auto-download so Gradle never tries Foojay again.
+        run: |
+          rm -f gradle/gradle-daemon-jvm.properties
+          echo "org.gradle.java.installations.auto-download=false" >> gradle.properties
 
       - name: Create Keystore properties
         run: |
