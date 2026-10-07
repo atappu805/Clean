@@ -12,14 +12,20 @@ import androidx.compose.foundation.pager.PagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import kotlinx.coroutines.isActive
 import org.intellij.lang.annotations.Language
 import kotlin.math.abs
@@ -175,25 +181,32 @@ fun Modifier.scrollMotionBlur(
     }
 
     val animatedVelocity = remember { Animatable(0f) }
+    var frameDeltaAccumulator by remember { mutableFloatStateOf(0f) }
+
+    val nestedScrollConnection = remember(isHorizontal) {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                val delta = if (isHorizontal) available.x else available.y
+                frameDeltaAccumulator -= delta
+                return Offset.Zero
+            }
+        }
+    }
 
     LaunchedEffect(lazyListState) {
-        var prevIndex = lazyListState.firstVisibleItemIndex
-        var prevOffset = lazyListState.firstVisibleItemScrollOffset
         var prevTimeNanos = 0L
 
         while (isActive) {
             var newVelocityToSnap = 0f
             withFrameNanos { frameTimeNanos ->
-                val currentIndex = lazyListState.firstVisibleItemIndex
-                val currentOffset = lazyListState.firstVisibleItemScrollOffset
+                val delta = frameDeltaAccumulator
+                frameDeltaAccumulator = 0f
+
                 if (prevTimeNanos != 0L) {
                     val dtMs = (frameTimeNanos - prevTimeNanos) / 1_000_000.0f
                     if (dtMs in 1f..100f) {
-                        val indexDelta = currentIndex - prevIndex
-                        val offsetDelta = currentOffset - prevOffset
-                        val totalDelta = (indexDelta * 80f) + offsetDelta
-                        val targetVelocity = (totalDelta / dtMs).coerceIn(-3f, 3f)
-                        if (abs(totalDelta) > 0.1f && lazyListState.isScrollInProgress) {
+                        val targetVelocity = (delta / dtMs).coerceIn(-3f, 3f)
+                        if (abs(delta) > 0.1f && lazyListState.isScrollInProgress) {
                             newVelocityToSnap = animatedVelocity.value * 0.35f + targetVelocity * 0.65f
                         } else {
                             val decayed = animatedVelocity.value * 0.45f
@@ -203,8 +216,6 @@ fun Modifier.scrollMotionBlur(
                         newVelocityToSnap = 0f
                     }
                 }
-                prevIndex = currentIndex
-                prevOffset = currentOffset
                 prevTimeNanos = frameTimeNanos
             }
             animatedVelocity.snapTo(newVelocityToSnap)
@@ -219,21 +230,23 @@ fun Modifier.scrollMotionBlur(
 
     val shader = remember { RuntimeShader(DIRECTIONAL_BLUR_AGSL) }
 
-    Modifier.graphicsLayer {
-        val vel = animatedVelocity.value
-        if (abs(vel) > 0.05f) {
-            shader.setFloatUniform("resolution", size.width, size.height)
-            shader.setFloatUniform("scrollVelocity", vel)
-            shader.setFloatUniform("isHorizontal", if (isHorizontal) 1.0f else 0.0f)
-            shader.setFloatUniform("blurIntensity", intensity)
+    Modifier
+        .nestedScroll(nestedScrollConnection)
+        .graphicsLayer {
+            val vel = animatedVelocity.value
+            if (abs(vel) > 0.05f) {
+                shader.setFloatUniform("resolution", size.width, size.height)
+                shader.setFloatUniform("scrollVelocity", vel)
+                shader.setFloatUniform("isHorizontal", if (isHorizontal) 1.0f else 0.0f)
+                shader.setFloatUniform("blurIntensity", intensity)
 
-            renderEffect = RenderEffect
-                .createRuntimeShaderEffect(shader, "composable")
-                .asComposeRenderEffect()
-        } else {
-            renderEffect = null
+                renderEffect = RenderEffect
+                    .createRuntimeShaderEffect(shader, "composable")
+                    .asComposeRenderEffect()
+            } else {
+                renderEffect = null
+            }
         }
-    }
 }
 
 fun Modifier.scrollMotionBlur(
@@ -248,25 +261,31 @@ fun Modifier.scrollMotionBlur(
     }
 
     val animatedVelocity = remember { Animatable(0f) }
+    var frameDeltaAccumulator by remember { mutableFloatStateOf(0f) }
+
+    val nestedScrollConnection = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                frameDeltaAccumulator -= available.y
+                return Offset.Zero
+            }
+        }
+    }
 
     LaunchedEffect(gridState) {
-        var prevIndex = gridState.firstVisibleItemIndex
-        var prevOffset = gridState.firstVisibleItemScrollOffset
         var prevTimeNanos = 0L
 
         while (isActive) {
             var newVelocityToSnap = 0f
             withFrameNanos { frameTimeNanos ->
-                val currentIndex = gridState.firstVisibleItemIndex
-                val currentOffset = gridState.firstVisibleItemScrollOffset
+                val delta = frameDeltaAccumulator
+                frameDeltaAccumulator = 0f
+
                 if (prevTimeNanos != 0L) {
                     val dtMs = (frameTimeNanos - prevTimeNanos) / 1_000_000.0f
                     if (dtMs in 1f..100f) {
-                        val indexDelta = currentIndex - prevIndex
-                        val offsetDelta = currentOffset - prevOffset
-                        val totalDelta = (indexDelta * 80f) + offsetDelta
-                        val targetVelocity = (totalDelta / dtMs).coerceIn(-3f, 3f)
-                        if (abs(totalDelta) > 0.1f && gridState.isScrollInProgress) {
+                        val targetVelocity = (delta / dtMs).coerceIn(-3f, 3f)
+                        if (abs(delta) > 0.1f && gridState.isScrollInProgress) {
                             newVelocityToSnap = animatedVelocity.value * 0.35f + targetVelocity * 0.65f
                         } else {
                             val decayed = animatedVelocity.value * 0.45f
@@ -276,8 +295,6 @@ fun Modifier.scrollMotionBlur(
                         newVelocityToSnap = 0f
                     }
                 }
-                prevIndex = currentIndex
-                prevOffset = currentOffset
                 prevTimeNanos = frameTimeNanos
             }
             animatedVelocity.snapTo(newVelocityToSnap)
@@ -292,21 +309,23 @@ fun Modifier.scrollMotionBlur(
 
     val shader = remember { RuntimeShader(DIRECTIONAL_BLUR_AGSL) }
 
-    Modifier.graphicsLayer {
-        val vel = animatedVelocity.value
-        if (abs(vel) > 0.05f) {
-            shader.setFloatUniform("resolution", size.width, size.height)
-            shader.setFloatUniform("scrollVelocity", vel)
-            shader.setFloatUniform("isHorizontal", 0.0f)
-            shader.setFloatUniform("blurIntensity", intensity)
+    Modifier
+        .nestedScroll(nestedScrollConnection)
+        .graphicsLayer {
+            val vel = animatedVelocity.value
+            if (abs(vel) > 0.05f) {
+                shader.setFloatUniform("resolution", size.width, size.height)
+                shader.setFloatUniform("scrollVelocity", vel)
+                shader.setFloatUniform("isHorizontal", 0.0f)
+                shader.setFloatUniform("blurIntensity", intensity)
 
-            renderEffect = RenderEffect
-                .createRuntimeShaderEffect(shader, "composable")
-                .asComposeRenderEffect()
-        } else {
-            renderEffect = null
+                renderEffect = RenderEffect
+                    .createRuntimeShaderEffect(shader, "composable")
+                    .asComposeRenderEffect()
+            } else {
+                renderEffect = null
+            }
         }
-    }
 }
 
 fun Modifier.scrollMotionBlur(
