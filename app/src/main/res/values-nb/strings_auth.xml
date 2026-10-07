@@ -1,3 +1,4 @@
+[lines 1-73 of 73; 4896 chars in file; FULL]
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Shared login / streaming auth -->
@@ -28,17 +29,7 @@
     <string name="cd_navidrome_logo">Navidrome</string>
     <string name="cd_subsonic_logo">Subsonic</string>
 
-    <!-- Jellyfin -->
-    <string name="auth_jellyfin_title">Jellyfin</string>
-    <string name="auth_jellyfin_info_card">Kobler til Jellyfin-servere. Både HTTP og HTTPS støttes.</string>
-    <string name="auth_jellyfin_subtitle">Koble til din Jellyfin-server</string>
-    <string name="auth_jellyfin_connection_subtitle">Skriv inn Jellyfin server-URL og påloggingsinformasjon.</string>
-    <string name="auth_jellyfin_server_placeholder">http://192.168.1.100:8096</string>
-    <string name="auth_jellyfin_server_url_hint">Fullstendig URL til Jellyfin-serveren din, inkludert port.</string>
-    <string name="auth_jellyfin_username_hint">Ditt Jellyfin-brukernavn.</string>
-    <string name="auth_jellyfin_password_hint">Ditt Jellyfin-passord.</string>
     <string name="auth_prefill_http">Fyll ut http://</string>
-    <string name="auth_jellyfin_footer">Kobler til Jellyfin-servere for strømming av musikk</string>
 
     <!-- Google Drive -->
     <string name="auth_gdrive_toast_connected">Google Drive tilkoblet!</string>
