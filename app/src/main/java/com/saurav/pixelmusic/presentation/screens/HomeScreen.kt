@@ -95,11 +95,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.ExperimentalTextApi
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.Font
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -121,7 +116,6 @@ import com.saurav.pixelmusic.presentation.components.AlbumArtCollage
 import com.saurav.pixelmusic.presentation.components.BetaInfoBottomSheet
 import com.saurav.pixelmusic.presentation.components.ChangelogBottomSheet
 import com.saurav.pixelmusic.presentation.components.DailyMixSection
-import com.saurav.pixelmusic.presentation.components.YourMixSection
 import com.saurav.pixelmusic.presentation.components.FavoriteArtistReleasesSection
 import com.saurav.pixelmusic.presentation.components.HomeOptionsBottomSheet
 import com.saurav.pixelmusic.presentation.components.HomeShuffleFab
@@ -225,8 +219,6 @@ fun HomeScreen(
         }
     }
     val dailyMixSongs by playerViewModel.dailyMixSongs.collectAsStateWithLifecycle()
-    val curatedYourMixSongs by playerViewModel.yourMixSongs.collectAsStateWithLifecycle()
-    val homeMixPreviewSongs by playerViewModel.homeMixPreviewSongs.collectAsStateWithLifecycle()
     val playbackHistory by playerViewModel.playbackHistory.collectAsStateWithLifecycle()
     val quickPicksDisplayMode by playerViewModel.quickPicksDisplayMode.collectAsStateWithLifecycle()
     val backgroundStyle by playerViewModel.userPreferencesRepository.appBackgroundStyleFlow.collectAsStateWithLifecycle(initialValue = AppBackgroundStyle.DEFAULT)
@@ -234,32 +226,14 @@ fun HomeScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
     val isTestBuild = context.packageName.endsWith(".test")
 
-    val usesFallbackHomeMix = remember(curatedYourMixSongs, dailyMixSongs) {
-        curatedYourMixSongs.isEmpty() && dailyMixSongs.isEmpty()
-    }
-    val yourMixSongs = remember(curatedYourMixSongs, dailyMixSongs, homeMixPreviewSongs) {
-        when {
-            dailyMixSongs.isNotEmpty() -> dailyMixSongs
-            curatedYourMixSongs.isNotEmpty() -> curatedYourMixSongs
-            else -> homeMixPreviewSongs
-        }
-    }
-    var homePlaceholderRefreshGeneration by rememberSaveable { mutableIntStateOf(0) }
-    var hasHomeLoadingMinimumElapsed by rememberSaveable(homePlaceholderRefreshGeneration) {
+    var hasHomeLoadingMinimumElapsed by rememberSaveable {
         mutableStateOf(false)
     }
 
-    LaunchedEffect(homePlaceholderRefreshGeneration, yourMixSongs.isEmpty()) {
-        if (yourMixSongs.isEmpty()) {
-            hasHomeLoadingMinimumElapsed = false
-            delay(HomeLoadingPlaceholderMinDurationMillis)
-            hasHomeLoadingMinimumElapsed = true
-        } else {
-            hasHomeLoadingMinimumElapsed = true
-        }
+    LaunchedEffect(Unit) {
+        delay(HomeLoadingPlaceholderMinDurationMillis)
+        hasHomeLoadingMinimumElapsed = true
     }
-
-    val shouldShowYourMixLoadingPlaceholder = yourMixSongs.isEmpty() && !hasHomeLoadingMinimumElapsed
     val recentSongIds = remember(playbackHistory) {
         collectRecentlyPlayedSongIds(
             playbackHistory = playbackHistory,
@@ -289,10 +263,8 @@ fun HomeScreen(
     }
 
     ReportDrawnWhen {
-        yourMixSongs.isNotEmpty() || hasHomeLoadingMinimumElapsed || isBenchmarkMode
+        dailyMixSongs.isNotEmpty() || hasHomeLoadingMinimumElapsed || isBenchmarkMode
     }
-
-    val yourMixSong: String = "Today's Mix for you"
 
     val currentSong by remember(playerViewModel.stablePlayerState) {
         playerViewModel.stablePlayerState.map { it.currentSong }
@@ -365,7 +337,6 @@ fun HomeScreen(
 
     LaunchedEffect(
         needsScrollRestore,
-        yourMixSongs.isNotEmpty(),
         dailyMixSongs.isNotEmpty(),
         recentlyPlayedSongs.size,
         homeStatsOverview
@@ -490,7 +461,6 @@ fun HomeScreen(
                 isRefreshing = isRefreshing,
                 onRefresh = {
                     isRefreshing = true
-                    homePlaceholderRefreshGeneration++
                     quickPicksViewModel.refresh()
                     playerViewModel.forceUpdateDailyMix()
                     scope.launch {
@@ -548,52 +518,6 @@ fun HomeScreen(
                                 },
                                 currentSongId = currentSong?.id,
                                 displayMode = quickPicksDisplayMode
-                            )
-                        }
-                    }
-
-                    if (yourMixSongs.isEmpty()) {
-                        item(
-                            key = "your_mix_placeholder",
-                            contentType = "your_mix_placeholder"
-                        ) {
-                            if (shouldShowYourMixLoadingPlaceholder) {
-                                YourMixLoadingPlaceholder()
-                            } else {
-                                YourMixEmptyPlaceholder(
-                                    onRefresh = {
-                                        homePlaceholderRefreshGeneration++
-                                        settingsViewModel.refreshLibrary()
-                                        playerViewModel.forceUpdateDailyMix()
-                                    }
-                                )
-                            }
-                        }
-                    } else {
-                        item(
-                            key = "your_mix_section",
-                            contentType = "your_mix_section"
-                        ) {
-                            YourMixSection(
-                                subtitle = yourMixSong,
-                                songs = yourMixSongs,
-                                isHomeScreenScrolling = listState.isScrollInProgress,
-                                onPlaySong = { song ->
-                                    if (usesFallbackHomeMix) {
-                                        playerViewModel.showAndPlaySongFromLibrary(song, queueName = "Your Mix")
-                                    } else {
-                                        playerViewModel.showAndPlaySong(song, yourMixSongs, "Your Mix")
-                                    }
-                                },
-                                onPlayAll = {
-                                    yourMixSongs.firstOrNull()?.let { song ->
-                                        if (usesFallbackHomeMix) {
-                                            playerViewModel.showAndPlaySongFromLibrary(song, queueName = "Your Mix")
-                                        } else {
-                                            playerViewModel.showAndPlaySong(song, yourMixSongs, "Your Mix")
-                                        }
-                                    }
-                                }
                             )
                         }
                     }
@@ -795,133 +719,6 @@ fun HomeScreen(
 
 }
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
-@Composable
-private fun YourMixLoadingPlaceholder() {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(256.dp)
-            .padding(16.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        LoadingIndicator(
-            modifier = Modifier.size(128.dp),
-            color = MaterialTheme.colorScheme.primary
-        )
-    }
-}
-
-@Composable
-private fun YourMixEmptyPlaceholder(
-    onRefresh: () -> Unit
-) {
-    val colors = MaterialTheme.colorScheme
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 256.dp)
-            .padding(horizontal = 24.dp, vertical = 16.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            Surface(
-                modifier = Modifier.size(76.dp),
-                shape = AbsoluteSmoothCornerShape(
-                    cornerRadiusTL = 28.dp,
-                    smoothnessAsPercentTR = 60,
-                    cornerRadiusBR = 28.dp,
-                    smoothnessAsPercentTL = 60,
-                    cornerRadiusBL = 28.dp,
-                    smoothnessAsPercentBR = 60,
-                    cornerRadiusTR = 28.dp,
-                    smoothnessAsPercentBL = 60,
-                ),
-                color = colors.secondaryContainer,
-                contentColor = colors.onSecondaryContainer
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.Rounded.MusicNote,
-                        contentDescription = null,
-                        modifier = Modifier.size(34.dp)
-                    )
-                }
-            }
-
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                Text(
-                    text = stringResource(R.string.home_empty_placeholder_title),
-                    style = MaterialTheme.typography.titleLarge,
-                    color = colors.onSurface,
-                    textAlign = TextAlign.Center
-                )
-                Text(
-                    text = stringResource(R.string.home_empty_placeholder_subtitle),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = colors.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-
-            FilledTonalButton(
-                onClick = onRefresh,
-                shape = AbsoluteSmoothCornerShape(
-                    cornerRadiusTL = 22.dp,
-                    smoothnessAsPercentTR = 60,
-                    cornerRadiusBR = 22.dp,
-                    smoothnessAsPercentTL = 60,
-                    cornerRadiusBL = 22.dp,
-                    smoothnessAsPercentBR = 60,
-                    cornerRadiusTR = 22.dp,
-                    smoothnessAsPercentBL = 60,
-                )
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.Refresh,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(text = stringResource(R.string.home_empty_placeholder_refresh))
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalTextApi::class)
-private val YourMixTitleStyle: TextStyle by lazy {
-    TextStyle(
-        fontFamily = FontFamily(
-            Font(
-                resId = R.font.gflex_variable,
-                variationSettings = FontVariation.Settings(
-                    FontVariation.weight(636),
-                    FontVariation.width(152f),
-                    FontVariation.Setting("ROND", 50f),
-                    FontVariation.Setting("XTRA", 520f),
-                    FontVariation.Setting("YOPQ", 90f),
-                    FontVariation.Setting("YTLC", 505f)
-                )
-            )
-        ),
-        fontWeight = FontWeight(760),
-        fontSize = 42.sp,
-        lineHeight = 44.sp
-    )
-}
-
-
-
 @Composable
 fun SongListItemFavs(
     modifier: Modifier = Modifier,
@@ -1024,9 +821,6 @@ fun SongListItemFavsWrapper(
         onClick = onClick
     )
 }
-
-@Composable
-private fun rememberYourMixTitleStyle(): TextStyle = YourMixTitleStyle
 
 @Composable
 fun HomeGreetingHeader(userName: String?) {
