@@ -876,57 +876,6 @@ suspend fun artist(browseId: String): Result<ArtistPage> = runCatching {
                 else -> null
             }
         }?.filter { it.items.isNotEmpty() }.orEmpty()
-
-    data class MoodsAndGenresSection(
-        val title: String,
-        val items: List<MoodCategoryItem>
-    )
-
-    data class MoodCategoryItem(
-        val title: String,
-        val stripeColor: Long?,
-        val browseId: String,
-        val params: String?
-    )
-
-    suspend fun moodsAndGenres(): Result<List<MoodsAndGenresSection>> = runCatching {
-        val response = innerTube.browse(
-            client = WEB_REMIX,
-            browseId = "FEmusic_moods_and_genres",
-            forceAnonymous = true
-        ).body<BrowseResponse>()
-
-        val sections = mutableListOf<MoodsAndGenresSection>()
-        val contents = response.contents
-            ?.singleColumnBrowseResultsRenderer
-            ?.tabs
-            ?.firstOrNull()
-            ?.tabRenderer
-            ?.content
-            ?.sectionListRenderer
-            ?.contents
-            .orEmpty()
-
-        contents.forEach { content ->
-            content.gridRenderer?.let { grid ->
-                val title = grid.header?.gridHeaderRenderer?.title?.runs?.firstOrNull()?.text ?: return@let
-                val items = grid.items.mapNotNull { it.musicNavigationButtonRenderer }.mapNotNull { navBtn ->
-                    val itemTitle = navBtn.buttonText.runs.firstOrNull()?.text?.trim() ?: return@mapNotNull null
-                    val endpoint = navBtn.clickCommand.browseEndpoint ?: return@mapNotNull null
-                    MoodCategoryItem(
-                        title = itemTitle,
-                        stripeColor = navBtn.solid?.leftStripeColor,
-                        browseId = endpoint.browseId,
-                        params = endpoint.params
-                    )
-                }
-                if (items.isNotEmpty()) {
-                    sections.add(MoodsAndGenresSection(title, items))
-                }
-            }
-        }
-        sections
-    }
         val immersiveHeader = response.header?.musicImmersiveHeaderRenderer
         val headerRenderer = response.header?.musicHeaderRenderer
         val detailHeader = response.header?.musicDetailHeaderRenderer
@@ -986,6 +935,57 @@ suspend fun artist(browseId: String): Result<ArtistPage> = runCatching {
             shuffleEndpoint = parsedShuffleEndpoint,
             radioEndpoint = parsedRadioEndpoint,
         )
+    }
+
+    data class MoodsAndGenresSection(
+        val title: String,
+        val items: List<MoodCategoryItem>
+    )
+
+    data class MoodCategoryItem(
+        val title: String,
+        val stripeColor: Long?,
+        val browseId: String,
+        val params: String?
+    )
+
+    suspend fun moodsAndGenres(): Result<List<MoodsAndGenresSection>> = runCatching {
+        val response = innerTube.browse(
+            client = WEB_REMIX,
+            browseId = "FEmusic_moods_and_genres",
+            forceAnonymous = true
+        ).body<BrowseResponse>()
+
+        val sections = mutableListOf<MoodsAndGenresSection>()
+        val contents = response.contents
+            ?.singleColumnBrowseResultsRenderer
+            ?.tabs
+            ?.firstOrNull()
+            ?.tabRenderer
+            ?.content
+            ?.sectionListRenderer
+            ?.contents
+            .orEmpty()
+
+        contents.forEach { content ->
+            content.gridRenderer?.let { grid ->
+                val title = grid.header?.gridHeaderRenderer?.title?.runs?.firstOrNull()?.text ?: return@let
+                val items = grid.items.mapNotNull { it.musicNavigationButtonRenderer }.mapNotNull { navBtn ->
+                    val itemTitle = navBtn.buttonText.runs?.firstOrNull()?.text?.trim() ?: return@mapNotNull null
+                    val endpoint = navBtn.clickCommand.browseEndpoint ?: return@mapNotNull null
+                    MoodCategoryItem(
+                        title = itemTitle,
+                        stripeColor = navBtn.solid?.leftStripeColor,
+                        browseId = endpoint.browseId,
+                        params = endpoint.params
+                    )
+                }
+                if (items.isNotEmpty()) {
+                    sections.add(MoodsAndGenresSection(title, items))
+                }
+            }
+        }
+        sections
     }
 
     suspend fun library(browseId: String, tabIndex: Int = 0) = runCatching {

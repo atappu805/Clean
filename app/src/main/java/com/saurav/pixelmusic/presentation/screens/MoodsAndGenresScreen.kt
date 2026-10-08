@@ -1,3 +1,7 @@
+@file:OptIn(
+    androidx.compose.material3.ExperimentalMaterial3Api::class,
+    androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class
+)
 package com.saurav.pixelmusic.presentation.screens
 
 import androidx.compose.foundation.background
@@ -9,6 +13,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import saurav.shru.pixelmusic.innertube.YouTube
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -79,12 +87,12 @@ fun MoodsAndGenresScreen(
     val listState = rememberLazyListState()
     val navBarBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val scope = rememberCoroutineScope()
-    var remoteSections by remember { mutableStateOf<List<saurav.shru.pixelmusic.innertube.YouTube.MoodsAndGenresSection>?>(null) }
+    var remoteSections by remember { mutableStateOf<List<YouTube.MoodsAndGenresSection>?>(null) }
 
     LaunchedEffect(Unit) {
         scope.launch {
-            val res = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                saurav.shru.pixelmusic.innertube.YouTube.moodsAndGenres().getOrNull()
+            val res = withContext(Dispatchers.IO) {
+                YouTube.moodsAndGenres().getOrNull()
             }
             if (!res.isNullOrEmpty()) {
                 remoteSections = res
