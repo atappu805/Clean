@@ -68,6 +68,7 @@ class ExploreViewModel @Inject constructor(
 
     /** Simple in-memory cache so re-tapping a mood doesn't refetch. */
     private val moodCache = mutableMapOf<String, List<HomePage.Section>>()
+    private var cachedMoodsAndGenres: List<YouTube.MoodsAndGenresSection>? = null
 
     private val gson by lazy {
         com.google.gson.GsonBuilder()
@@ -619,36 +620,41 @@ class ExploreViewModel @Inject constructor(
             _uiState.update { it.copy(selectedMood = mood, isMoodLoading = true, moodSections = emptyList()) }
             try {
                 val sections = withContext(Dispatchers.IO) {
-                    coroutineScope {
-                        val songsDeferred = async {
-                            YouTube.search(mood, YouTube.SearchFilter.FILTER_SONG).getOrNull()
+                    val allMoods = cachedMoodsAndGenres ?: run {
+                        val fetched = YouTube.moodsAndGenres().getOrNull()
+                        if (!fetched.isNullOrEmpty()) {
+                            cachedMoodsAndGenres = fetched
                         }
-                        val playlistsDeferred = async {
-                            YouTube.search("$mood playlist", YouTube.SearchFilter.FILTER_COMMUNITY_PLAYLIST).getOrNull()
-                        }
-                        val albumsDeferred = async {
-                            YouTube.search(mood, YouTube.SearchFilter.FILTER_ALBUM).getOrNull()
-                        }
-                        val artistsDeferred = async {
-                            YouTube.search(mood, YouTube.SearchFilter.FILTER_ARTIST).getOrNull()
-                        }
+                        fetched
+                    }
 
-                        val songs = songsDeferred.await()?.items?.filterIsInstance<SongItem>().orEmpty()
-                        val playlists = playlistsDeferred.await()?.items?.filterIsInstance<PlaylistItem>().orEmpty()
-                        val albums = albumsDeferred.await()?.items?.filterIsInstance<AlbumItem>().orEmpty()
-                        val artists = artistsDeferred.await()?.items?.filterIsInstance<ArtistItem>().orEmpty()
+                    // Look for matching category in official moods and genres
+                    val matchedItem = allMoods?.flatMap { it.items }?.firstOrNull {
+                        it.title.equals(mood, ignoreCase = true)
+                    }
 
-                        val result = mutableListOf<HomePage.Section>()
+                    val browseResult = if (matchedItem != null && matchedItem.browseId.isNotBlank()) {
+                        YouTube.browse(matchedItem.browseId, matchedItem.params).getOrNull()
+                    } else null
 
-                        if (songs.isNotEmpty()) {
-                            result.add(HomePage.Section(
-                                title = "$mood Songs",
+                    if (browseResult != null && browseResult.items.isNotEmpty()) {
+                        browseResult.items.map { shelf ->
+                            HomePage.Section(
+                                title = shelf.title ?: "$mood Highlights",
                                 label = null,
                                 thumbnail = null,
                                 endpoint = null,
-                                items = songs
-                            ))
+                                items = shelf.items
+                            )
                         }
+                    } else {
+                        // Fallback: search ONLY for curated featured playlists for this mood
+                        val playlists = YouTube.search(
+                            "$mood playlist",
+                            YouTube.SearchFilter.FILTER_FEATURED_PLAYLIST
+                        ).getOrNull()?.items?.filterIsInstance<PlaylistItem>().orEmpty()
+
+                        val result = mutableListOf<HomePage.Section>()
                         if (playlists.isNotEmpty()) {
                             result.add(HomePage.Section(
                                 title = "$mood Playlists",
@@ -656,24 +662,6 @@ class ExploreViewModel @Inject constructor(
                                 thumbnail = null,
                                 endpoint = null,
                                 items = playlists
-                            ))
-                        }
-                        if (albums.isNotEmpty()) {
-                            result.add(HomePage.Section(
-                                title = "$mood Albums",
-                                label = null,
-                                thumbnail = null,
-                                endpoint = null,
-                                items = albums
-                            ))
-                        }
-                        if (artists.isNotEmpty()) {
-                            result.add(HomePage.Section(
-                                title = "$mood Artists",
-                                label = null,
-                                thumbnail = null,
-                                endpoint = null,
-                                items = artists
                             ))
                         }
                         result
