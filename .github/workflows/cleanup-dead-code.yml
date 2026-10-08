@@ -1,4 +1,4 @@
-name: 🧹 Remove Dead Files
+name: 🧹 Remove Cleanup Workflow
 
 on:
   workflow_dispatch:
@@ -15,72 +15,13 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
 
-      - name: Remove dead files and assets
+      - name: Remove self
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
 
-          # Delete dead Kotlin files
-          rm -f app/src/main/java/com/saurav/pixelmusic/presentation/screens/QuickFillScreen.kt
-          rm -f app/src/main/java/com/saurav/pixelmusic/presentation/utils/GenreIconProvider.kt
-          rm -f app/src/main/java/com/saurav/pixelmusic/data/backup/AppDataBackupManager.kt
-          rm -f app/src/main/java/com/saurav/pixelmusic/presentation/components/subcomps/SelectionHeader.kt
-          rm -f app/src/main/java/com/saurav/pixelmusic/presentation/components/Beta05CleanInstallDisclaimerDialog.kt
-          rm -f app/src/main/java/com/saurav/pixelmusic/utils/AudioDecoder.kt
-          rm -f app/src/main/java/com/saurav/pixelmusic/presentation/components/subcomps/ExpressiveSongListItem.kt
-          rm -f app/src/main/java/com/saurav/pixelmusic/presentation/components/AppRebrandDialog.kt
-          rm -f app/src/main/java/com/saurav/pixelmusic/presentation/components/AllFilesAccessDialog.kt
-          rm -f app/src/main/java/com/saurav/pixelmusic/presentation/components/WavyArcSlider.kt
-          rm -f app/src/main/java/com/saurav/pixelmusic/data/model/SortOptionTest.kt
-          rm -f app/src/main/java/com/saurav/pixelmusic/presentation/components/subcomps/PlayerProgressBarSection.kt
-
-          # Delete dead drawables
-          rm -f app/src/main/res/drawable/accordion.xml
-          rm -f app/src/main/res/drawable/acoustic_guitar.xml
-          rm -f app/src/main/res/drawable/alt_video.xml
-          rm -f app/src/main/res/drawable/banjo.xml
-          rm -f app/src/main/res/drawable/bongos.xml
-          rm -f app/src/main/res/drawable/clasic_piano.xml
-          rm -f app/src/main/res/drawable/conga.xml
-          rm -f app/src/main/res/drawable/drum.xml
-          rm -f app/src/main/res/drawable/electronic_sound.xml
-          rm -f app/src/main/res/drawable/harmonica.xml
-          rm -f app/src/main/res/drawable/idk_indie_ig.xml
-          rm -f app/src/main/res/drawable/maracas.xml
-          rm -f app/src/main/res/drawable/metal_guitar.xml
-          rm -f app/src/main/res/drawable/metal_guitar_2.xml
-          rm -f app/src/main/res/drawable/pop_mic.xml
-          rm -f app/src/main/res/drawable/punk.xml
-          rm -f app/src/main/res/drawable/rapper.xml
-          rm -f app/src/main/res/drawable/rattle.xml
-          rm -f app/src/main/res/drawable/rock.xml
-          rm -f app/src/main/res/drawable/rock_guitar_test.xml
-          rm -f app/src/main/res/drawable/sax.xml
-          rm -f app/src/main/res/drawable/star_angle.xml
-          rm -f app/src/main/res/drawable/synth_piano.xml
-          rm -f app/src/main/res/drawable/ic_jellyfin.xml
-          rm -f app/src/main/res/drawable/ic_subsonic.xml
-          rm -f app/src/main/res/drawable/ic_navidrome_md3.xml
-          rm -f app/src/main/res/drawable/qq_music.xml
-          rm -f app/src/main/res/drawable/ic_phone.xml
-          rm -f app/src/main/res/drawable/ic_snapchat.xml
-          rm -f app/src/main/res/drawable/genre_default.xml
-          rm -f app/src/main/res/drawable/theveloper_icon.png
-          rm -f app/src/main/res/drawable/monochrome.xml
-          rm -f app/src/main/res/drawable/new_monochrome.xml
-          rm -f app/src/main/res/drawable/round_developer_board_24.xml
-          rm -f app/src/main/res/drawable/round_home_24.xml
-          rm -f app/src/main/res/drawable/round_newspaper_24.xml
-          rm -f app/src/main/res/drawable/rounded_bottom_drawer_24.xml
-          rm -f app/src/main/res/drawable/rounded_conversion_path_off_24.xml
-          rm -f app/src/main/res/drawable/rounded_key_vertical_24.xml
-          rm -f app/src/main/res/drawable/rounded_dataset_24.xml
-          rm -f app/src/main/res/drawable/rounded_sentiment_dissatisfied_24.xml
-          rm -f app/src/main/res/drawable/rounded_view_week_24.xml
-          rm -f app/src/main/res/drawable/rounded_watch_arrow_down_24.xml
-          rm -f app/src/main/res/drawable/rounded_calendar_view_week_24.xml
-          rm -f app/src/main/res/drawable/rounded_clear_all_24.xml
+          rm -f .github/workflows/cleanup-dead-code.yml
 
           git add -u
-          git commit -m "chore: delete dead code files, unused classes, and unreferenced drawables" || echo "No changes to commit"
+          git commit -m "chore: remove temporary cleanup workflow"
           git push origin main
