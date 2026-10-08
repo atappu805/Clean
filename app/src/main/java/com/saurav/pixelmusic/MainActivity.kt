@@ -121,7 +121,6 @@ import com.saurav.pixelmusic.data.preferences.UserPreferencesRepository
 import com.saurav.pixelmusic.data.service.MusicService
 import com.saurav.pixelmusic.data.worker.SyncManager
 import com.saurav.pixelmusic.data.worker.SyncProgress
-import com.saurav.pixelmusic.presentation.components.AllFilesAccessDialog
 import com.saurav.pixelmusic.presentation.components.AppSidebarDrawer
 import com.saurav.pixelmusic.presentation.components.CrashReportDialog
 import com.saurav.pixelmusic.presentation.components.DismissUndoBar
@@ -222,9 +221,6 @@ class MainActivity : ComponentActivity() {
     /** URI of an M3U/M3U8 file shared/opened from another app, waiting to be imported. */
     val pendingM3uImportUri = kotlinx.coroutines.flow.MutableStateFlow<android.net.Uri?>(null)
 
-    private val requestAllFilesAccessLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { _ ->
-        // Handle the result in onResume
-    }
 
     /**
      * Asks the OS to run this window at the display's highest supported refresh
