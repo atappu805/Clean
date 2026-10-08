@@ -33,17 +33,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.setValue
+
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.boundsInWindow
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -59,7 +53,7 @@ import com.saurav.pixelmusic.ui.theme.LocalPixelMusicDarkTheme
 
 private val HomeRecentlyPlayedPillHeight = 58.dp
 private val HomeRecentlyPlayedPillSpacing = 8.dp
-private const val HomeRecentlyPlayedPillsLimit = 64 // Raised from 10 to 64!
+private const val HomeRecentlyPlayedPillsLimit = 15 // Preview limit for home screen
 private const val HomeRecentlyPlayedPillsPerColumn = 3
 internal const val RecentlyPlayedSectionMinSongsToShow = 4
 private val HomeRecentlyPlayedPillArtSize = 38.dp
@@ -257,12 +251,6 @@ private fun RecentlyPlayedPill(
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
-    val density = LocalDensity.current
-    val configuration = LocalConfiguration.current
-    val screenWidthPx = with(density) { configuration.screenWidthDp.dp.toPx() }
-
-    var visibilityFactor by remember { mutableFloatStateOf(1f) }
-
     val isDark = LocalPixelMusicDarkTheme.current
     val albumColorSchemeState by remember(item.song.albumArtUriString, themeStateHolder) {
         themeStateHolder.getAlbumColorSchemeFlow(item.song.albumArtUriString.orEmpty())
@@ -279,9 +267,6 @@ private fun RecentlyPlayedPill(
     val targetContainerColor = albumColorScheme?.primaryContainer ?: fallbackContainer
     val targetTitleColor = albumColorScheme?.onPrimaryContainer ?: fallbackTitle
     val targetArtistColor = albumColorScheme?.onPrimaryContainer?.copy(alpha = 0.80f) ?: fallbackArtist
-
-    // We only animate the scale and opacity for pills, the corner radius stays pill-shaped
-    val contentScaleFactor = 0.85f + (0.15f * visibilityFactor)
 
     // The corner radius only changes slightly if it's the actively playing song
     val animatedCorner by animateDpAsState(
@@ -313,25 +298,6 @@ private fun RecentlyPlayedPill(
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         modifier = modifier
             .height(HomeRecentlyPlayedPillHeight)
-            .onGloballyPositioned { coordinates ->
-                val bounds = coordinates.boundsInWindow()
-                val cardCenterX = bounds.center.x
-
-                // 15% Edge Margin Animation
-                val hMargin = screenWidthPx * 0.15f
-                val hFactor = when {
-                    cardCenterX < hMargin -> (cardCenterX / hMargin).coerceIn(0f, 1f)
-                    cardCenterX > (screenWidthPx - hMargin) -> ((screenWidthPx - cardCenterX) / hMargin).coerceIn(0f, 1f)
-                    else -> 1f
-                }
-
-                visibilityFactor = hFactor
-            }
-            .graphicsLayer {
-                scaleX = contentScaleFactor
-                scaleY = contentScaleFactor
-                alpha = 0.4f + (0.6f * visibilityFactor)
-            }
             .clip(shape)
             .clickable(onClick = onClick)
     ) {

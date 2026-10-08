@@ -51,16 +51,18 @@ fun StatsOverviewCard(
     onClick: () -> Unit
 ) {
     val containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-    val shape = AbsoluteSmoothCornerShape(
-        cornerRadiusTL = 28.dp,
-        smoothnessAsPercentTR = 60,
-        cornerRadiusBR = 28.dp,
-        smoothnessAsPercentTL = 60,
-        cornerRadiusBL = 28.dp,
-        smoothnessAsPercentBR = 60,
-        cornerRadiusTR = 28.dp,
-        smoothnessAsPercentBL = 60,
-    )
+    val shape = androidx.compose.runtime.remember {
+        AbsoluteSmoothCornerShape(
+            cornerRadiusTL = 28.dp,
+            smoothnessAsPercentTR = 60,
+            cornerRadiusBR = 28.dp,
+            smoothnessAsPercentTL = 60,
+            cornerRadiusBL = 28.dp,
+            smoothnessAsPercentBR = 60,
+            cornerRadiusTR = 28.dp,
+            smoothnessAsPercentBL = 60,
+        )
+    }
 
     Card(
         modifier = modifier

@@ -28,21 +28,14 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.setValue
+
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.boundsInWindow
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.lerp
 import com.saurav.pixelmusic.data.model.Song
 import com.saurav.pixelmusic.data.preferences.QuickPicksDisplayMode
 
@@ -191,13 +184,6 @@ private fun QuickPickCard(
     isPlaying: Boolean,
     onClick: () -> Unit
 ) {
-    val density = LocalDensity.current
-    val configuration = LocalConfiguration.current
-    val screenWidthPx = with(density) { configuration.screenWidthDp.dp.toPx() }
-    val screenHeightPx = with(density) { configuration.screenHeightDp.dp.toPx() }
-
-    var visibilityFactor by remember { mutableFloatStateOf(1f) }
-
     val targetBg = if (isPlaying) MaterialTheme.colorScheme.primaryContainer
     else MaterialTheme.colorScheme.surfaceContainerLow
     val bgColor by animateColorAsState(
@@ -206,42 +192,15 @@ private fun QuickPickCard(
         label = "QuickPickBg"
     )
 
-    val cardCornerRadius = lerp(16.dp, 60.dp, 1f - visibilityFactor)
-    val imageCornerRadius = lerp(12.dp, 56.dp, 1f - visibilityFactor)
-    val contentScaleFactor = 0.90f + (0.10f * visibilityFactor)
+    val cardShape = remember { RoundedCornerShape(16.dp) }
+    val imageShape = remember { RoundedCornerShape(12.dp) }
 
     Card(
         onClick = onClick,
         modifier = Modifier
             .width(140.dp)
-            .padding(bottom = 8.dp)
-            .onGloballyPositioned { coordinates ->
-                val bounds = coordinates.boundsInWindow()
-                val cardCenterX = bounds.center.x
-                val cardCenterY = bounds.center.y
-
-                val hMargin = screenWidthPx * 0.20f
-                val hFactor = when {
-                    cardCenterX < hMargin -> (cardCenterX / hMargin).coerceIn(0f, 1f)
-                    cardCenterX > (screenWidthPx - hMargin) -> ((screenWidthPx - cardCenterX) / hMargin).coerceIn(0f, 1f)
-                    else -> 1f
-                }
-
-                val vMargin = screenHeightPx * 0.15f
-                val vFactor = when {
-                    cardCenterY < vMargin -> (cardCenterY / vMargin).coerceIn(0f, 1f)
-                    cardCenterY > (screenHeightPx - vMargin) -> ((screenHeightPx - cardCenterY) / vMargin).coerceIn(0f, 1f)
-                    else -> 1f
-                }
-
-                visibilityFactor = (hFactor * vFactor).coerceIn(0f, 1f)
-            }
-            .graphicsLayer {
-                scaleX = contentScaleFactor
-                scaleY = contentScaleFactor
-                alpha = 0.5f + (0.5f * visibilityFactor)
-            },
-        shape = RoundedCornerShape(cardCornerRadius),
+            .padding(bottom = 8.dp),
+        shape = cardShape,
         colors = CardDefaults.cardColors(containerColor = bgColor),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
@@ -256,7 +215,7 @@ private fun QuickPickCard(
                 model = artUri,
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
-                shape = RoundedCornerShape(imageCornerRadius),
+                shape = imageShape,
                 modifier = Modifier
                     .size(124.dp)
                     .align(Alignment.CenterHorizontally)
@@ -292,13 +251,6 @@ private fun QuickPickPill(
     isPlaying: Boolean,
     onClick: () -> Unit
 ) {
-    val density = LocalDensity.current
-    val configuration = LocalConfiguration.current
-    val screenWidthPx = with(density) { configuration.screenWidthDp.dp.toPx() }
-    val screenHeightPx = with(density) { configuration.screenHeightDp.dp.toPx() }
-
-    var visibilityFactor by remember { mutableFloatStateOf(1f) }
-
     val targetBg = if (isPlaying) MaterialTheme.colorScheme.primaryContainer
     else MaterialTheme.colorScheme.surfaceContainerHigh
     val bgColor by animateColorAsState(
@@ -307,41 +259,14 @@ private fun QuickPickPill(
         label = "QuickPickBg"
     )
 
-    val cardCornerRadius = lerp(QuickPicksPillHeight / 2, 60.dp, 1f - visibilityFactor)
-    val contentScaleFactor = 0.90f + (0.10f * visibilityFactor)
+    val pillShape = remember { RoundedCornerShape(QuickPicksPillHeight / 2) }
 
     Card(
         onClick = onClick,
         modifier = Modifier
             .width(width)
-            .height(QuickPicksPillHeight)
-            .onGloballyPositioned { coordinates ->
-                val bounds = coordinates.boundsInWindow()
-                val cardCenterX = bounds.center.x
-                val cardCenterY = bounds.center.y
-
-                val hMargin = screenWidthPx * 0.15f
-                val hFactor = when {
-                    cardCenterX < hMargin -> (cardCenterX / hMargin).coerceIn(0f, 1f)
-                    cardCenterX > (screenWidthPx - hMargin) -> ((screenWidthPx - cardCenterX) / hMargin).coerceIn(0f, 1f)
-                    else -> 1f
-                }
-
-                val vMargin = screenHeightPx * 0.15f
-                val vFactor = when {
-                    cardCenterY < vMargin -> (cardCenterY / vMargin).coerceIn(0f, 1f)
-                    cardCenterY > (screenHeightPx - vMargin) -> ((screenHeightPx - cardCenterY) / vMargin).coerceIn(0f, 1f)
-                    else -> 1f
-                }
-
-                visibilityFactor = (hFactor * vFactor).coerceIn(0f, 1f)
-            }
-            .graphicsLayer {
-                scaleX = contentScaleFactor
-                scaleY = contentScaleFactor
-                alpha = 0.5f + (0.5f * visibilityFactor)
-            },
-        shape = RoundedCornerShape(cardCornerRadius),
+            .height(QuickPicksPillHeight),
+        shape = pillShape,
         colors = CardDefaults.cardColors(containerColor = bgColor),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {

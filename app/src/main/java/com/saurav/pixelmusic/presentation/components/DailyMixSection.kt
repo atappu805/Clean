@@ -252,18 +252,17 @@ fun DailyMixHeader(thumbnails: ImmutableList<Song>) {
         }
     }
 
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val tertiaryColor = MaterialTheme.colorScheme.tertiary
+    val headerGradient = remember(primaryColor, tertiaryColor) {
+        Brush.horizontalGradient(colors = listOf(primaryColor, tertiaryColor))
+    }
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(80.dp)
-            .background(
-                brush = Brush.horizontalGradient(
-                    colors = listOf(
-                        MaterialTheme.colorScheme.primary, //.copy(alpha = 0.7f),
-                        MaterialTheme.colorScheme.tertiary //.copy(alpha = 0.7f)
-                    )
-                )
-            ),
+            .background(brush = headerGradient),
         contentAlignment = Alignment.CenterStart
     ) {
         Row(
@@ -349,6 +348,7 @@ private fun DailyMixSongList(
     val stablePlayerState by playerViewModel.stablePlayerState.collectAsStateWithLifecycle()
     val itemContainerColor = MaterialTheme.colorScheme.surfaceContainerLow
 
+    val itemShape = remember { RoundedCornerShape(10.dp) }
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -363,7 +363,7 @@ private fun DailyMixSongList(
                 isPlaying = stablePlayerState.isPlaying && stablePlayerState.currentSong?.id == song.id,
                 containerColorOverride = itemContainerColor,
                 onMoreOptionsClick = onMoreOptionsClick,
-                customShape = RoundedCornerShape(10.dp),
+                customShape = itemShape,
                 showAlbumArt = false,
                 onClick = {
                     playerViewModel.showAndPlaySong(

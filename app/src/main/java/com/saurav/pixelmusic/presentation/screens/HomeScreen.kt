@@ -110,9 +110,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.navigation.NavController
 import com.saurav.pixelmusic.R
 import com.saurav.pixelmusic.data.model.Song
-import com.saurav.pixelmusic.data.preferences.CollagePattern
 import com.saurav.pixelmusic.data.remote.youtube.toNativeSong
-import com.saurav.pixelmusic.presentation.components.AlbumArtCollage
 import com.saurav.pixelmusic.presentation.components.BetaInfoBottomSheet
 import com.saurav.pixelmusic.presentation.components.ChangelogBottomSheet
 import com.saurav.pixelmusic.presentation.components.DailyMixSection
@@ -298,27 +296,13 @@ fun HomeScreen(
     var isRefreshing by remember { mutableStateOf(false) }
 
     val listState = rememberSaveable(saver = LazyListState.Saver) { LazyListState() }
-    val scrollThresholdPx = remember(density) { with(density) { 180.dp.toPx() } }
-    val isScrolledPastThreshold = remember {
-        derivedStateOf { listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > scrollThresholdPx }
+    val isScrolledPastThreshold by remember {
+        derivedStateOf { listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 24 }
     }
 
     var savedScrollIndex by rememberSaveable { mutableIntStateOf(0) }
     var savedScrollOffset by rememberSaveable { mutableIntStateOf(0) }
     var needsScrollRestore by rememberSaveable { mutableStateOf(false) }
-
-    val isCollageAutoRotate = settingsUiState.collageAutoRotate
-    val baseCollagePattern = settingsUiState.collagePattern
-    val collagePatterns = remember { CollagePattern.entries }
-    var collageAutoRotateIndex by rememberSaveable { mutableIntStateOf(0) }
-
-    val activeCollagePattern = remember(isCollageAutoRotate, baseCollagePattern, collageAutoRotateIndex) {
-        if (isCollageAutoRotate) {
-            collagePatterns[collageAutoRotateIndex.coerceAtLeast(0) % collagePatterns.size]
-        } else {
-            baseCollagePattern
-        }
-    }
 
     DisposableEffect(lifecycleOwner, listState) {
         val observer = LifecycleEventObserver { _, event ->
@@ -326,9 +310,6 @@ fun HomeScreen(
                 savedScrollIndex = listState.firstVisibleItemIndex
                 savedScrollOffset = listState.firstVisibleItemScrollOffset
                 needsScrollRestore = true
-                if (settingsUiState.collageAutoRotate) {
-                    collageAutoRotateIndex++
-                }
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -423,29 +404,10 @@ fun HomeScreen(
     // Status-bar height + title alpha — used by the top scrim and "PixelMusic" title
     val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val homeTitleAlpha by animateFloatAsState(
-        targetValue = if (isScrolledPastThreshold.value) 0f else 1f,
-        animationSpec = tween(durationMillis = 320, easing = FastOutSlowInEasing),
+        targetValue = if (isScrolledPastThreshold) 0f else 1f,
+        animationSpec = tween(durationMillis = 240, easing = FastOutSlowInEasing),
         label = "homeTitleAlpha"
     )
-
-    // Tinted top scrim that matches Explore's Material You expressive style in light mode
-    val isLightTheme = MaterialTheme.colorScheme.background.luminance() > 0.5f
-    val homeScrimTopColor = if (isLightTheme) {
-        MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
-            .compositeOver(MaterialTheme.colorScheme.background)
-    } else {
-        MaterialTheme.colorScheme.background
-    }
-
-    // NEW: Expressive dynamic bottom scrim
-    // Adds a subtle primary tint even in dark mode for that rich Material You feel
-    val homeScrimBottomColor = if (isLightTheme) {
-        MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
-            .compositeOver(MaterialTheme.colorScheme.background)
-    } else {
-        MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
-            .compositeOver(MaterialTheme.colorScheme.background)
-    }
 
     Box(
         modifier = Modifier
@@ -609,7 +571,23 @@ fun HomeScreen(
             }
         }
 
-        // "PixelMusic" title + icon — sits above the scrim, fades out on scroll
+        // Top status bar protection scrim so scrolled items fade cleanly under system icons
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.TopCenter)
+                .height(statusBarHeight + 16.dp)
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            if (isCustomBackground) Color.Transparent else MaterialTheme.colorScheme.background,
+                            Color.Transparent
+                        )
+                    )
+                )
+        )
+
+        // "PixelMusic" title + icon — fades out immediately upon scrolling
         Row(
             modifier = Modifier
                 .align(Alignment.TopStart)
