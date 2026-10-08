@@ -121,6 +121,7 @@ import com.saurav.pixelmusic.presentation.components.AlbumArtCollage
 import com.saurav.pixelmusic.presentation.components.BetaInfoBottomSheet
 import com.saurav.pixelmusic.presentation.components.ChangelogBottomSheet
 import com.saurav.pixelmusic.presentation.components.DailyMixSection
+import com.saurav.pixelmusic.presentation.components.YourMixSection
 import com.saurav.pixelmusic.presentation.components.FavoriteArtistReleasesSection
 import com.saurav.pixelmusic.presentation.components.HomeOptionsBottomSheet
 import com.saurav.pixelmusic.presentation.components.HomeShuffleFab
@@ -570,41 +571,27 @@ fun HomeScreen(
                         }
                     } else {
                         item(
-                            key = "your_mix_header",
-                            contentType = "your_mix_header"
+                            key = "your_mix_section",
+                            contentType = "your_mix_section"
                         ) {
-                            YourMixHeader(
+                            YourMixSection(
                                 subtitle = yourMixSong,
-                                featuredSong = yourMixSongs.firstOrNull(),
-                                onSongClick = {
+                                songs = yourMixSongs,
+                                isHomeScreenScrolling = listState.isScrollInProgress,
+                                onPlaySong = { song ->
+                                    if (usesFallbackHomeMix) {
+                                        playerViewModel.showAndPlaySongFromLibrary(song, queueName = "Your Mix")
+                                    } else {
+                                        playerViewModel.showAndPlaySong(song, yourMixSongs, "Your Mix")
+                                    }
+                                },
+                                onPlayAll = {
                                     yourMixSongs.firstOrNull()?.let { song ->
                                         if (usesFallbackHomeMix) {
                                             playerViewModel.showAndPlaySongFromLibrary(song, queueName = "Your Mix")
                                         } else {
                                             playerViewModel.showAndPlaySong(song, yourMixSongs, "Your Mix")
                                         }
-                                    }
-                                }
-                            )
-                        }
-                    }
-
-                    if (yourMixSongs.isNotEmpty()) {
-                        item(
-                            key = "album_art_collage",
-                            contentType = "album_art_collage"
-                        ) {
-                            AlbumArtCollage(
-                                modifier = Modifier.fillMaxWidth(),
-                                songs = yourMixSongs,
-                                padding = 14.dp,
-                                height = 400.dp,
-                                pattern = activeCollagePattern,
-                                onSongClick = { song ->
-                                    if (usesFallbackHomeMix) {
-                                        playerViewModel.showAndPlaySongFromLibrary(song, queueName = "Your Mix")
-                                    } else {
-                                        playerViewModel.showAndPlaySong(song, yourMixSongs, "Your Mix")
                                     }
                                 }
                             )
@@ -933,73 +920,7 @@ private val YourMixTitleStyle: TextStyle by lazy {
     )
 }
 
-private val YourMixFeaturedShape = racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape(
-    cornerRadiusTL = 32.dp, smoothnessAsPercentTL = 100,
-    cornerRadiusTR = 12.dp, smoothnessAsPercentTR = 60,
-    cornerRadiusBL = 12.dp, smoothnessAsPercentBL = 60,
-    cornerRadiusBR = 32.dp, smoothnessAsPercentBR = 100
-)
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
-@Composable
-fun YourMixHeader(
-    subtitle: String,
-    featuredSong: Song?,
-    onSongClick: () -> Unit
-) {
-    val titleStyle = YourMixTitleStyle
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .wrapContentHeight()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .padding(start = 12.dp, top = 8.dp)
-        ) {
-            Text(
-                text = stringResource(R.string.home_your_mix_title),
-                style = titleStyle,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 2,
-                overflow = TextOverflow.Clip
-            )
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                modifier = Modifier.padding(start = 8.dp)
-            )
-        }
-
-        if (featuredSong != null) {
-            Surface(
-                modifier = Modifier
-                    .padding(end = 8.dp)
-                    .size(86.dp),
-                shape = YourMixFeaturedShape,
-                color = MaterialTheme.colorScheme.surfaceContainerHighest,
-                onClick = onSongClick
-            ) {
-                SmartImage(
-                    model = featuredSong.albumArtUriString,
-                    contentDescription = featuredSong.title,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop,
-                    crossfadeDurationMillis = 0
-                )
-            }
-        }
-    }
-}
 
 @Composable
 fun SongListItemFavs(
