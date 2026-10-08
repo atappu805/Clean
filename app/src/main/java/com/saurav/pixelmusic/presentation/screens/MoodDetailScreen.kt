@@ -1,3 +1,7 @@
+@file:OptIn(
+    androidx.compose.material3.ExperimentalMaterial3Api::class,
+    androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class
+)
 package com.saurav.pixelmusic.presentation.screens
 
 import androidx.compose.foundation.clickable
