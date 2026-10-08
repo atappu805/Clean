@@ -65,8 +65,13 @@ sealed class Screen(val route: String) {
     object NewReleases : Screen("new_releases")
     object Charts : Screen("charts")
     object MoodsAndGenres : Screen("moods_and_genres")
-    object MoodDetail : Screen("mood_detail/{mood}") {
-        fun createRoute(mood: String) = "mood_detail/${Uri.encode(mood)}"
+    object MoodDetail : Screen("mood_detail/{title}?browseId={browseId}&params={params}") {
+        fun createRoute(title: String, browseId: String = "FEmusic_moods_and_genre_category", params: String? = null): String {
+            val encTitle = Uri.encode(title)
+            val encBrowseId = Uri.encode(browseId)
+            val encParams = if (!params.isNullOrEmpty()) Uri.encode(params) else ""
+            return "mood_detail/$encTitle?browseId=$encBrowseId&params=$encParams"
+        }
     }
     object Podcasts : Screen("podcasts")
 

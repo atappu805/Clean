@@ -653,17 +653,37 @@ fun AppNavigation(
             composable(
                 route = Screen.MoodDetail.route,
                 arguments = listOf(
-                    navArgument("mood") { type = NavType.StringType }
+                    navArgument("title") {
+                        type = NavType.StringType
+                        defaultValue = ""
+                    },
+                    navArgument("browseId") {
+                        type = NavType.StringType
+                        defaultValue = "FEmusic_moods_and_genre_category"
+                    },
+                    navArgument("params") {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = ""
+                    }
                 ),
                 enterTransition = { enterTransition() },
                 exitTransition = { exitTransition() },
                 popEnterTransition = { popEnterTransition() },
                 popExitTransition = { popExitTransition() },
             ) { backStackEntry ->
-                val mood = backStackEntry.arguments?.getString("mood") ?: ""
+                val rawTitle = backStackEntry.arguments?.getString("title") ?: ""
+                val title = runCatching { java.net.URLDecoder.decode(rawTitle, "UTF-8") }.getOrDefault(rawTitle)
+                val rawBrowseId = backStackEntry.arguments?.getString("browseId") ?: "FEmusic_moods_and_genre_category"
+                val browseId = runCatching { java.net.URLDecoder.decode(rawBrowseId, "UTF-8") }.getOrDefault(rawBrowseId)
+                val rawParams = backStackEntry.arguments?.getString("params")
+                val params = if (rawParams.isNullOrEmpty()) null else runCatching { java.net.URLDecoder.decode(rawParams, "UTF-8") }.getOrNull()
+
                 ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
                     MoodDetailScreen(
-                        mood = mood,
+                        title = title,
+                        browseId = browseId,
+                        params = params,
                         navController = navController,
                         playerViewModel = playerViewModel,
                         onBackClick = { navController.popBackStack() }

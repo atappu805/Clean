@@ -58,7 +58,9 @@ data class MoodSectionData(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MoodDetailScreen(
-    mood: String,
+    title: String,
+    browseId: String = "FEmusic_moods_and_genre_category",
+    params: String? = null,
     navController: NavController,
     playerViewModel: PlayerViewModel,
     onBackClick: () -> Unit
@@ -77,59 +79,45 @@ fun MoodDetailScreen(
             error = null
             try {
                 val data = withContext(Dispatchers.IO) {
-                    coroutineScope {
-                        val featuredPlaylistsDeferred = async {
-                            YouTube.search("$mood hits", YouTube.SearchFilter.FILTER_FEATURED_PLAYLIST).getOrNull()
-                        }
-                        val communityPlaylistsDeferred = async {
-                            YouTube.search("$mood playlist", YouTube.SearchFilter.FILTER_COMMUNITY_PLAYLIST).getOrNull()
-                        }
-                        val albumsDeferred = async {
-                            YouTube.search(mood, YouTube.SearchFilter.FILTER_ALBUM).getOrNull()
-                        }
-                        val songsDeferred = async {
-                            YouTube.search(mood, YouTube.SearchFilter.FILTER_SONG).getOrNull()
-                        }
+                    val browseResult = if (browseId.isNotBlank()) {
+                        YouTube.browse(browseId = browseId, params = params).getOrNull()
+                    } else null
 
-                        val resultSections = mutableListOf<MoodSectionData>()
-
-                        val featuredPlaylists = featuredPlaylistsDeferred.await()?.items?.filterIsInstance<PlaylistItem>() ?: emptyList()
-                        if (featuredPlaylists.isNotEmpty()) {
-                            resultSections.add(MoodSectionData("$mood Hits & Highlights", featuredPlaylists))
+                    if (browseResult != null && browseResult.items.isNotEmpty()) {
+                        browseResult.items.map { shelf ->
+                            MoodSectionData(
+                                title = shelf.title ?: title,
+                                items = shelf.items
+                            )
                         }
+                    } else {
+                        // Fallback: search ONLY for curated featured playlists
+                        val searchPlaylists = YouTube.search(
+                            "$title playlist",
+                            YouTube.SearchFilter.FILTER_FEATURED_PLAYLIST
+                        ).getOrNull()?.items?.filterIsInstance<PlaylistItem>() ?: emptyList()
 
-                        val communityPlaylists = communityPlaylistsDeferred.await()?.items?.filterIsInstance<PlaylistItem>() ?: emptyList()
-                        if (communityPlaylists.isNotEmpty()) {
-                            resultSections.add(MoodSectionData("Popular $mood Playlists", communityPlaylists))
-                        }
-
-                        val albums = albumsDeferred.await()?.items?.filterIsInstance<AlbumItem>() ?: emptyList()
-                        if (albums.isNotEmpty()) {
-                            resultSections.add(MoodSectionData("$mood Albums & Singles", albums))
-                        }
-
-                        val songs = songsDeferred.await()?.items?.filterIsInstance<SongItem>() ?: emptyList()
-                        if (songs.isNotEmpty()) {
-                            resultSections.add(MoodSectionData("Top $mood Songs", songs))
-                        }
-
-                        resultSections
+                        if (searchPlaylists.isNotEmpty()) {
+                            listOf(MoodSectionData("$title Playlists", searchPlaylists))
+                        } else emptyList()
                     }
                 }
                 sections = data
+                if (data.isEmpty()) {
+                    error = "No content available for $title"
+                }
             } catch (e: Exception) {
-                error = e.localizedMessage ?: "Failed to load $mood"
+                error = e.localizedMessage ?: "Failed to load $title"
             }
             isLoading = false
             isRefreshing = false
         }
     }
 
-    LaunchedEffect(mood) {
+    LaunchedEffect(title, browseId, params) {
         loadMoodData(refresh = false)
     }
 
-    val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val navBarBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
     Scaffold(
@@ -183,12 +171,12 @@ fun MoodDetailScreen(
                         .fillMaxSize()
                         .scrollMotionBlur(listState, enabled = true),
                     contentPadding = PaddingValues(
-                        top = statusBarTop + 8.dp,
+                        top = 8.dp,
                         bottom = navBarBottom + MiniPlayerHeight + 32.dp
                     ),
                     verticalArrangement = Arrangement.spacedBy(22.dp)
                 ) {
-                    // Header Bar
+                    // Header Bar (matches screenshot 249613.jpg: "< Romance")
                     item(key = "header") {
                         Row(
                             modifier = Modifier
@@ -205,7 +193,7 @@ fun MoodDetailScreen(
                             }
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = mood,
+                                text = title,
                                 fontFamily = GoogleSansRounded,
                                 fontWeight = FontWeight.Bold,
                                 style = MaterialTheme.typography.headlineMedium,

@@ -24,7 +24,12 @@ import com.saurav.pixelmusic.presentation.navigation.navigateSafely
 import com.saurav.pixelmusic.ui.modifiers.scrollMotionBlur
 import com.saurav.pixelmusic.ui.theme.GoogleSansRounded
 
-data class MoodCategoryItem(val name: String, val color: Color)
+data class MoodCategoryItem(
+    val name: String,
+    val color: Color,
+    val browseId: String = "FEmusic_moods_and_genre_category",
+    val params: String? = null
+)
 
 private val FOR_YOU_MOODS = listOf(
     MoodCategoryItem("Romance", Color(0xFFE53935)),
@@ -72,8 +77,20 @@ fun MoodsAndGenresScreen(
     onBackClick: () -> Unit
 ) {
     val listState = rememberLazyListState()
-    val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val navBarBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    val scope = rememberCoroutineScope()
+    var remoteSections by remember { mutableStateOf<List<saurav.shru.pixelmusic.innertube.YouTube.MoodsAndGenresSection>?>(null) }
+
+    LaunchedEffect(Unit) {
+        scope.launch {
+            val res = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                saurav.shru.pixelmusic.innertube.YouTube.moodsAndGenres().getOrNull()
+            }
+            if (!res.isNullOrEmpty()) {
+                remoteSections = res
+            }
+        }
+    }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -86,7 +103,7 @@ fun MoodsAndGenresScreen(
                 .padding(innerPadding)
                 .scrollMotionBlur(listState, enabled = true),
             contentPadding = PaddingValues(
-                top = statusBarTop + 8.dp,
+                top = 8.dp,
                 bottom = navBarBottom + MiniPlayerHeight + 32.dp
             ),
             verticalArrangement = Arrangement.spacedBy(22.dp)
@@ -117,67 +134,130 @@ fun MoodsAndGenresScreen(
                 }
             }
 
-            // Section 1: For you
-            item(key = "for_you_title") {
-                Text(
-                    text = "For you",
-                    fontFamily = GoogleSansRounded,
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(horizontal = 20.dp)
-                )
-            }
-
-            item(key = "for_you_grid") {
-                MoodGridSection(
-                    items = FOR_YOU_MOODS,
-                    onItemClick = { mood ->
-                        navController.navigateSafely(Screen.MoodDetail.createRoute(mood.name))
+            val sections = remoteSections
+            if (!sections.isNullOrEmpty()) {
+                sections.forEachIndexed { sIndex, section ->
+                    item(key = "remote_section_title_$sIndex") {
+                        Text(
+                            text = section.title,
+                            fontFamily = GoogleSansRounded,
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleLarge,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.padding(horizontal = 20.dp)
+                        )
                     }
-                )
-            }
 
-            // Section 2: Moods & moments
-            item(key = "moods_moments_title") {
-                Text(
-                    text = "Moods & moments",
-                    fontFamily = GoogleSansRounded,
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(horizontal = 20.dp)
-                )
-            }
-
-            item(key = "moods_moments_grid") {
-                MoodGridSection(
-                    items = MOODS_AND_MOMENTS,
-                    onItemClick = { mood ->
-                        navController.navigateSafely(Screen.MoodDetail.createRoute(mood.name))
+                    val mappedItems = section.items.map { item ->
+                        val color = item.stripeColor?.let { Color(it.toInt()) }
+                            ?: when (sIndex % 4) {
+                                0 -> Color(0xFFE53935)
+                                1 -> Color(0xFF43A047)
+                                2 -> Color(0xFFFDD835)
+                                else -> Color(0xFF8E24AA)
+                            }
+                        MoodCategoryItem(
+                            name = item.title,
+                            color = color,
+                            browseId = item.browseId,
+                            params = item.params
+                        )
                     }
-                )
-            }
 
-            // Section 3: Genres
-            item(key = "genres_title") {
-                Text(
-                    text = "Genres",
-                    fontFamily = GoogleSansRounded,
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(horizontal = 20.dp)
-                )
-            }
-
-            item(key = "genres_grid") {
-                MoodGridSection(
-                    items = GENRES,
-                    onItemClick = { mood ->
-                        navController.navigateSafely(Screen.MoodDetail.createRoute(mood.name))
+                    item(key = "remote_section_grid_$sIndex") {
+                        MoodGridSection(
+                            items = mappedItems,
+                            onItemClick = { mood ->
+                                navController.navigateSafely(
+                                    Screen.MoodDetail.createRoute(
+                                        title = mood.name,
+                                        browseId = mood.browseId,
+                                        params = mood.params
+                                    )
+                                )
+                            }
+                        )
                     }
-                )
+                }
+            } else {
+                // Fallback to presets while loading or offline
+                item(key = "for_you_title") {
+                    Text(
+                        text = "For you",
+                        fontFamily = GoogleSansRounded,
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(horizontal = 20.dp)
+                    )
+                }
+
+                item(key = "for_you_grid") {
+                    MoodGridSection(
+                        items = FOR_YOU_MOODS,
+                        onItemClick = { mood ->
+                            navController.navigateSafely(
+                                Screen.MoodDetail.createRoute(
+                                    title = mood.name,
+                                    browseId = mood.browseId,
+                                    params = mood.params
+                                )
+                            )
+                        }
+                    )
+                }
+
+                item(key = "moods_moments_title") {
+                    Text(
+                        text = "Moods & moments",
+                        fontFamily = GoogleSansRounded,
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(horizontal = 20.dp)
+                    )
+                }
+
+                item(key = "moods_moments_grid") {
+                    MoodGridSection(
+                        items = MOODS_AND_MOMENTS,
+                        onItemClick = { mood ->
+                            navController.navigateSafely(
+                                Screen.MoodDetail.createRoute(
+                                    title = mood.name,
+                                    browseId = mood.browseId,
+                                    params = mood.params
+                                )
+                            )
+                        }
+                    )
+                }
+
+                item(key = "genres_title") {
+                    Text(
+                        text = "Genres",
+                        fontFamily = GoogleSansRounded,
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(horizontal = 20.dp)
+                    )
+                }
+
+                item(key = "genres_grid") {
+                    MoodGridSection(
+                        items = GENRES,
+                        onItemClick = { mood ->
+                            navController.navigateSafely(
+                                Screen.MoodDetail.createRoute(
+                                    title = mood.name,
+                                    browseId = mood.browseId,
+                                    params = mood.params
+                                )
+                            )
+                        }
+                    )
+                }
             }
         }
     }

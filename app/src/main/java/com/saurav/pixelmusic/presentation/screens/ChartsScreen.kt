@@ -92,8 +92,11 @@ fun ChartsScreen(
             val result = withContext(Dispatchers.IO) {
                 YouTube.getChartsPage(countryCode).getOrNull()
             }
-            if (result != null) {
+            if (result != null && result.sections.isNotEmpty()) {
                 chartsPage = result
+            } else if (result != null && result.sections.isEmpty()) {
+                chartsPage = result
+                error = "No charts available for this region"
             } else {
                 error = "Failed to load charts"
             }
@@ -160,7 +163,7 @@ fun ChartsScreen(
                         .fillMaxSize()
                         .scrollMotionBlur(listState, enabled = true),
                     contentPadding = PaddingValues(
-                        top = statusBarTop + 8.dp,
+                        top = 8.dp,
                         bottom = navBarBottom + MiniPlayerHeight + 32.dp
                     ),
                     verticalArrangement = Arrangement.spacedBy(20.dp)
@@ -249,49 +252,104 @@ fun ChartsScreen(
                             )
                         }
 
-                        item(key = "chart_section_${index}_items") {
-                            LazyRow(
-                                contentPadding = PaddingValues(horizontal = 16.dp),
-                                horizontalArrangement = Arrangement.spacedBy(14.dp)
-                            ) {
-                                items(section.items, key = { "chart_item_${it.id}_$index" }) { item ->
-                                    when (item) {
-                                        is SongItem -> {
-                                            val nativeSong = item.toNativeSong()
-                                            ChartCardItem(
-                                                title = item.title,
-                                                subtitle = "Chart • YouTube Charts",
-                                                thumbnail = item.thumbnail,
-                                                onClick = {
-                                                    playerViewModel.showAndPlaySong(
-                                                        song = nativeSong,
-                                                        contextSongs = section.items.filterIsInstance<SongItem>().map { it.toNativeSong() },
-                                                        queueName = section.title
-                                                    )
-                                                }
+                        val allSongs = section.items.filterIsInstance<SongItem>()
+                        if (allSongs.isNotEmpty() && allSongs.size == section.items.size) {
+                            val songListNative = allSongs.map { it.toNativeSong() }
+                            items(allSongs.size, key = { "chart_song_${allSongs[it].id}_$index" }) { idx ->
+                                val song = allSongs[idx]
+                                val nativeSong = songListNative[idx]
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            playerViewModel.showAndPlaySong(
+                                                song = nativeSong,
+                                                contextSongs = songListNative,
+                                                queueName = section.title
                                             )
                                         }
-                                        is PlaylistItem -> {
-                                            ChartCardItem(
-                                                title = item.title,
-                                                subtitle = item.author?.name ?: "Chart • YouTube Charts",
-                                                thumbnail = item.thumbnail.orEmpty(),
-                                                onClick = {
-                                                    navController.navigateSafely(Screen.PlaylistDetail.createRoute(item.id))
-                                                }
-                                            )
+                                        .padding(horizontal = 20.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = (idx + 1).toString(),
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.width(32.dp)
+                                    )
+                                    SmartImage(
+                                        model = song.thumbnail,
+                                        contentDescription = song.title,
+                                        contentScale = ContentScale.Crop,
+                                        shape = RoundedCornerShape(8.dp),
+                                        modifier = Modifier.size(48.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = song.title,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        Text(
+                                            text = song.artists.joinToString(", ") { it.name },
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                }
+                            }
+                        } else {
+                            item(key = "chart_section_${index}_items") {
+                                LazyRow(
+                                    contentPadding = PaddingValues(horizontal = 16.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                                ) {
+                                    items(section.items, key = { "chart_item_${it.id}_$index" }) { item ->
+                                        when (item) {
+                                            is SongItem -> {
+                                                val nativeSong = item.toNativeSong()
+                                                ChartCardItem(
+                                                    title = item.title,
+                                                    subtitle = item.artists.firstOrNull()?.name ?: "Song",
+                                                    thumbnail = item.thumbnail,
+                                                    onClick = {
+                                                        playerViewModel.showAndPlaySong(
+                                                            song = nativeSong,
+                                                            contextSongs = section.items.filterIsInstance<SongItem>().map { it.toNativeSong() },
+                                                            queueName = section.title
+                                                        )
+                                                    }
+                                                )
+                                            }
+                                            is PlaylistItem -> {
+                                                ChartCardItem(
+                                                    title = item.title,
+                                                    subtitle = item.author?.name ?: "Chart • YouTube Charts",
+                                                    thumbnail = item.thumbnail.orEmpty(),
+                                                    onClick = {
+                                                        navController.navigateSafely(Screen.PlaylistDetail.createRoute(item.id))
+                                                    }
+                                                )
+                                            }
+                                            is AlbumItem -> {
+                                                ChartCardItem(
+                                                    title = item.title,
+                                                    subtitle = "Album • ${item.artists?.firstOrNull()?.name ?: ""}",
+                                                    thumbnail = item.thumbnail,
+                                                    onClick = {
+                                                        navController.navigateSafely(Screen.AlbumDetail.createRoute(item.browseId))
+                                                    }
+                                                )
+                                            }
+                                            else -> {}
                                         }
-                                        is AlbumItem -> {
-                                            ChartCardItem(
-                                                title = item.title,
-                                                subtitle = "Album • ${item.artists?.firstOrNull()?.name ?: ""}",
-                                                thumbnail = item.thumbnail,
-                                                onClick = {
-                                                    navController.navigateSafely(Screen.AlbumDetail.createRoute(item.browseId))
-                                                }
-                                            )
-                                        }
-                                        else -> {}
                                     }
                                 }
                             }
