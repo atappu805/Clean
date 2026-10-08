@@ -61,7 +61,7 @@ fun SmoothModalBottomSheet(
     scrimColor: Color = BottomSheetDefaults.ScrimColor,
     dragHandle: @Composable (() -> Unit)? = { BottomSheetDefaults.DragHandle() },
     contentWindowInsets: @Composable () -> WindowInsets = { BottomSheetDefaults.modalWindowInsets },
-    properties: ModalBottomSheetProperties = ModalBottomSheetProperties(shouldDismissOnBackPress = false),
+    properties: ModalBottomSheetProperties = ModalBottomSheetProperties(shouldDismissOnBackPress = true),
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val scope = rememberCoroutineScope()
@@ -75,26 +75,18 @@ fun SmoothModalBottomSheet(
                 sheetState.hide()
             } catch (_: Throwable) {
             } finally {
-                if (!sheetState.isVisible) {
-                    onDismissRequest()
-                    afterDismiss?.invoke()
-                } else {
-                    isDismissing = false
-                }
+                onDismissRequest()
+                afterDismiss?.invoke()
+                isDismissing = false
             }
         }
     }
 
-    // Intercept back button and predictive back gesture to run the smooth hide animation
-    BackHandler(enabled = !isDismissing && sheetState.targetValue != SheetValue.Hidden) {
-        dismissSmoothly()
-    }
-
     ModalBottomSheet(
         onDismissRequest = {
-            if (sheetState.isVisible && !isDismissing) {
+            if (!isDismissing && sheetState.isVisible) {
                 dismissSmoothly()
-            } else {
+            } else if (!isDismissing) {
                 onDismissRequest()
             }
         },
@@ -110,6 +102,11 @@ fun SmoothModalBottomSheet(
         contentWindowInsets = contentWindowInsets,
         properties = properties,
         content = {
+            // Intercept system back within the bottom sheet's dialog window
+            BackHandler(enabled = !isDismissing) {
+                dismissSmoothly()
+            }
+
             CompositionLocalProvider(
                 LocalSmoothDismiss provides { afterDismiss -> dismissSmoothly(afterDismiss) }
             ) {

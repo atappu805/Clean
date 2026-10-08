@@ -95,6 +95,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.ExperimentalTextApi
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -110,7 +115,9 @@ import androidx.media3.common.util.UnstableApi
 import androidx.navigation.NavController
 import com.saurav.pixelmusic.R
 import com.saurav.pixelmusic.data.model.Song
+import com.saurav.pixelmusic.data.preferences.CollagePattern
 import com.saurav.pixelmusic.data.remote.youtube.toNativeSong
+import com.saurav.pixelmusic.presentation.components.AlbumArtCollage
 import com.saurav.pixelmusic.presentation.components.BetaInfoBottomSheet
 import com.saurav.pixelmusic.presentation.components.ChangelogBottomSheet
 import com.saurav.pixelmusic.presentation.components.DailyMixSection
@@ -217,6 +224,8 @@ fun HomeScreen(
         }
     }
     val dailyMixSongs by playerViewModel.dailyMixSongs.collectAsStateWithLifecycle()
+    val curatedYourMixSongs by playerViewModel.yourMixSongs.collectAsStateWithLifecycle()
+    val homeMixPreviewSongs by playerViewModel.homeMixPreviewSongs.collectAsStateWithLifecycle()
     val playbackHistory by playerViewModel.playbackHistory.collectAsStateWithLifecycle()
     val quickPicksDisplayMode by playerViewModel.quickPicksDisplayMode.collectAsStateWithLifecycle()
     val backgroundStyle by playerViewModel.userPreferencesRepository.appBackgroundStyleFlow.collectAsStateWithLifecycle(initialValue = AppBackgroundStyle.DEFAULT)
@@ -224,14 +233,32 @@ fun HomeScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
     val isTestBuild = context.packageName.endsWith(".test")
 
-    var hasHomeLoadingMinimumElapsed by rememberSaveable {
+    val usesFallbackHomeMix = remember(curatedYourMixSongs, dailyMixSongs) {
+        curatedYourMixSongs.isEmpty() && dailyMixSongs.isEmpty()
+    }
+    val yourMixSongs = remember(curatedYourMixSongs, dailyMixSongs, homeMixPreviewSongs) {
+        when {
+            dailyMixSongs.isNotEmpty() -> dailyMixSongs
+            curatedYourMixSongs.isNotEmpty() -> curatedYourMixSongs
+            else -> homeMixPreviewSongs
+        }
+    }
+    var homePlaceholderRefreshGeneration by rememberSaveable { mutableIntStateOf(0) }
+    var hasHomeLoadingMinimumElapsed by rememberSaveable(homePlaceholderRefreshGeneration) {
         mutableStateOf(false)
     }
 
-    LaunchedEffect(Unit) {
-        delay(HomeLoadingPlaceholderMinDurationMillis)
-        hasHomeLoadingMinimumElapsed = true
+    LaunchedEffect(homePlaceholderRefreshGeneration, yourMixSongs.isEmpty()) {
+        if (yourMixSongs.isEmpty()) {
+            hasHomeLoadingMinimumElapsed = false
+            delay(HomeLoadingPlaceholderMinDurationMillis)
+            hasHomeLoadingMinimumElapsed = true
+        } else {
+            hasHomeLoadingMinimumElapsed = true
+        }
     }
+
+    val shouldShowYourMixLoadingPlaceholder = yourMixSongs.isEmpty() && !hasHomeLoadingMinimumElapsed
     val recentSongIds = remember(playbackHistory) {
         collectRecentlyPlayedSongIds(
             playbackHistory = playbackHistory,
@@ -261,8 +288,10 @@ fun HomeScreen(
     }
 
     ReportDrawnWhen {
-        dailyMixSongs.isNotEmpty() || hasHomeLoadingMinimumElapsed || isBenchmarkMode
+        yourMixSongs.isNotEmpty() || hasHomeLoadingMinimumElapsed || isBenchmarkMode
     }
+
+    val yourMixSong: String = "Today's Mix for you"
 
     val currentSong by remember(playerViewModel.stablePlayerState) {
         playerViewModel.stablePlayerState.map { it.currentSong }
@@ -304,12 +333,28 @@ fun HomeScreen(
     var savedScrollOffset by rememberSaveable { mutableIntStateOf(0) }
     var needsScrollRestore by rememberSaveable { mutableStateOf(false) }
 
+    val isCollageAutoRotate = settingsUiState.collageAutoRotate
+    val baseCollagePattern = settingsUiState.collagePattern
+    val collagePatterns = remember { CollagePattern.entries }
+    var collageAutoRotateIndex by rememberSaveable { mutableIntStateOf(0) }
+
+    val activeCollagePattern = remember(isCollageAutoRotate, baseCollagePattern, collageAutoRotateIndex) {
+        if (isCollageAutoRotate) {
+            collagePatterns[collageAutoRotateIndex.coerceAtLeast(0) % collagePatterns.size]
+        } else {
+            baseCollagePattern
+        }
+    }
+
     DisposableEffect(lifecycleOwner, listState) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_PAUSE) {
                 savedScrollIndex = listState.firstVisibleItemIndex
                 savedScrollOffset = listState.firstVisibleItemScrollOffset
                 needsScrollRestore = true
+                if (settingsUiState.collageAutoRotate) {
+                    collageAutoRotateIndex++
+                }
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -318,6 +363,7 @@ fun HomeScreen(
 
     LaunchedEffect(
         needsScrollRestore,
+        yourMixSongs.isNotEmpty(),
         dailyMixSongs.isNotEmpty(),
         recentlyPlayedSongs.size,
         homeStatsOverview
@@ -423,6 +469,7 @@ fun HomeScreen(
                 isRefreshing = isRefreshing,
                 onRefresh = {
                     isRefreshing = true
+                    homePlaceholderRefreshGeneration++
                     quickPicksViewModel.refresh()
                     playerViewModel.forceUpdateDailyMix()
                     scope.launch {
@@ -480,6 +527,66 @@ fun HomeScreen(
                                 },
                                 currentSongId = currentSong?.id,
                                 displayMode = quickPicksDisplayMode
+                            )
+                        }
+                    }
+
+                    if (yourMixSongs.isEmpty()) {
+                        item(
+                            key = "your_mix_placeholder",
+                            contentType = "your_mix_placeholder"
+                        ) {
+                            if (shouldShowYourMixLoadingPlaceholder) {
+                                YourMixLoadingPlaceholder()
+                            } else {
+                                YourMixEmptyPlaceholder(
+                                    onRefresh = {
+                                        homePlaceholderRefreshGeneration++
+                                        settingsViewModel.refreshLibrary()
+                                        playerViewModel.forceUpdateDailyMix()
+                                    }
+                                )
+                            }
+                        }
+                    } else {
+                        item(
+                            key = "your_mix_header",
+                            contentType = "your_mix_header"
+                        ) {
+                            YourMixHeader(
+                                subtitle = yourMixSong,
+                                featuredSong = yourMixSongs.firstOrNull(),
+                                onSongClick = {
+                                    yourMixSongs.firstOrNull()?.let { song ->
+                                        if (usesFallbackHomeMix) {
+                                            playerViewModel.showAndPlaySongFromLibrary(song, queueName = "Your Mix")
+                                        } else {
+                                            playerViewModel.showAndPlaySong(song, yourMixSongs, "Your Mix")
+                                        }
+                                    }
+                                }
+                            )
+                        }
+                    }
+
+                    if (yourMixSongs.isNotEmpty()) {
+                        item(
+                            key = "album_art_collage",
+                            contentType = "album_art_collage"
+                        ) {
+                            AlbumArtCollage(
+                                modifier = Modifier.fillMaxWidth(),
+                                songs = yourMixSongs,
+                                padding = 14.dp,
+                                height = 400.dp,
+                                pattern = activeCollagePattern,
+                                onSongClick = { song ->
+                                    if (usesFallbackHomeMix) {
+                                        playerViewModel.showAndPlaySongFromLibrary(song, queueName = "Your Mix")
+                                    } else {
+                                        playerViewModel.showAndPlaySong(song, yourMixSongs, "Your Mix")
+                                    }
+                                }
                             )
                         }
                     }
@@ -695,6 +802,199 @@ fun HomeScreen(
     }
 
 
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun YourMixLoadingPlaceholder() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(256.dp)
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        LoadingIndicator(
+            modifier = Modifier.size(128.dp),
+            color = MaterialTheme.colorScheme.primary
+        )
+    }
+}
+
+@Composable
+private fun YourMixEmptyPlaceholder(
+    onRefresh: () -> Unit
+) {
+    val colors = MaterialTheme.colorScheme
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 256.dp)
+            .padding(horizontal = 24.dp, vertical = 16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Surface(
+                modifier = Modifier.size(76.dp),
+                shape = AbsoluteSmoothCornerShape(
+                    cornerRadiusTL = 28.dp,
+                    smoothnessAsPercentTR = 60,
+                    cornerRadiusBR = 28.dp,
+                    smoothnessAsPercentTL = 60,
+                    cornerRadiusBL = 28.dp,
+                    smoothnessAsPercentBR = 60,
+                    cornerRadiusTR = 28.dp,
+                    smoothnessAsPercentBL = 60,
+                ),
+                color = colors.secondaryContainer,
+                contentColor = colors.onSecondaryContainer
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Rounded.MusicNote,
+                        contentDescription = null,
+                        modifier = Modifier.size(34.dp)
+                    )
+                }
+            }
+
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.home_empty_placeholder_title),
+                    style = MaterialTheme.typography.titleLarge,
+                    color = colors.onSurface,
+                    textAlign = TextAlign.Center
+                )
+                Text(
+                    text = stringResource(R.string.home_empty_placeholder_subtitle),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = colors.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            FilledTonalButton(
+                onClick = onRefresh,
+                shape = AbsoluteSmoothCornerShape(
+                    cornerRadiusTL = 22.dp,
+                    smoothnessAsPercentTR = 60,
+                    cornerRadiusBR = 22.dp,
+                    smoothnessAsPercentTL = 60,
+                    cornerRadiusBL = 22.dp,
+                    smoothnessAsPercentBR = 60,
+                    cornerRadiusTR = 22.dp,
+                    smoothnessAsPercentBL = 60,
+                )
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Refresh,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(text = stringResource(R.string.home_empty_placeholder_refresh))
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalTextApi::class)
+private val YourMixTitleStyle: TextStyle by lazy {
+    TextStyle(
+        fontFamily = FontFamily(
+            Font(
+                resId = R.font.gflex_variable,
+                variationSettings = FontVariation.Settings(
+                    FontVariation.weight(636),
+                    FontVariation.width(152f),
+                    FontVariation.Setting("ROND", 50f),
+                    FontVariation.Setting("XTRA", 520f),
+                    FontVariation.Setting("YOPQ", 90f),
+                    FontVariation.Setting("YTLC", 505f)
+                )
+            )
+        ),
+        fontWeight = FontWeight(760),
+        fontSize = 42.sp,
+        lineHeight = 44.sp
+    )
+}
+
+private val YourMixFeaturedShape = racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape(
+    cornerRadiusTL = 32.dp, smoothnessAsPercentTL = 100,
+    cornerRadiusTR = 12.dp, smoothnessAsPercentTR = 60,
+    cornerRadiusBL = 12.dp, smoothnessAsPercentBL = 60,
+    cornerRadiusBR = 32.dp, smoothnessAsPercentBR = 100
+)
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+fun YourMixHeader(
+    subtitle: String,
+    featuredSong: Song?,
+    onSongClick: () -> Unit
+) {
+    val titleStyle = YourMixTitleStyle
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .wrapContentHeight()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(start = 12.dp, top = 8.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.home_your_mix_title),
+                style = titleStyle,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 2,
+                overflow = TextOverflow.Clip
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                modifier = Modifier.padding(start = 8.dp)
+            )
+        }
+
+        if (featuredSong != null) {
+            Surface(
+                modifier = Modifier
+                    .padding(end = 8.dp)
+                    .size(86.dp),
+                shape = YourMixFeaturedShape,
+                color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                onClick = onSongClick
+            ) {
+                SmartImage(
+                    model = featuredSong.albumArtUriString,
+                    contentDescription = featuredSong.title,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop,
+                    crossfadeDurationMillis = 0
+                )
+            }
+        }
+    }
 }
 
 @Composable
