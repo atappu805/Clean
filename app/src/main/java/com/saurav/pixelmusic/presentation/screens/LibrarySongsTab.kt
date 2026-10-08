@@ -306,6 +306,7 @@ fun LibrarySongsTab(
                         LazyColumn(
                             modifier = Modifier
                                 .padding(start = 12.dp, end = if (listState.canScrollForward || listState.canScrollBackward) 22.dp else 12.dp, bottom = 6.dp)
+                                .scrollMotionBlur(listState, enabled = isMotionBlurEnabled)
                                 .clip(
                                     RoundedCornerShape(
                                         topStart = 26.dp,

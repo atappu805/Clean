@@ -18,6 +18,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import android.graphics.RenderEffect
+import android.graphics.Shader
+import android.os.Build
+import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Color
@@ -116,6 +120,17 @@ fun ScreenWrapper(
         label = "dimAlpha"
     )
 
+    // Navigation Motion Blur
+    val isMotionBlurEnabled by playerViewModel.userPreferencesRepository.uiMotionBlurEnabledFlow.collectAsStateWithLifecycle(initialValue = true)
+    val motionBlurIntensity by playerViewModel.userPreferencesRepository.uiMotionBlurIntensityFlow.collectAsStateWithLifecycle(initialValue = 1f)
+
+    val targetNavBlur = if (shouldRunDepthEffects && !isResumed && isMotionBlurEnabled) 16f * motionBlurIntensity else 0f
+    val navBlurRadius by animateFloatAsState(
+        targetValue = targetNavBlur,
+        animationSpec = tween(durationMillis = 350, easing = FastOutSlowInEasing),
+        label = "navBlurRadius"
+    )
+
     // Fetch background style to determine if the ScreenWrapper should become transparent
     val backgroundStyle by playerViewModel.userPreferencesRepository.appBackgroundStyleFlow.collectAsStateWithLifecycle(initialValue = AppBackgroundStyle.DEFAULT)
 
@@ -133,6 +148,15 @@ fun ScreenWrapper(
                     this.clip = true
                 } else {
                     this.clip = false
+                }
+                if (isMotionBlurEnabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && navBlurRadius > 0.5f) {
+                    this.renderEffect = RenderEffect.createBlurEffect(
+                        navBlurRadius,
+                        0.1f,
+                        Shader.TileMode.DECAL
+                    ).asComposeRenderEffect()
+                } else {
+                    this.renderEffect = null
                 }
             }
             // If using a custom wallpaper, make the wrapper transparent so the MainActivity background shows through!
