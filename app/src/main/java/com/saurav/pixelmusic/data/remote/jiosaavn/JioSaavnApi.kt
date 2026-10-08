@@ -93,7 +93,7 @@ object JioSaavnApi {
                 .build()
             client.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) return@withContext emptyList()
-                val body = response.body?.string() ?: return@withContext emptyList()
+                val body = response.body.string()
                 val parsed = json.decodeFromString<SearchResponse>(body)
                 parsed.results.mapNotNull { raw ->
                     val info = raw.moreInfo ?: return@mapNotNull null

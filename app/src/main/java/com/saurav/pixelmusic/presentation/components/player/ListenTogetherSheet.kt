@@ -56,7 +56,7 @@ import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.Group
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
-import androidx.compose.material.icons.rounded.QueueMusic
+import androidx.compose.material.icons.automirrored.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.SkipPrevious
@@ -221,7 +221,10 @@ fun ListenTogetherSheet(
         }
     }
 
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val sheetState = rememberBottomSheetState(
+        initialValue = SheetValue.Hidden,
+        enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded)
+    )
 
     val isCreating = uiState is ListenTogetherUiState.Creating
     val isJoining = uiState is ListenTogetherUiState.Joining
@@ -1936,7 +1939,7 @@ private fun SongRequestsSection(
                             contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Rounded.QueueMusic,
+                                imageVector = Icons.AutoMirrored.Rounded.QueueMusic,
                                 contentDescription = null,
                                 modifier = Modifier.size(16.dp)
                             )

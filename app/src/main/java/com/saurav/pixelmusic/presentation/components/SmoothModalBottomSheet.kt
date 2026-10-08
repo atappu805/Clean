@@ -61,7 +61,7 @@ fun SmoothModalBottomSheet(
     scrimColor: Color = BottomSheetDefaults.ScrimColor,
     dragHandle: @Composable (() -> Unit)? = { BottomSheetDefaults.DragHandle() },
     contentWindowInsets: @Composable () -> WindowInsets = { BottomSheetDefaults.modalWindowInsets },
-    properties: ModalBottomSheetProperties = ModalBottomSheetDefaults.properties(shouldDismissOnBackPress = false),
+    properties: ModalBottomSheetProperties = ModalBottomSheetProperties(shouldDismissOnBackPress = false),
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val scope = rememberCoroutineScope()

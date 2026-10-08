@@ -4668,8 +4668,8 @@ class PlayerViewModel @Inject constructor(
                         try {
                             val fallbackUrl = JioSaavnHelper.getFallbackStreamUrl(
                                 youtubeId = song.youtubeId ?: mediaId,
-                                title = song.title ?: "",
-                                artist = song.artist ?: "",
+                                title = song.title,
+                                artist = song.artist,
                                 durationMs = song.duration,
                                 preferKbps = 160
                             )

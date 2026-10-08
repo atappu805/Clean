@@ -111,7 +111,7 @@ object InAppUpdater {
             val response = client.newCall(request).execute()
             
             if (response.isSuccessful) {
-                val body = response.body?.string()
+                val body = response.body.string()
                 if (!body.isNullOrBlank()) {
                     val release = gson.fromJson(body, GithubRelease::class.java)
                     val tagName = release?.tagName
@@ -328,10 +328,7 @@ object InAppUpdater {
                     totalBytes = 0L
                 }
 
-                val body = response.body ?: run {
-                    downloadState.value = GlobalDownloadState.Error("Empty response body from server")
-                    return@launch
-                }
+                val body = response.body
                 if (totalBytes <= 0L) {
                     val len = body.contentLength()
                     if (len > 0) totalBytes = len + downloadedBytes
