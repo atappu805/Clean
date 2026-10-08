@@ -205,8 +205,6 @@ dependencies {
     implementation(libs.ktor.client.content.negotiation)
     implementation(libs.ktor.serialization.json)
     implementation(libs.ktor.client.encoding)
-    implementation(libs.brotli)
-    implementation(libs.re2j)
     implementation(libs.innertubex)
 
 
@@ -274,7 +272,6 @@ dependencies {
     implementation(libs.taglib)
     implementation(libs.jaudiotagger)
     implementation(libs.vorbisjava.core)
-    implementation(libs.wavy.slider)
 
     // Networking & Serialization
     implementation(libs.androidx.media3.exoplayer.hls)
