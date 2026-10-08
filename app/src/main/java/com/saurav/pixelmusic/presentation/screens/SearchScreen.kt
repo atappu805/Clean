@@ -91,7 +91,12 @@ import com.saurav.pixelmusic.presentation.components.SongInfoBottomSheet
 import com.saurav.pixelmusic.presentation.viewmodel.PlayerViewModel
 import com.saurav.pixelmusic.ui.theme.LocalPixelMusicDarkTheme
 import androidx.compose.material.icons.rounded.DeleteForever
+import androidx.compose.material.icons.automirrored.rounded.TrendingUp
+import androidx.compose.material.icons.rounded.Album
 import androidx.compose.material.icons.rounded.History
+import androidx.compose.material.icons.rounded.Podcasts
+import androidx.compose.material.icons.rounded.SentimentSatisfied
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.layout.WindowInsets
@@ -426,6 +431,10 @@ fun SearchScreen(
                             onClearAllHistory = {
                                 playerViewModel.clearSearchHistory()
                             },
+                            onNavigateToNewReleases = { navController.navigateSafely(Screen.NewReleases.route) },
+                            onNavigateToCharts = { navController.navigateSafely(Screen.Charts.route) },
+                            onNavigateToMoodsAndGenres = { navController.navigateSafely(Screen.MoodsAndGenres.route) },
+                            onNavigateToPodcasts = { navController.navigateSafely(Screen.Podcasts.route) },
                             isMotionBlurEnabled = isMotionBlurEnabled
                         )
                     }
@@ -623,23 +632,27 @@ fun SearchHistoryList(
     onHistoryClick: (String) -> Unit,
     onHistoryDelete: (String) -> Unit,
     onClearAllHistory: () -> Unit,
+    onNavigateToNewReleases: () -> Unit = {},
+    onNavigateToCharts: () -> Unit = {},
+    onNavigateToMoodsAndGenres: () -> Unit = {},
+    onNavigateToPodcasts: () -> Unit = {},
     isMotionBlurEnabled: Boolean = true
 ) {
     val historyListState = rememberLazyListState()
     Column {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp, horizontal = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                stringResource(R.string.recent_searches),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold
-            )
-            if (historyItems.isNotEmpty()) {
+        if (historyItems.isNotEmpty()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp, horizontal = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    stringResource(R.string.recent_searches),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold
+                )
                 TextButton(onClick = onClearAllHistory) {
                     Text(stringResource(R.string.clear_all), maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
@@ -650,7 +663,7 @@ fun SearchHistoryList(
             modifier = Modifier
                 .fillMaxSize()
                 .scrollMotionBlur(historyListState, enabled = isMotionBlurEnabled),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
             contentPadding = PaddingValues(
                 top = 8.dp,
                 bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 160.dp
@@ -663,6 +676,92 @@ fun SearchHistoryList(
                     onHistoryDelete = onHistoryDelete
                 )
             }
+
+            item(key = "explore_categories_header") {
+                Spacer(modifier = Modifier.height(14.dp))
+            }
+
+            item(key = "explore_categories_grid") {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 4.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        ExploreCategoryCard(
+                            title = "New releases",
+                            icon = Icons.Rounded.Album,
+                            modifier = Modifier.weight(1f),
+                            onClick = onNavigateToNewReleases
+                        )
+                        ExploreCategoryCard(
+                            title = "Charts",
+                            icon = Icons.AutoMirrored.Rounded.TrendingUp,
+                            modifier = Modifier.weight(1f),
+                            onClick = onNavigateToCharts
+                        )
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        ExploreCategoryCard(
+                            title = "Moods & genres",
+                            icon = Icons.Rounded.SentimentSatisfied,
+                            modifier = Modifier.weight(1f),
+                            onClick = onNavigateToMoodsAndGenres
+                        )
+                        ExploreCategoryCard(
+                            title = "Podcasts",
+                            icon = Icons.Rounded.Podcasts,
+                            modifier = Modifier.weight(1f),
+                            onClick = onNavigateToPodcasts
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ExploreCategoryCard(
+    title: String,
+    icon: ImageVector,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        modifier = modifier.height(86.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(14.dp),
+            verticalArrangement = Arrangement.SpaceBetween,
+            horizontalAlignment = Alignment.Start
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.size(22.dp)
+            )
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }

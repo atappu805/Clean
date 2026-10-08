@@ -62,6 +62,14 @@ sealed class Screen(val route: String) {
     object About : Screen("about")
     object EasterEgg : Screen("easter_egg")
 
+    object NewReleases : Screen("new_releases")
+    object Charts : Screen("charts")
+    object MoodsAndGenres : Screen("moods_and_genres")
+    object MoodDetail : Screen("mood_detail/{mood}") {
+        fun createRoute(mood: String) = "mood_detail/${Uri.encode(mood)}"
+    }
+    object Podcasts : Screen("podcasts")
+
     object ArtistSettings : Screen("artist_settings")
     object DelimiterConfig : Screen("delimiter_config")
     object WordDelimiterConfig : Screen("word_delimiter_config")

@@ -39,7 +39,12 @@ import com.saurav.pixelmusic.presentation.screens.ArtistDetailScreen
 import com.saurav.pixelmusic.presentation.screens.ArtistSettingsScreen
 import com.saurav.pixelmusic.presentation.screens.DailyMixScreen
 import com.saurav.pixelmusic.presentation.screens.EditTransitionScreen
+import com.saurav.pixelmusic.presentation.screens.ChartsScreen
 import com.saurav.pixelmusic.presentation.screens.EasterEggScreen
+import com.saurav.pixelmusic.presentation.screens.MoodDetailScreen
+import com.saurav.pixelmusic.presentation.screens.MoodsAndGenresScreen
+import com.saurav.pixelmusic.presentation.screens.NewReleasesScreen
+import com.saurav.pixelmusic.presentation.screens.PodcastsScreen
 import com.saurav.pixelmusic.presentation.screens.ExperimentalSettingsScreen
 import com.saurav.pixelmusic.presentation.screens.HomeScreen
 import com.saurav.pixelmusic.presentation.screens.ExploreScreen
@@ -598,6 +603,85 @@ fun AppNavigation(
                     EasterEggScreen(
                         viewModel = playerViewModel,
                         onNavigationIconClick = { navController.popBackStack() },
+                    )
+                }
+            }
+            composable(
+                Screen.NewReleases.route,
+                enterTransition = { enterTransition() },
+                exitTransition = { exitTransition() },
+                popEnterTransition = { popEnterTransition() },
+                popExitTransition = { popExitTransition() },
+            ) {
+                ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
+                    NewReleasesScreen(
+                        navController = navController,
+                        playerViewModel = playerViewModel,
+                        onBackClick = { navController.popBackStack() }
+                    )
+                }
+            }
+            composable(
+                Screen.Charts.route,
+                enterTransition = { enterTransition() },
+                exitTransition = { exitTransition() },
+                popEnterTransition = { popEnterTransition() },
+                popExitTransition = { popExitTransition() },
+            ) {
+                ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
+                    ChartsScreen(
+                        navController = navController,
+                        playerViewModel = playerViewModel,
+                        onBackClick = { navController.popBackStack() }
+                    )
+                }
+            }
+            composable(
+                Screen.MoodsAndGenres.route,
+                enterTransition = { enterTransition() },
+                exitTransition = { exitTransition() },
+                popEnterTransition = { popEnterTransition() },
+                popExitTransition = { popExitTransition() },
+            ) {
+                ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
+                    MoodsAndGenresScreen(
+                        navController = navController,
+                        onBackClick = { navController.popBackStack() }
+                    )
+                }
+            }
+            composable(
+                route = Screen.MoodDetail.route,
+                arguments = listOf(
+                    navArgument("mood") { type = NavType.StringType }
+                ),
+                enterTransition = { enterTransition() },
+                exitTransition = { exitTransition() },
+                popEnterTransition = { popEnterTransition() },
+                popExitTransition = { popExitTransition() },
+            ) { backStackEntry ->
+                val mood = backStackEntry.arguments?.getString("mood") ?: ""
+                ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
+                    MoodDetailScreen(
+                        mood = mood,
+                        navController = navController,
+                        playerViewModel = playerViewModel,
+                        onBackClick = { navController.popBackStack() }
+                    )
+                }
+            }
+            composable(
+                Screen.Podcasts.route,
+                enterTransition = { enterTransition() },
+                exitTransition = { exitTransition() },
+                popEnterTransition = { popEnterTransition() },
+                popExitTransition = { popExitTransition() },
+            ) {
+                ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
+                    PodcastsScreen(
+                        navController = navController,
+                        playerViewModel = playerViewModel,
+                        onBackClick = { navController.popBackStack() }
                     )
                 }
             }
