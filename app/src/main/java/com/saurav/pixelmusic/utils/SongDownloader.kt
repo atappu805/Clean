@@ -72,21 +72,8 @@ object SongDownloader {
         val endByte: Long
     )
 
-    private val downloadOkHttpClient: OkHttpClient by lazy {
-        OkHttpClient.Builder()
-            .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(60, TimeUnit.SECONDS)
-            .writeTimeout(60, TimeUnit.SECONDS)
-            .callTimeout(0, TimeUnit.SECONDS) // No call timeout for file downloads
-            .retryOnConnectionFailure(true)
-            .followRedirects(true)
-            .followSslRedirects(true)
-            .connectionPool(okhttp3.ConnectionPool(10, 5, TimeUnit.MINUTES))
-            .build()
-    }
-
-    private val secondaryOkHttpClient: OkHttpClient by lazy {
-        OkHttpClient.Builder()
+    private fun createDownloadOkHttpClient(): OkHttpClient {
+        return OkHttpClient.Builder()
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(60, TimeUnit.SECONDS)
             .writeTimeout(60, TimeUnit.SECONDS)
@@ -94,9 +81,26 @@ object SongDownloader {
             .retryOnConnectionFailure(true)
             .followRedirects(true)
             .followSslRedirects(true)
+            .addInterceptor { chain ->
+                val request = chain.request()
+                val urlStr = request.url.toString()
+                val newReq = if (urlStr.contains("googlevideo.com") || urlStr.contains("youtube.com")) {
+                    request.newBuilder()
+                        .header("Origin", "https://music.youtube.com")
+                        .header("Referer", "https://music.youtube.com/")
+                        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+                        .build()
+                } else {
+                    request
+                }
+                chain.proceed(newReq)
+            }
             .connectionPool(okhttp3.ConnectionPool(10, 5, TimeUnit.MINUTES))
             .build()
     }
+
+    private val downloadOkHttpClient: OkHttpClient by lazy { createDownloadOkHttpClient() }
+    private val secondaryOkHttpClient: OkHttpClient by lazy { createDownloadOkHttpClient() }
 
     // Global state controls for Pause/Cancel from notifications
     @Volatile var isPaused = false
@@ -174,7 +178,18 @@ object SongDownloader {
                 duration = "",
                 thumbnailHref = song.albumArtUriString ?: ""
             )
-            val streamUrl = YoutubeHelper.getDownloadUrl(context, ytSong)
+            var streamUrl = try {
+                YoutubeHelper.getDownloadUrl(context, ytSong)
+            } catch (_: Exception) { "" }
+            if (streamUrl.isBlank()) {
+                streamUrl = com.saurav.pixelmusic.data.remote.jiosaavn.JioSaavnHelper.getFallbackStreamUrl(
+                    youtubeId = ytSong.youtubeId,
+                    title = ytSong.title,
+                    artist = ytSong.artist,
+                    durationMs = com.saurav.pixelmusic.data.remote.jiosaavn.JioSaavnHelper.parseDurationToMs(ytSong.duration),
+                    preferKbps = 320
+                ) ?: ""
+            }
             if (streamUrl.isBlank()) throw Exception("Could not resolve stream URL")
 
             val cleanTitle = song.title.replace(Regex("[\\\\/:*?\"<>|]"), "_")
@@ -469,34 +484,44 @@ object SongDownloader {
                 }
             }
 
+            var remuxSuccess = false
             if (audioTrackIndex >= 0) {
-                extractor.selectTrack(audioTrackIndex)
-                val format = extractor.getTrackFormat(audioTrackIndex)
+                try {
+                    extractor.selectTrack(audioTrackIndex)
+                    val format = extractor.getTrackFormat(audioTrackIndex)
 
-                val muxer = MediaMuxer(tempRemuxedFile.absolutePath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
-                val muxerTrackIndex = muxer.addTrack(format)
-                muxer.start()
+                    val muxer = MediaMuxer(tempRemuxedFile.absolutePath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
+                    val muxerTrackIndex = muxer.addTrack(format)
+                    muxer.start()
 
-                val buffer = ByteBuffer.allocateDirect(1024 * 1024)
-                val bufferInfo = MediaCodec.BufferInfo()
+                    val buffer = ByteBuffer.allocateDirect(1024 * 1024)
+                    val bufferInfo = MediaCodec.BufferInfo()
 
-                while (true) {
-                    val sampleSize = extractor.readSampleData(buffer, 0)
-                    if (sampleSize <= 0) break
-                    bufferInfo.offset = 0
-                    bufferInfo.size = sampleSize
-                    bufferInfo.flags = extractor.sampleFlags
-                    bufferInfo.presentationTimeUs = extractor.sampleTime
-                    muxer.writeSampleData(muxerTrackIndex, buffer, bufferInfo)
-                    if (!extractor.advance()) break
+                    while (true) {
+                        val sampleSize = extractor.readSampleData(buffer, 0)
+                        if (sampleSize <= 0) break
+                        bufferInfo.offset = 0
+                        bufferInfo.size = sampleSize
+                        bufferInfo.flags = extractor.sampleFlags
+                        bufferInfo.presentationTimeUs = extractor.sampleTime
+                        muxer.writeSampleData(muxerTrackIndex, buffer, bufferInfo)
+                        if (!extractor.advance()) break
+                    }
+
+                    muxer.stop()
+                    muxer.release()
+                    remuxSuccess = true
+                } catch (_: Exception) {
+                    remuxSuccess = false
+                } finally {
+                    extractor.release()
                 }
-
-                muxer.stop()
-                muxer.release()
-                extractor.release()
             } else {
                 extractor.release()
-                throw Exception("No audio track found in downloaded file")
+            }
+
+            if (!remuxSuccess || !tempRemuxedFile.exists() || tempRemuxedFile.length() == 0L) {
+                tempAudioFile.copyTo(tempRemuxedFile, overwrite = true)
             }
 
             try {
@@ -748,11 +773,16 @@ try {
         if (total > 0L) return total
 
         try {
-            val req = okhttp3.Request.Builder()
+            val reqBuilder = okhttp3.Request.Builder()
                 .url(url)
                 .header("Range", "bytes=0-0")
                 .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-                .build()
+            if (url.contains("googlevideo.com") || url.contains("youtube.com")) {
+                reqBuilder
+                    .header("Origin", "https://music.youtube.com")
+                    .header("Referer", "https://music.youtube.com/")
+            }
+            val req = reqBuilder.build()
             downloadOkHttpClient.newCall(req).execute().use { resp ->
                 val range = resp.header("Content-Range")
                 if (range != null && range.contains("/")) {
@@ -773,6 +803,10 @@ try {
                 requestMethod = "GET"
                 setRequestProperty("Range", "bytes=0-0")
                 setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+                if (url.contains("googlevideo.com") || url.contains("youtube.com")) {
+                    setRequestProperty("Origin", "https://music.youtube.com")
+                    setRequestProperty("Referer", "https://music.youtube.com/")
+                }
             }
             val range = conn.getHeaderField("Content-Range")
             if (range != null && range.contains("/")) {
@@ -792,11 +826,16 @@ try {
         buffer: ByteArray,
         onBytesRead: (ByteArray, Int) -> Unit
     ): Long {
-        val request = okhttp3.Request.Builder()
+        val requestBuilder = okhttp3.Request.Builder()
             .url(url)
             .header("Range", "bytes=$startByte-$endByte")
             .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-            .build()
+        if (url.contains("googlevideo.com") || url.contains("youtube.com")) {
+            requestBuilder
+                .header("Origin", "https://music.youtube.com")
+                .header("Referer", "https://music.youtube.com/")
+        }
+        val request = requestBuilder.build()
 
         client.newCall(request).execute().use { response ->
             val code = response.code
@@ -829,6 +868,10 @@ try {
             requestMethod = "GET"
             setRequestProperty("Range", "bytes=$startByte-$endByte")
             setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+            if (url.contains("googlevideo.com") || url.contains("youtube.com")) {
+                setRequestProperty("Origin", "https://music.youtube.com")
+                setRequestProperty("Referer", "https://music.youtube.com/")
+            }
             instanceFollowRedirects = true
         }
 
@@ -970,8 +1013,18 @@ try {
                 if (e.message?.contains("403") == true || e.message?.contains("410") == true) {
                     try {
                         YoutubeHelper.invalidateStreamCache(ytSong.youtubeId)
-                        val freshUrl = YoutubeHelper.getDownloadUrl(context, ytSong)
-                        if (freshUrl.isNotBlank()) {
+                        val freshUrl = if (attempt >= 1) {
+                            com.saurav.pixelmusic.data.remote.jiosaavn.JioSaavnHelper.getFallbackStreamUrl(
+                                youtubeId = ytSong.youtubeId,
+                                title = ytSong.title,
+                                artist = ytSong.artist,
+                                durationMs = com.saurav.pixelmusic.data.remote.jiosaavn.JioSaavnHelper.parseDurationToMs(ytSong.duration),
+                                preferKbps = 320
+                            ) ?: YoutubeHelper.getDownloadUrl(context, ytSong)
+                        } else {
+                            YoutubeHelper.getDownloadUrl(context, ytSong)
+                        }
+                        if (!freshUrl.isNullOrBlank()) {
                             activeUrlRef.set(freshUrl)
                         }
                     } catch (_: Exception) {}

@@ -366,15 +366,25 @@ object YoutubeHelper {
         val cachedQuality = streamUrlLruCache.get(cacheKey)
         if (cachedQuality != null && isYoutubeUrlValid(cachedQuality)) return cachedQuality
 
-        val result = getSongUrlFromYoutube(
-            context = context,
-            song = song,
-            lowQuality = (targetQuality == StreamingAudioQuality.LOW),
-            maxBitrateKbps = targetQuality.maxBitrateKbps,
-            requireM4a = true,
-            explicitQuality = targetQuality
-        )
-        val newUri = result.first
+        val (newUri, _, _) = try {
+            getSongUrlFromYoutube(
+                context = context,
+                song = song,
+                lowQuality = (targetQuality == StreamingAudioQuality.LOW),
+                maxBitrateKbps = targetQuality.maxBitrateKbps,
+                requireM4a = true,
+                explicitQuality = targetQuality
+            )
+        } catch (e: Exception) {
+            val fallback = com.saurav.pixelmusic.data.remote.jiosaavn.JioSaavnHelper.getFallbackStreamUrl(
+                youtubeId = videoId,
+                title = song.title,
+                artist = song.artist,
+                durationMs = com.saurav.pixelmusic.data.remote.jiosaavn.JioSaavnHelper.parseDurationToMs(song.duration),
+                preferKbps = if (targetQuality.maxBitrateKbps >= 256) 320 else 160
+            )
+            if (fallback != null) Triple(fallback, "audio/mp4", 160) else throw e
+        }
         streamUrlLruCache.put(cacheKey, newUri)
         return newUri
     }
@@ -599,10 +609,27 @@ private suspend fun getSongUrlFromYoutube(
     }
 
     // 2. Secondary fallback: NewPipeExtractor
-    val streamInfo = StreamInfo.getInfo(ServiceList.YouTube, "https://www.youtube.com/watch?v=$videoId")
+    val streamInfo = try {
+        StreamInfo.getInfo(ServiceList.YouTube, "https://www.youtube.com/watch?v=$videoId")
+    } catch (e: Exception) {
+        UmihiHelper.printe("NewPipeExtractor failed for $videoId: ${e.message}")
+        null
+    }
     
-    val audioStreams = streamInfo.audioStreams
-    if (audioStreams.isNullOrEmpty()) throw Exception("No audio streams found for $videoId")
+    val audioStreams = streamInfo?.audioStreams
+    if (audioStreams.isNullOrEmpty()) {
+        val jioFallback = com.saurav.pixelmusic.data.remote.jiosaavn.JioSaavnHelper.getFallbackStreamUrl(
+            youtubeId = videoId,
+            title = song.title,
+            artist = song.artist,
+            durationMs = com.saurav.pixelmusic.data.remote.jiosaavn.JioSaavnHelper.parseDurationToMs(song.duration),
+            preferKbps = if (maxBitrateKbps >= 256) 320 else 160
+        )
+        if (jioFallback != null) {
+            return@withContext Triple(jioFallback, "audio/mp4", 160)
+        }
+        throw Exception("No audio streams found for $videoId")
+    }
 
     val filteredStreams = if (requireM4a) {
         audioStreams.filter { 
