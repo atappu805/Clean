@@ -32,6 +32,7 @@ import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilledTonalButton
 import kotlinx.coroutines.flow.collectLatest
+import com.saurav.pixelmusic.ui.modifiers.scrollMotionBlur
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -254,7 +255,9 @@ fun AboutScreen(
                         .asPaddingValues()
                         .calculateBottomPadding() + 12.dp,
             ),
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .scrollMotionBlur(lazyListState),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             item(key = "hero_card") {

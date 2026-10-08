@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.DragIndicator
+import com.saurav.pixelmusic.ui.modifiers.scrollMotionBlur
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ContainedLoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -187,7 +188,7 @@ fun ReorderTabsSheet(
                 } else {
                     LazyColumn(
                         state = listState,
-                        modifier = Modifier.fillMaxSize().padding(horizontal = 14.dp),
+                        modifier = Modifier.fillMaxSize().padding(horizontal = 14.dp).scrollMotionBlur(listState),
                         contentPadding = PaddingValues(bottom = 100.dp, top = 8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {

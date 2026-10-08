@@ -151,6 +151,7 @@ import androidx.media3.common.util.UnstableApi
 import com.saurav.pixelmusic.R
 import com.saurav.pixelmusic.data.model.Song
 import com.saurav.pixelmusic.presentation.components.AutoScrollingText
+import com.saurav.pixelmusic.ui.modifiers.scrollMotionBlur
 import com.saurav.pixelmusic.presentation.components.SmartImage
 import com.saurav.pixelmusic.presentation.components.subcomps.PlayingEqIcon
 import com.saurav.pixelmusic.presentation.components.player.AnimatedPlaybackControls
@@ -761,6 +762,7 @@ fun QueueBottomSheet(
                             state = listState,
                             modifier = Modifier
                                 .fillMaxSize()
+                                .scrollMotionBlur(listState)
                                 .clip(shape = queueListShape)
                                 .background(
                                     color = MaterialTheme.colorScheme.surfaceContainerHigh,

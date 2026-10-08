@@ -25,6 +25,8 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import com.saurav.pixelmusic.ui.modifiers.scrollMotionBlur
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -182,9 +184,12 @@ fun EditTransitionScreen(
                 CircularProgressIndicator()
             }
         } else {
+            val listState = rememberLazyListState()
             LazyColumn(
+                state = listState,
                 modifier = Modifier
                     .fillMaxSize()
+                    .scrollMotionBlur(listState)
                     .padding(top = paddingValues.calculateTopPadding())
                     .padding(horizontal = 16.dp),
                 contentPadding = PaddingValues(bottom = 100.dp),

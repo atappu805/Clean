@@ -23,6 +23,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
+import com.saurav.pixelmusic.ui.modifiers.scrollMotionBlur
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -201,8 +203,12 @@ fun openSetting(setting: SearchableSetting, queryUsed: String) {
                 )
                 results.isEmpty() -> NoResultsHint(query)
                 else -> {
+                    val resultsListState = rememberLazyListState()
                     LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
+                        state = resultsListState,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .scrollMotionBlur(resultsListState),
                         contentPadding = PaddingValues(
                             start = 16.dp,
                             end = 16.dp,
@@ -295,8 +301,12 @@ private fun RecentSearchesList(
     onQuerySelected: (String) -> Unit,
     onClearAll: () -> Unit
 ) {
+    val historyListState = rememberLazyListState()
     LazyColumn(
-        modifier = Modifier.fillMaxSize(),
+        state = historyListState,
+        modifier = Modifier
+            .fillMaxSize()
+            .scrollMotionBlur(historyListState),
         contentPadding = PaddingValues(
             start = 16.dp, end = 16.dp, top = 12.dp,
             bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 24.dp

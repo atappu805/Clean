@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.systemBars
+import com.saurav.pixelmusic.ui.modifiers.scrollMotionBlur
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -387,6 +388,7 @@ fun FileExplorerContent(
                             LazyColumn(
                                 modifier = Modifier
                                     .fillMaxSize()
+                                    .scrollMotionBlur(listState)
                                     // Padding horizontal moved to parent Box
                                     .clip(
                                         RoundedCornerShape(
