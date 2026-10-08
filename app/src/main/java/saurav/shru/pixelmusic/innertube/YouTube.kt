@@ -838,16 +838,17 @@ suspend fun artist(browseId: String): Result<ArtistPage> = runCatching {
     }
 
 
-    suspend fun browse(browseId: String, params: String?): Result<BrowseResult> = runCatching {
-        val response = innerTube.browse(WEB_REMIX, browseId = browseId, params = params).body<BrowseResponse>()
+    suspend fun browse(browseId: String, params: String? = null): Result<BrowseResult> = runCatching {
+        val response = innerTube.browse(WEB_REMIX, browseId = browseId, params = params, forceAnonymous = true).body<BrowseResponse>()
         val browseItems = response.contents?.singleColumnBrowseResultsRenderer?.tabs?.firstOrNull()?.tabRenderer?.content?.sectionListRenderer?.contents?.mapNotNull { content ->
             when {
                 content.gridRenderer != null -> {
                     BrowseResult.Item(
                         title = content.gridRenderer.header?.gridHeaderRenderer?.title?.runs?.firstOrNull()?.text,
                         items = content.gridRenderer.items
-                            .mapNotNull(GridRenderer.Item::musicTwoRowItemRenderer)
-                            .mapNotNull(RelatedPage.Companion::fromMusicTwoRowItemRenderer)
+                            .mapNotNull { item ->
+                                item.musicTwoRowItemRenderer?.let { convertMusicTwoRowItem(it) }
+                            }
                     )
                 }
 
@@ -855,14 +856,77 @@ suspend fun artist(browseId: String): Result<ArtistPage> = runCatching {
                     BrowseResult.Item(
                         title = content.musicCarouselShelfRenderer.header?.musicCarouselShelfBasicHeaderRenderer?.title?.runs?.firstOrNull()?.text,
                         items = content.musicCarouselShelfRenderer.contents
-                            .mapNotNull(MusicCarouselShelfRenderer.Content::musicTwoRowItemRenderer)
-                            .mapNotNull(RelatedPage.Companion::fromMusicTwoRowItemRenderer)
+                            .mapNotNull { item ->
+                                item.musicTwoRowItemRenderer?.let { convertMusicTwoRowItem(it) }
+                                    ?: item.musicResponsiveListItemRenderer?.let { convertToChartItem(it) }
+                            }
+                    )
+                }
+
+                content.musicShelfRenderer != null -> {
+                    BrowseResult.Item(
+                        title = content.musicShelfRenderer.title?.runs?.firstOrNull()?.text,
+                        items = content.musicShelfRenderer.contents
+                            ?.mapNotNull { it.musicResponsiveListItemRenderer }
+                            ?.mapNotNull { convertToChartItem(it) }
+                            .orEmpty()
                     )
                 }
 
                 else -> null
             }
-        }.orEmpty()
+        }?.filter { it.items.isNotEmpty() }.orEmpty()
+
+    data class MoodsAndGenresSection(
+        val title: String,
+        val items: List<MoodCategoryItem>
+    )
+
+    data class MoodCategoryItem(
+        val title: String,
+        val stripeColor: Long?,
+        val browseId: String,
+        val params: String?
+    )
+
+    suspend fun moodsAndGenres(): Result<List<MoodsAndGenresSection>> = runCatching {
+        val response = innerTube.browse(
+            client = WEB_REMIX,
+            browseId = "FEmusic_moods_and_genres",
+            forceAnonymous = true
+        ).body<BrowseResponse>()
+
+        val sections = mutableListOf<MoodsAndGenresSection>()
+        val contents = response.contents
+            ?.singleColumnBrowseResultsRenderer
+            ?.tabs
+            ?.firstOrNull()
+            ?.tabRenderer
+            ?.content
+            ?.sectionListRenderer
+            ?.contents
+            .orEmpty()
+
+        contents.forEach { content ->
+            content.gridRenderer?.let { grid ->
+                val title = grid.header?.gridHeaderRenderer?.title?.runs?.firstOrNull()?.text ?: return@let
+                val items = grid.items.mapNotNull { it.musicNavigationButtonRenderer }.mapNotNull { navBtn ->
+                    val itemTitle = navBtn.buttonText.runs.firstOrNull()?.text?.trim() ?: return@mapNotNull null
+                    val endpoint = navBtn.clickCommand.browseEndpoint ?: return@mapNotNull null
+                    MoodCategoryItem(
+                        title = itemTitle,
+                        stripeColor = navBtn.solid?.leftStripeColor,
+                        browseId = endpoint.browseId,
+                        params = endpoint.params
+                    )
+                }
+                if (items.isNotEmpty()) {
+                    sections.add(MoodsAndGenresSection(title, items))
+                }
+            }
+        }
+        sections
+    }
         val immersiveHeader = response.header?.musicImmersiveHeaderRenderer
         val headerRenderer = response.header?.musicHeaderRenderer
         val detailHeader = response.header?.musicDetailHeaderRenderer
@@ -1059,7 +1123,7 @@ suspend fun artist(browseId: String): Result<ArtistPage> = runCatching {
             innerTube.locale = originalLocale.copy(gl = countryCode)
         }
         try {
-            val response = innerTube.browse(
+            var response = innerTube.browse(
                 client = WEB_REMIX,
                 browseId = "FEmusic_charts",
                 params = "ggMGCgQIgAQ%3D",
@@ -1069,14 +1133,14 @@ suspend fun artist(browseId: String): Result<ArtistPage> = runCatching {
         
             var sections = parseChartsSections(response)
             if (sections.isEmpty() && continuation == null) {
-                val fallbackResponse = innerTube.browse(
+                response = innerTube.browse(
                     client = WEB_REMIX,
                     browseId = "FEmusic_charts",
                     params = null,
                     continuation = null,
                     forceAnonymous = true
                 ).body<BrowseResponse>()
-                sections = parseChartsSections(fallbackResponse)
+                sections = parseChartsSections(response)
             }
         
             ChartsPage(
@@ -1093,49 +1157,67 @@ suspend fun artist(browseId: String): Result<ArtistPage> = runCatching {
 
     private fun parseChartsSections(response: BrowseResponse): List<ChartsPage.ChartSection> {
         val sections = mutableListOf<ChartsPage.ChartSection>()
-        response.contents?.singleColumnBrowseResultsRenderer?.tabs?.firstOrNull()
-            ?.tabRenderer?.content?.sectionListRenderer?.contents?.forEach { content ->
-                content.musicCarouselShelfRenderer?.let { renderer ->
-                    val title = renderer.header?.musicCarouselShelfBasicHeaderRenderer?.title?.runs?.firstOrNull()?.text
-                        ?: return@forEach
-                    val items = renderer.contents.mapNotNull { item ->
-                        when {
-                            item.musicResponsiveListItemRenderer != null -> 
-                                convertToChartItem(item.musicResponsiveListItemRenderer)
-                            item.musicTwoRowItemRenderer != null -> 
-                                convertMusicTwoRowItem(item.musicTwoRowItemRenderer)
-                            else -> null
-                        }
-                    }
-                    if (items.isNotEmpty()) {
-                        sections.add(
-                            ChartsPage.ChartSection(
-                                title = title,
-                                items = items,
-                                chartType = determineChartType(title)
-                            )
-                        )
+        val contents = response.contents?.singleColumnBrowseResultsRenderer?.tabs?.firstOrNull()
+            ?.tabRenderer?.content?.sectionListRenderer?.contents
+            .orEmpty()
+
+        contents.forEach { content ->
+            content.musicCarouselShelfRenderer?.let { renderer ->
+                val title = renderer.header?.musicCarouselShelfBasicHeaderRenderer?.title?.runs?.firstOrNull()?.text
+                    ?: return@forEach
+                val items = renderer.contents.mapNotNull { item ->
+                    when {
+                        item.musicResponsiveListItemRenderer != null -> 
+                            convertToChartItem(item.musicResponsiveListItemRenderer)
+                        item.musicTwoRowItemRenderer != null -> 
+                            convertMusicTwoRowItem(item.musicTwoRowItemRenderer)
+                        else -> null
                     }
                 }
-                content.gridRenderer?.let { renderer ->
-                    val title = renderer.header?.gridHeaderRenderer?.title?.runs?.firstOrNull()?.text
-                        ?: return@let
-                    val items = renderer.items.mapNotNull { item ->
-                        item.musicTwoRowItemRenderer?.let { renderer ->
-                            convertMusicTwoRowItem(renderer)
-                        }
-                    }
-                    if (items.isNotEmpty()) {
-                        sections.add(
-                            ChartsPage.ChartSection(
-                                title = title,
-                                items = items,
-                                chartType = ChartsPage.ChartType.NEW_RELEASES
-                            )
+                if (items.isNotEmpty()) {
+                    sections.add(
+                        ChartsPage.ChartSection(
+                            title = title,
+                            items = items,
+                            chartType = determineChartType(title)
                         )
-                    }
+                    )
                 }
             }
+            content.gridRenderer?.let { renderer ->
+                val title = renderer.header?.gridHeaderRenderer?.title?.runs?.firstOrNull()?.text
+                    ?: return@let
+                val items = renderer.items.mapNotNull { item ->
+                    item.musicTwoRowItemRenderer?.let { renderer ->
+                        convertMusicTwoRowItem(renderer)
+                    }
+                }
+                if (items.isNotEmpty()) {
+                    sections.add(
+                        ChartsPage.ChartSection(
+                            title = title,
+                            items = items,
+                            chartType = ChartsPage.ChartType.NEW_RELEASES
+                        )
+                    )
+                }
+            }
+            content.musicShelfRenderer?.let { renderer ->
+                val title = renderer.title?.runs?.firstOrNull()?.text ?: "Top Songs"
+                val items = renderer.contents?.mapNotNull { item ->
+                    item.musicResponsiveListItemRenderer?.let { convertToChartItem(it) }
+                }.orEmpty()
+                if (items.isNotEmpty()) {
+                    sections.add(
+                        ChartsPage.ChartSection(
+                            title = title,
+                            items = items,
+                            chartType = ChartsPage.ChartType.TOP
+                        )
+                    )
+                }
+            }
+        }
         return sections
     }
 
@@ -1149,8 +1231,9 @@ suspend fun artist(browseId: String): Result<ArtistPage> = runCatching {
 
     private fun convertToChartItem(renderer: MusicResponsiveListItemRenderer): YTItem? {
         return try {
-            // Try primary videoId, fall back to navigationEndpoint on the title run
+            // Try primary videoId, fall back to navigationEndpoint on the title run or overlay
             val videoId = renderer.playlistItemData?.videoId
+                ?: renderer.navigationEndpoint?.watchEndpoint?.videoId
                 ?: renderer.flexColumns.getOrNull(0)
                     ?.musicResponsiveListItemFlexColumnRenderer
                     ?.text?.runs?.firstOrNull()
@@ -1161,7 +1244,7 @@ suspend fun artist(browseId: String): Result<ArtistPage> = runCatching {
             if (videoId.isNullOrBlank()) return null
 
             val flexSize = renderer.flexColumns.size
-            if (flexSize < 2) return null
+            if (flexSize < 1) return null
 
             val firstColumn = renderer.flexColumns.getOrNull(0)
                 ?.musicResponsiveListItemFlexColumnRenderer
@@ -1169,12 +1252,12 @@ suspend fun artist(browseId: String): Result<ArtistPage> = runCatching {
 
             val secondColumn = renderer.flexColumns.getOrNull(1)
                 ?.musicResponsiveListItemFlexColumnRenderer
-                ?.text ?: return null
+                ?.text
 
             val titleRun = firstColumn.runs?.firstOrNull() ?: return null
             val title = titleRun.text.takeIf { it.isNotBlank() } ?: return null
 
-            val artists = secondColumn.runs?.mapNotNull { run ->
+            val artists = secondColumn?.runs?.mapNotNull { run ->
                 run.text.takeIf { it.isNotBlank() }?.let { name ->
                     Artist(
                         name = name,
@@ -1212,7 +1295,10 @@ suspend fun artist(browseId: String): Result<ArtistPage> = runCatching {
             val thumbnail = renderer.thumbnailRenderer.musicThumbnailRenderer?.getThumbnailUrl() ?: ""
             when {
                 renderer.isSong -> {
-                    val videoId = renderer.navigationEndpoint.watchEndpoint?.videoId ?: return null
+                    val videoId = renderer.navigationEndpoint.watchEndpoint?.videoId
+                        ?: renderer.thumbnailOverlay?.musicItemThumbnailOverlayRenderer?.content
+                            ?.musicPlayButtonRenderer?.playNavigationEndpoint?.watchEndpoint?.videoId
+                        ?: return null
                     val subtitleRuns = renderer.subtitle?.runs
                     val artists = subtitleRuns?.mapNotNull {
                         it.navigationEndpoint?.browseEndpoint?.browseId?.let { id ->
@@ -1253,7 +1339,35 @@ suspend fun artist(browseId: String): Result<ArtistPage> = runCatching {
                         } == true
                     )
                 }
-                else -> null
+                renderer.isPlaylist || renderer.navigationEndpoint.browseEndpoint?.browseId?.let {
+                    it.startsWith("VL") || it.startsWith("PL") || it.startsWith("RD")
+                } == true -> {
+                    val playlistId = renderer.navigationEndpoint.browseEndpoint?.browseId?.removePrefix("VL") ?: return null
+                    val authorName = renderer.subtitle?.runs?.firstOrNull()?.text
+                    val playEndpoint = renderer.thumbnailOverlay?.musicItemThumbnailOverlayRenderer?.content
+                        ?.musicPlayButtonRenderer?.playNavigationEndpoint?.watchPlaylistEndpoint
+                    PlaylistItem(
+                        id = playlistId,
+                        title = title,
+                        author = authorName?.let { Artist(name = it, id = null) },
+                        songCountText = renderer.subtitle?.runs?.lastOrNull()?.text,
+                        thumbnail = thumbnail,
+                        playEndpoint = playEndpoint,
+                        shuffleEndpoint = null,
+                        radioEndpoint = null
+                    )
+                }
+                renderer.isArtist -> {
+                    val browseId = renderer.navigationEndpoint.browseEndpoint?.browseId ?: return null
+                    ArtistItem(
+                        id = browseId,
+                        title = title,
+                        thumbnail = thumbnail,
+                        shuffleEndpoint = null,
+                        radioEndpoint = null
+                    )
+                }
+                else -> RelatedPage.fromMusicTwoRowItemRenderer(renderer)
             }
         } catch (e: Exception) {
             android.util.Log.e("YouTube", "Error converting music two row item", e)
