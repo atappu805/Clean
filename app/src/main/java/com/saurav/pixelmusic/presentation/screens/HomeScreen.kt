@@ -447,6 +447,34 @@ fun HomeScreen(
         Modifier
     }
 
+    val isLightTheme = MaterialTheme.colorScheme.background.luminance() > 0.5f
+    val surfaceColor = MaterialTheme.colorScheme.surface
+    val primaryColor = MaterialTheme.colorScheme.primary
+
+    val backgroundBrush = remember(surfaceColor, primaryColor, isLightTheme) {
+        if (isLightTheme) {
+            Brush.verticalGradient(
+                colors = listOf(
+                    primaryColor.copy(alpha = 0.15f),
+                    surfaceColor.copy(alpha = 0.6f),
+                    surfaceColor
+                ),
+                endY = 1000f
+            )
+        } else {
+            Brush.verticalGradient(
+                colors = listOf(surfaceColor, surfaceColor),
+                endY = 1000f
+            )
+        }
+    }
+
+    val scrimTopColor = if (isLightTheme) {
+        primaryColor.copy(alpha = 0.15f).compositeOver(MaterialTheme.colorScheme.background)
+    } else {
+        MaterialTheme.colorScheme.background
+    }
+
     // Status-bar height + title alpha — used by the top scrim and "PixelMusic" title
     val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val homeTitleAlpha by animateFloatAsState(
@@ -491,7 +519,7 @@ fun HomeScreen(
                     state = listState,
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(if (isCustomBackground) Color.Transparent else MaterialTheme.colorScheme.background)
+                        .then(if (isCustomBackground) Modifier else Modifier.background(backgroundBrush))
                         .scrollMotionBlur(
                             lazyListState = listState,
                             enabled = settingsUiState.isUiMotionBlurEnabled
@@ -678,17 +706,22 @@ fun HomeScreen(
             }
         }
 
-        // Top status bar protection scrim so scrolled items fade cleanly under system icons
+        // Top status bar protection scrim matching Explore screen
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .align(Alignment.TopCenter)
-                .height(statusBarHeight + 16.dp)
+                .height(statusBarHeight + 64.dp)
                 .background(
                     brush = Brush.verticalGradient(
-                        colors = listOf(
-                            if (isCustomBackground) Color.Transparent else MaterialTheme.colorScheme.background,
-                            Color.Transparent
+                        colorStops = arrayOf(
+                            0.00f to (if (isCustomBackground) Color.Transparent else scrimTopColor.copy(alpha = 0.95f)),
+                            0.18f to (if (isCustomBackground) Color.Transparent else scrimTopColor.copy(alpha = 0.86f)),
+                            0.36f to (if (isCustomBackground) Color.Transparent else scrimTopColor.copy(alpha = 0.68f)),
+                            0.54f to (if (isCustomBackground) Color.Transparent else scrimTopColor.copy(alpha = 0.48f)),
+                            0.72f to (if (isCustomBackground) Color.Transparent else scrimTopColor.copy(alpha = 0.28f)),
+                            0.88f to (if (isCustomBackground) Color.Transparent else scrimTopColor.copy(alpha = 0.11f)),
+                            1.00f to Color.Transparent
                         )
                     )
                 )

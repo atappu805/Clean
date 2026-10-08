@@ -68,6 +68,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.graphics.luminance
+import com.saurav.pixelmusic.data.preferences.AppBackgroundStyle
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -210,6 +213,36 @@ fun SearchScreen(
     val dm = LocalPixelMusicDarkTheme.current
     val colorScheme = MaterialTheme.colorScheme
 
+    val backgroundStyle by playerViewModel.userPreferencesRepository.appBackgroundStyleFlow.collectAsStateWithLifecycle(initialValue = AppBackgroundStyle.DEFAULT)
+    val isCustomBackground = backgroundStyle != AppBackgroundStyle.DEFAULT
+    val isLightTheme = MaterialTheme.colorScheme.background.luminance() > 0.5f
+    val surfaceColor = MaterialTheme.colorScheme.surface
+    val primaryColor = MaterialTheme.colorScheme.primary
+
+    val backgroundBrush = remember(surfaceColor, primaryColor, isLightTheme) {
+        if (isLightTheme) {
+            Brush.verticalGradient(
+                colors = listOf(
+                    primaryColor.copy(alpha = 0.15f),
+                    surfaceColor.copy(alpha = 0.6f),
+                    surfaceColor
+                ),
+                endY = 1000f
+            )
+        } else {
+            Brush.verticalGradient(
+                colors = listOf(surfaceColor, surfaceColor),
+                endY = 1000f
+            )
+        }
+    }
+
+    val scrimTopColor = if (isLightTheme) {
+        primaryColor.copy(alpha = 0.15f).compositeOver(MaterialTheme.colorScheme.background)
+    } else {
+        MaterialTheme.colorScheme.background
+    }
+
     DisposableEffect(Unit) {
         onDispose {
             onSearchBarActiveChange(false)
@@ -219,7 +252,7 @@ fun SearchScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            // Removed solid background so the global wallpaper shows through!
+            .then(if (isCustomBackground) Modifier else Modifier.background(backgroundBrush))
     ) {
         Column(
             modifier = Modifier.fillMaxSize()
@@ -448,6 +481,27 @@ fun SearchScreen(
                 }
             }
         }
+
+        // Top scrim overlay matching Explore and Home screen
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.TopCenter)
+                .height(statusBarTopInset + 64.dp)
+                .background(
+                    brush = Brush.verticalGradient(
+                        colorStops = arrayOf(
+                            0.00f to (if (isCustomBackground) Color.Transparent else scrimTopColor.copy(alpha = 0.95f)),
+                            0.18f to (if (isCustomBackground) Color.Transparent else scrimTopColor.copy(alpha = 0.86f)),
+                            0.36f to (if (isCustomBackground) Color.Transparent else scrimTopColor.copy(alpha = 0.68f)),
+                            0.54f to (if (isCustomBackground) Color.Transparent else scrimTopColor.copy(alpha = 0.48f)),
+                            0.72f to (if (isCustomBackground) Color.Transparent else scrimTopColor.copy(alpha = 0.28f)),
+                            0.88f to (if (isCustomBackground) Color.Transparent else scrimTopColor.copy(alpha = 0.11f)),
+                            1.00f to Color.Transparent
+                        )
+                    )
+                )
+        )
 
         Box(
             modifier = Modifier
