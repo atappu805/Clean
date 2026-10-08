@@ -1,6 +1,7 @@
 package com.saurav.pixelmusic.ui.modifiers
 
 import android.graphics.RenderEffect
+import android.graphics.RuntimeShader
 import android.graphics.Shader
 import android.os.Build
 import androidx.compose.animation.core.Animatable
@@ -25,6 +26,7 @@ import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.graphics.graphicsLayer
 import kotlinx.coroutines.flow.collectLatest
+import org.intellij.lang.annotations.Language
 import kotlin.math.abs
 
 /**
@@ -40,9 +42,47 @@ val LocalMotionBlurIntensity = compositionLocalOf { 1f }
  */
 val LocalMotionBlurEnabled = compositionLocalOf { true }
 
+@Language("AGSL")
+const val DIRECTIONAL_BLUR_AGSL = """
+    uniform shader content;
+    uniform float2 resolution;
+    uniform float2 direction;
+    uniform float blurAmount;
+
+    half4 main(float2 fragCoord) {
+        if (blurAmount <= 0.5) {
+            return content.eval(fragCoord);
+        }
+        
+        half4 color = half4(0.0);
+        float totalWeight = 0.0;
+        const int samples = 7;
+        float step = blurAmount / float(samples);
+        
+        for (int i = -3; i <= 3; i++) {
+            float offset = float(i) * step;
+            float2 sampleCoord = fragCoord + direction * offset;
+            
+            if (sampleCoord.x >= 0.0 && sampleCoord.x <= resolution.x &&
+                sampleCoord.y >= 0.0 && sampleCoord.y <= resolution.y) {
+                float weight = 1.0 - (abs(float(i)) / 4.0);
+                color += content.eval(sampleCoord) * weight;
+                totalWeight += weight;
+            }
+        }
+        
+        if (totalWeight < 0.001) {
+            return content.eval(fragCoord);
+        }
+        
+        return color / totalWeight;
+    }
+"""
+
 /**
  * Modifier that applies a dynamic vertical or horizontal motion blur based on scroll speed.
  * Origin: Essentials (https://github.com/sameerasw/essentials)
+ * Uses AGSL RuntimeShader on Android 13+ (API 33+) with fallback to RenderEffect on Android 12 (API 31+).
  */
 fun Modifier.scrollMotionBlur(
     scrollState: ScrollState,
@@ -97,16 +137,36 @@ fun Modifier.scrollMotionBlur(
         }
     }
 
+    val shader = remember {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            RuntimeShader(DIRECTIONAL_BLUR_AGSL)
+        } else null
+    }
+    val runtimeEffect = remember(shader) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && shader != null) {
+            RenderEffect.createRuntimeShaderEffect(shader, "content").asComposeRenderEffect()
+        } else null
+    }
+
     this.graphicsLayer {
         val radius = blurRadius.value
         if (radius > 0.1f) {
-            val blurX = if (isHorizontal) radius else 0.1f
-            val blurY = if (isHorizontal) 0.1f else radius
-            renderEffect = RenderEffect.createBlurEffect(
-                blurX,
-                blurY,
-                Shader.TileMode.DECAL
-            ).asComposeRenderEffect()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && shader != null && runtimeEffect != null) {
+                shader.setFloatUniform("resolution", size.width, size.height)
+                val dirX = if (isHorizontal) 1.0f else 0.0f
+                val dirY = if (isHorizontal) 0.0f else 1.0f
+                shader.setFloatUniform("direction", dirX, dirY)
+                shader.setFloatUniform("blurAmount", radius)
+                renderEffect = runtimeEffect
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                val blurX = if (isHorizontal) radius else 0.1f
+                val blurY = if (isHorizontal) 0.1f else radius
+                renderEffect = RenderEffect.createBlurEffect(
+                    blurX,
+                    blurY,
+                    Shader.TileMode.DECAL
+                ).asComposeRenderEffect()
+            }
         } else {
             renderEffect = null
         }
@@ -178,16 +238,36 @@ fun Modifier.scrollMotionBlur(
         }
     }
 
+    val shader = remember {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            RuntimeShader(DIRECTIONAL_BLUR_AGSL)
+        } else null
+    }
+    val runtimeEffect = remember(shader) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && shader != null) {
+            RenderEffect.createRuntimeShaderEffect(shader, "content").asComposeRenderEffect()
+        } else null
+    }
+
     this.graphicsLayer {
         val radius = blurRadius.value
         if (radius > 0.1f) {
-            val blurX = if (isHorizontal) radius else 0.1f
-            val blurY = if (isHorizontal) 0.1f else radius
-            renderEffect = RenderEffect.createBlurEffect(
-                blurX,
-                blurY,
-                Shader.TileMode.DECAL
-            ).asComposeRenderEffect()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && shader != null && runtimeEffect != null) {
+                shader.setFloatUniform("resolution", size.width, size.height)
+                val dirX = if (isHorizontal) 1.0f else 0.0f
+                val dirY = if (isHorizontal) 0.0f else 1.0f
+                shader.setFloatUniform("direction", dirX, dirY)
+                shader.setFloatUniform("blurAmount", radius)
+                renderEffect = runtimeEffect
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                val blurX = if (isHorizontal) radius else 0.1f
+                val blurY = if (isHorizontal) 0.1f else radius
+                renderEffect = RenderEffect.createBlurEffect(
+                    blurX,
+                    blurY,
+                    Shader.TileMode.DECAL
+                ).asComposeRenderEffect()
+            }
         } else {
             renderEffect = null
         }
@@ -258,14 +338,32 @@ fun Modifier.scrollMotionBlur(
         }
     }
 
+    val shader = remember {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            RuntimeShader(DIRECTIONAL_BLUR_AGSL)
+        } else null
+    }
+    val runtimeEffect = remember(shader) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && shader != null) {
+            RenderEffect.createRuntimeShaderEffect(shader, "content").asComposeRenderEffect()
+        } else null
+    }
+
     this.graphicsLayer {
         val radius = blurRadius.value
         if (radius > 0.1f) {
-            renderEffect = RenderEffect.createBlurEffect(
-                0.1f,
-                radius,
-                Shader.TileMode.DECAL
-            ).asComposeRenderEffect()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && shader != null && runtimeEffect != null) {
+                shader.setFloatUniform("resolution", size.width, size.height)
+                shader.setFloatUniform("direction", 0.0f, 1.0f)
+                shader.setFloatUniform("blurAmount", radius)
+                renderEffect = runtimeEffect
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                renderEffect = RenderEffect.createBlurEffect(
+                    0.1f,
+                    radius,
+                    Shader.TileMode.DECAL
+                ).asComposeRenderEffect()
+            }
         } else {
             renderEffect = null
         }
@@ -336,14 +434,32 @@ fun Modifier.scrollMotionBlur(
         }
     }
 
+    val shader = remember {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            RuntimeShader(DIRECTIONAL_BLUR_AGSL)
+        } else null
+    }
+    val runtimeEffect = remember(shader) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && shader != null) {
+            RenderEffect.createRuntimeShaderEffect(shader, "content").asComposeRenderEffect()
+        } else null
+    }
+
     this.graphicsLayer {
         val radius = blurRadius.value
         if (radius > 0.1f) {
-            renderEffect = RenderEffect.createBlurEffect(
-                0.1f,
-                radius,
-                Shader.TileMode.DECAL
-            ).asComposeRenderEffect()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && shader != null && runtimeEffect != null) {
+                shader.setFloatUniform("resolution", size.width, size.height)
+                shader.setFloatUniform("direction", 0.0f, 1.0f)
+                shader.setFloatUniform("blurAmount", radius)
+                renderEffect = runtimeEffect
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                renderEffect = RenderEffect.createBlurEffect(
+                    0.1f,
+                    radius,
+                    Shader.TileMode.DECAL
+                ).asComposeRenderEffect()
+            }
         } else {
             renderEffect = null
         }
@@ -410,14 +526,32 @@ fun Modifier.scrollMotionBlur(
         }
     }
 
+    val shader = remember {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            RuntimeShader(DIRECTIONAL_BLUR_AGSL)
+        } else null
+    }
+    val runtimeEffect = remember(shader) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && shader != null) {
+            RenderEffect.createRuntimeShaderEffect(shader, "content").asComposeRenderEffect()
+        } else null
+    }
+
     this.graphicsLayer {
         val radius = blurRadius.value
         if (radius > 0.1f) {
-            renderEffect = RenderEffect.createBlurEffect(
-                radius,
-                0.1f,
-                Shader.TileMode.DECAL
-            ).asComposeRenderEffect()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && shader != null && runtimeEffect != null) {
+                shader.setFloatUniform("resolution", size.width, size.height)
+                shader.setFloatUniform("direction", 1.0f, 0.0f)
+                shader.setFloatUniform("blurAmount", radius)
+                renderEffect = runtimeEffect
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                renderEffect = RenderEffect.createBlurEffect(
+                    radius,
+                    0.1f,
+                    Shader.TileMode.DECAL
+                ).asComposeRenderEffect()
+            }
         } else {
             renderEffect = null
         }
