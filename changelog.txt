@@ -1,3 +1,16 @@
+**Sub release 4.4.7**
+
+* 🎨 **Monochrome Zinc & Yellow Palette:** Applied an iOS and Nothing OS-inspired cool zinc palette to the Black & White theme, paired with refined cool zinc containers and high-contrast FAB styling for the yellow monochrome theme.
+* 🧭 **Search & Explore Categories:** Added YouTube Music-style Explore categories and destination screens directly within Search, powered by InnerTube browse endpoints, curated mood playlists, and real-time YouTube charts.
+* ⚡ **Resilient Downloads & 403 Fallback:** Resolved HTTP 403 download errors by injecting GoogleVideo CDN headers and adding JioSaavn as a seamless fallback provider.
+* 🌊 **Native AGSL Scroll Motion Blur:** Implemented directional AGSL runtime shaders (`RenderEffect`) for fluid scroll motion blur across all screens and sheets, optimized specifically for high refresh rate displays without navigation stutter.
+* 🎛️ **Smooth Modal Bottom Sheets:** Upgraded player, options, and screen bottom sheets to `SmoothModalBottomSheet` with fluid dismiss animations and system back-gesture support.
+* 🖼️ **Home & Search Scrims:** Added top scrims and subtle gradient backdrops to the Home and Search headers, alongside stacked album artwork for the Your Mix section.
+* 📂 **Redesigned Playlist Import:** Completely refreshed the Import Playlist sheet, transformed the Link Import dialog into a modern bottom sheet, and added duplicate checking for YouTube Music uploads.
+* 🧹 **Under-the-Hood Cleanup:** Pruned obsolete dependencies (`wavy-slider`, `brotli`, `re2j`), removed unreferenced assets and dead code, and resolved compiler warnings across core components.
+
+---
+
 **Sub release 4.4.6**
 
 * 🎧 **Listen Together Bug Fixes & Improvements:** Fixed animation hiccups from per-frame layout remeasurement, overlapping UI during state transitions, and the guest view layout; removed the breathing pulse animation; end session button now pinned to the bottom.
