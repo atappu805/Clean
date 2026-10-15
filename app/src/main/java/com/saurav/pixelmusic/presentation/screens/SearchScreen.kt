@@ -703,22 +703,7 @@ fun SearchScreen(
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun SearchLoadingPlaceholder(bottomPadding: Dp) {
-    val dummySong = remember {
-        Song(
-            id = "loading",
-            title = "Loading",
-            artist = "Loading",
-            artistId = 0L,
-            album = "Loading",
-            albumId = 0L,
-            path = "",
-            duration = 0L,
-            albumArtUriString = null,
-            mimeType = "audio/mpeg",
-            bitrate = 0,
-            sampleRate = 0
-        )
-    }
+    val dummySong = remember { Song.emptySong() }
     Column(
         modifier = Modifier
             .fillMaxSize()
