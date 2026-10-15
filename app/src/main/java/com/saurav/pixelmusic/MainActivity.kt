@@ -358,19 +358,30 @@ class MainActivity : ComponentActivity() {
                 useSystemFont = (appFontMode == AppFontMode.SYSTEM),
                 isAmoledBlack = isAmoledBlackEnabled
             ) {
-                var showSplashScreen by remember { mutableStateOf(true) }
-                var contentVisible by remember { mutableStateOf(false) }
+                val shouldSkipSplash = remember {
+                    val action = intent?.action
+                    isBenchmarkMode ||
+                        action == Intent.ACTION_VIEW ||
+                        action == Intent.ACTION_SEND ||
+                        action == MainActivityIntentContract.ACTION_SHUFFLE_ALL ||
+                        action == MainActivityIntentContract.ACTION_OPEN_PLAYLIST ||
+                        action == "com.saurav.pixelmusic.ACTION_PLAY_SONG" ||
+                        intent?.getBooleanExtra("ACTION_SHOW_PLAYER", false) == true ||
+                        intent?.getBooleanExtra("NAVIGATE_TO_ABOUT", false) == true
+                }
+                var showSplashScreen by remember { mutableStateOf(!shouldSkipSplash) }
+                var contentVisible by remember { mutableStateOf(shouldSkipSplash) }
                 
                 val contentAlpha by animateFloatAsState(
                     targetValue = if (contentVisible) 1f else 0f,
-                    animationSpec = tween(durationMillis = 500, easing = LinearOutSlowInEasing),
+                    animationSpec = tween(durationMillis = 380, easing = LinearOutSlowInEasing),
                     label = "AppContentAlpha"
                 )
                 
                 val contentOffset by animateDpAsState(
-                    targetValue = if (contentVisible) 0.dp else 40.dp, // Starts slightly lower and slides up
+                    targetValue = if (contentVisible) 0.dp else 24.dp,
                     animationSpec = spring(
-                        dampingRatio = 0.65f,
+                        dampingRatio = 0.72f,
                         stiffness = Spring.StiffnessMediumLow
                     ),
                     label = "AppContentOffset"
@@ -379,7 +390,12 @@ class MainActivity : ComponentActivity() {
                 // The Box allows us to layer the Splash Screen ON TOP of the app
                 Box(modifier = Modifier.fillMaxSize()) {
                     Surface(
-                        modifier = Modifier.fillMaxSize().graphicsLayer { alpha = contentAlpha }, 
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .graphicsLayer {
+                                alpha = contentAlpha
+                                translationY = contentOffset.toPx()
+                            },
                         color = MaterialTheme.colorScheme.background
                     ) {
                         if (showSetupScreen == null) {
@@ -446,9 +462,12 @@ class MainActivity : ComponentActivity() {
 
                 if (showSplashScreen) {
                     com.saurav.pixelmusic.presentation.screens.AnimatedSplashScreen(
-                        onSplashFinished = {
-                            showSplashScreen = false
+                        onExitStarted = {
                             contentVisible = true
+                        },
+                        onSplashFinished = {
+                            contentVisible = true
+                            showSplashScreen = false
                         }
                     )
                 }

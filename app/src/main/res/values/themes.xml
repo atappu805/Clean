@@ -26,8 +26,8 @@
 
     <!-- Splash screen theme can still extend Theme.SplashScreen -->
     <style name="Theme.App.Starting" parent="Theme.SplashScreen">
-<!--        <item name="windowSplashScreenBackground">@color/light_background</item>-->
-<!--        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>-->
-<!--        <item name="postSplashScreenTheme">@style/Theme.PixelMusic</item>-->
+        <item name="windowSplashScreenBackground">@color/light_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <item name="postSplashScreenTheme">@style/Theme.PixelMusic</item>
     </style>
 </resources>
