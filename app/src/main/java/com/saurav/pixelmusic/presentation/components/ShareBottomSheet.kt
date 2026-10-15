@@ -45,9 +45,17 @@ import com.saurav.pixelmusic.presentation.components.subcomps.SineWaveLine
 import com.saurav.pixelmusic.ui.theme.ExpTitleTypography
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
+import kotlin.math.PI
+import kotlin.math.abs
+import kotlin.math.cos
+import kotlin.math.min
+import kotlin.math.pow
+import kotlin.math.sin
+import kotlin.math.sqrt
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.layout.ContentScale
@@ -93,11 +101,152 @@ private const val INSTAGRAM_PACKAGE = "com.instagram.android"
  * Spotify-inspired dynamic background themes for the 9:16 shared card
  */
 enum class ShareThemeStyle(val displayName: String) {
-    DYNAMIC_PALETTE("Dynamic Player"),
-    SOOTHING_GRADIENT("Gradient"),
-    BLURRED_ARTWORK("Artwork Blur"),
-    MIDNIGHT_MINIMAL("Midnight"),
-    VIBRANT_GLOW("Vibrant Accent")
+    EXPRESSIVE_LIGHT("Material Light"),
+    EXPRESSIVE_DARK("Material Dark"),
+    BLURRED_ARTWORK("Blurred Light"),
+    ARTWORK_CLEAN("Full Artwork"),
+    MIDNIGHT_AURA("Midnight Aura")
+}
+
+private data class ExpressiveShapeDef(
+    val name: String,
+    val radiusAt: (Double) -> Double
+)
+
+private val EXPRESSIVE_SHAPES = listOf(
+    ExpressiveShapeDef("Circle") { 1.0 },
+    ExpressiveShapeDef("Square") { th ->
+        val c = abs(cos(th))
+        val s = abs(sin(th))
+        1.0 / (c.pow(4.0) + s.pow(4.0)).pow(0.25)
+    },
+    ExpressiveShapeDef("Slanted") { th ->
+        val shifted = th - 0.22 * sin(2.0 * th)
+        val c = abs(cos(shifted))
+        val s = abs(sin(shifted))
+        1.0 / (c.pow(3.8) + s.pow(3.8)).pow(0.26)
+    },
+    ExpressiveShapeDef("Arch") { th ->
+        if (sin(th) < 0.0) 1.0 else {
+            val c = abs(cos(th)).coerceAtLeast(0.01)
+            val s = sin(th).coerceAtLeast(0.01)
+            min(1.0 / c, 1.0 / s).coerceAtMost(1.18)
+        }
+    },
+    ExpressiveShapeDef("Fan") { th ->
+        if (cos(th) > -0.2 && sin(th) < 0.2) 1.05 else 0.72 + 0.28 * cos(th - PI / 4.0)
+    },
+    ExpressiveShapeDef("Arrow") { th ->
+        val a = th + PI / 2.0
+        0.88 + 0.32 * cos(a) - 0.16 * cos(2.0 * a)
+    },
+    ExpressiveShapeDef("Semicircle") { th ->
+        if (sin(th) <= 0.0) 1.0 else 0.65 + 0.35 * (1.0 - sin(th))
+    },
+    ExpressiveShapeDef("Oval") { th ->
+        1.0 / sqrt((cos(th) / 0.82).pow(2.0) + (sin(th) / 1.0).pow(2.0))
+    },
+    ExpressiveShapeDef("Pill") { th ->
+        val c = abs(cos(th))
+        val s = abs(sin(th))
+        1.0 / ((c / 0.72).pow(5.5) + (s / 1.0).pow(5.5)).pow(1.0 / 5.5)
+    },
+    ExpressiveShapeDef("Triangle") { th ->
+        0.84 + 0.26 * cos(3.0 * th + PI / 2.0)
+    },
+    ExpressiveShapeDef("Diamond") { th ->
+        val c = abs(cos(th))
+        val s = abs(sin(th))
+        1.0 / (c.pow(1.4) + s.pow(1.4)).pow(1.0 / 1.4)
+    },
+    ExpressiveShapeDef("Hexagon") { th ->
+        0.88 + 0.14 * cos(6.0 * th)
+    },
+    ExpressiveShapeDef("Pentagon") { th ->
+        0.86 + 0.16 * cos(5.0 * th + PI / 2.0)
+    },
+    ExpressiveShapeDef("Gem") { th ->
+        0.88 + 0.12 * cos(8.0 * th + PI / 8.0)
+    },
+    ExpressiveShapeDef("Very Sunny") { th ->
+        0.88 + 0.12 * cos(16.0 * th)
+    },
+    ExpressiveShapeDef("Sunny") { th ->
+        0.86 + 0.14 * cos(8.0 * th)
+    },
+    ExpressiveShapeDef("4-sided Cookie") { th ->
+        0.85 + 0.15 * cos(4.0 * th)
+    },
+    ExpressiveShapeDef("6-sided Cookie") { th ->
+        0.86 + 0.14 * cos(6.0 * th)
+    },
+    ExpressiveShapeDef("7-sided Cookie") { th ->
+        0.87 + 0.13 * cos(7.0 * th)
+    },
+    ExpressiveShapeDef("9-sided Cookie") { th ->
+        0.88 + 0.12 * cos(9.0 * th)
+    },
+    ExpressiveShapeDef("12-sided Cookie") { th ->
+        0.90 + 0.10 * cos(12.0 * th)
+    },
+    ExpressiveShapeDef("Ghost-ish") { th ->
+        if (sin(th) < 0.0) 1.0 else 0.84 + 0.16 * cos(8.0 * th)
+    },
+    ExpressiveShapeDef("4-leaf Clover") { th ->
+        0.80 + 0.20 * abs(cos(2.0 * th))
+    },
+    ExpressiveShapeDef("8-leaf Clover") { th ->
+        0.84 + 0.16 * abs(cos(4.0 * th))
+    },
+    ExpressiveShapeDef("Burst") { th ->
+        0.80 + 0.20 * cos(10.0 * th)
+    }
+)
+
+private class MorphingExpressiveShape(
+    private val from: (Double) -> Double,
+    private val to: (Double) -> Double,
+    private val progress: Float,
+    private val steps: Int = 120
+) : Shape {
+    override fun createOutline(
+        size: androidx.compose.ui.geometry.Size,
+        layoutDirection: androidx.compose.ui.unit.LayoutDirection,
+        density: androidx.compose.ui.unit.Density
+    ): Outline {
+        val count = steps.coerceAtLeast(60)
+        val twoPi = 2.0 * PI
+        val clampedT = progress.coerceIn(0f, 1f).toDouble()
+
+        val radii = DoubleArray(count)
+        var maxR = 0.001
+
+        for (i in 0 until count) {
+            val theta = (twoPi * i) / count
+            val rFrom = from(theta)
+            val rTo = to(theta)
+            val r = (1.0 - clampedT) * rFrom + clampedT * rTo
+            radii[i] = r
+            if (r > maxR) maxR = r
+        }
+
+        val baseRadius = min(size.width, size.height) * 0.485f
+        val centerX = size.width * 0.5f
+        val centerY = size.height * 0.5f
+
+        val path = Path().apply {
+            for (i in 0 until count) {
+                val theta = (twoPi * i) / count
+                val normalizedR = (baseRadius * (radii[i] / maxR)).toFloat()
+                val x = centerX + (normalizedR * cos(theta)).toFloat()
+                val y = centerY + (normalizedR * sin(theta)).toFloat()
+                if (i == 0) moveTo(x, y) else lineTo(x, y)
+            }
+            close()
+        }
+
+        return Outline.Generic(path)
+    }
 }
 
 /**
@@ -170,7 +319,22 @@ fun ShareBottomSheet(
         }
     }
 
-    var activeThemeStyle by remember { mutableStateOf(ShareThemeStyle.DYNAMIC_PALETTE) }
+    var activeThemeStyle by remember { mutableStateOf(ShareThemeStyle.EXPRESSIVE_LIGHT) }
+    var currentShapeIndex by remember { mutableIntStateOf(0) }
+    var previousShapeIndex by remember { mutableIntStateOf(0) }
+    val shapeMorphAnim = remember { Animatable(1f) }
+    val shapeCoroutineScope = rememberCoroutineScope()
+
+    val onAlbumArtTap: () -> Unit = {
+        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+        previousShapeIndex = currentShapeIndex
+        currentShapeIndex = (currentShapeIndex + 1) % EXPRESSIVE_SHAPES.size
+        shapeCoroutineScope.launch {
+            shapeMorphAnim.snapTo(0f)
+            shapeMorphAnim.animateTo(1f, tween(450, easing = FastOutSlowInEasing))
+        }
+    }
+
     var isCapturing by remember { mutableStateOf(false) }
     var isGeneratingVideo by remember { mutableStateOf(false) }
     var videoProgress by remember { mutableStateOf(0f) }
@@ -505,7 +669,11 @@ fun ShareBottomSheet(
                             albumColorScheme = albumColorSchemeState,
                             useSolidLyricsCard = solidMode,
                             isVideoMode = selectedFormat == com.saurav.pixelmusic.data.preferences.ShareCardFormat.VIDEO,
-                            currentPositionMs = currentPlaybackPositionMs
+                            currentPositionMs = currentPlaybackPositionMs,
+                            currentShapeIndex = currentShapeIndex,
+                            previousShapeIndex = previousShapeIndex,
+                            shapeMorphProgress = shapeMorphAnim.value,
+                            onAlbumArtTap = onAlbumArtTap
                         )
                     }
                 }
@@ -554,7 +722,7 @@ fun ShareBottomSheet(
                                     }
                             ) {
                                 when (style) {
-                                    ShareThemeStyle.DYNAMIC_PALETTE -> {
+                                    ShareThemeStyle.EXPRESSIVE_LIGHT -> {
                                         Box(
                                             modifier = Modifier
                                                 .fillMaxSize()
@@ -562,14 +730,44 @@ fun ShareBottomSheet(
                                                     brush = Brush.linearGradient(
                                                         colors = listOf(
                                                             colorScheme.primaryContainer,
-                                                            colorScheme.secondaryContainer.copy(alpha = 0.6f),
-                                                            colorScheme.surfaceContainerLow
+                                                            colorScheme.surfaceContainerHigh,
+                                                            colorScheme.surfaceContainerLowest
+                                                        )
+                                                    )
+                                                )
+                                        )
+                                    }
+                                    ShareThemeStyle.EXPRESSIVE_DARK -> {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .background(
+                                                    brush = Brush.linearGradient(
+                                                        colors = listOf(
+                                                            Color(0xFF2C2C2C),
+                                                            Color(0xFF1E1E1E),
+                                                            Color(0xFF121212)
                                                         )
                                                     )
                                                 )
                                         )
                                     }
                                     ShareThemeStyle.BLURRED_ARTWORK -> {
+                                        Box(modifier = Modifier.fillMaxSize()) {
+                                            SmartImage(
+                                                model = song.albumArtUriString,
+                                                contentDescription = null,
+                                                contentScale = ContentScale.Crop,
+                                                modifier = Modifier.fillMaxSize().blur(4.dp)
+                                            )
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxSize()
+                                                    .background(Color.White.copy(alpha = 0.55f))
+                                            )
+                                        }
+                                    }
+                                    ShareThemeStyle.ARTWORK_CLEAN -> {
                                         SmartImage(
                                             model = song.albumArtUriString,
                                             contentDescription = null,
@@ -577,22 +775,7 @@ fun ShareBottomSheet(
                                             modifier = Modifier.fillMaxSize()
                                         )
                                     }
-                                    ShareThemeStyle.SOOTHING_GRADIENT -> {
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxSize()
-                                                .background(
-                                                    brush = Brush.linearGradient(
-                                                        colors = listOf(
-                                                            primaryColor.copy(alpha = 0.85f),
-                                                            tertiaryColor.copy(alpha = 0.7f),
-                                                            colorScheme.surfaceContainerHighest
-                                                        )
-                                                    )
-                                                )
-                                        )
-                                    }
-                                    ShareThemeStyle.MIDNIGHT_MINIMAL -> {
+                                    ShareThemeStyle.MIDNIGHT_AURA -> {
                                         Box(
                                             modifier = Modifier
                                                 .fillMaxSize()
@@ -604,26 +787,15 @@ fun ShareBottomSheet(
                                                     .align(Alignment.Center)
                                                     .background(
                                                         brush = Brush.radialGradient(
-                                                            colors = listOf(primaryColor.copy(alpha = 0.6f), Color.Transparent)
+                                                            colors = listOf(
+                                                                primaryColor.copy(alpha = 0.85f),
+                                                                secondaryColor.copy(alpha = 0.45f),
+                                                                Color.Transparent
+                                                            )
                                                         )
                                                     )
                                             )
                                         }
-                                    }
-                                    ShareThemeStyle.VIBRANT_GLOW -> {
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxSize()
-                                                .background(
-                                                    brush = Brush.linearGradient(
-                                                        colors = listOf(
-                                                            primaryColor,
-                                                            secondaryColor,
-                                                            tertiaryColor
-                                                        )
-                                                    )
-                                                )
-                                        )
                                     }
                                 }
                             }
@@ -1339,7 +1511,11 @@ private fun ShareableCard(
     albumColorScheme: ColorSchemePair?,
     useSolidLyricsCard: Boolean = false,
     isVideoMode: Boolean = false,
-    currentPositionMs: Long = 0L
+    currentPositionMs: Long = 0L,
+    currentShapeIndex: Int = 0,
+    previousShapeIndex: Int = 0,
+    shapeMorphProgress: Float = 1f,
+    onAlbumArtTap: () -> Unit = {}
 ) {
     val cardRatio = 9f / 16f
     val darkScheme = albumColorScheme?.dark ?: DarkColorScheme
@@ -1347,9 +1523,6 @@ private fun ShareableCard(
 
     val primaryColor = darkScheme.primary
     val secondaryColor = darkScheme.secondary
-    val tertiaryColor = darkScheme.tertiary
-    val surfaceContainerLow = darkScheme.surfaceContainerLow
-    val surfaceContainerLowest = darkScheme.surfaceContainerLowest
 
     Box(
         modifier = modifier
@@ -1357,17 +1530,17 @@ private fun ShareableCard(
             .shadow(elevation = 16.dp, shape = cardShape, clip = true)
             .clip(cardShape)
     ) {
-        val primaryContainer = darkScheme.primaryContainer
-        val secondaryContainer = darkScheme.secondaryContainer
-
         when (themeStyle) {
-            ShareThemeStyle.DYNAMIC_PALETTE -> {
+            ShareThemeStyle.EXPRESSIVE_LIGHT -> {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .background(
                             brush = Brush.verticalGradient(
-                                colors = listOf(primaryContainer, surfaceContainerLowest)
+                                colors = listOf(
+                                    lightScheme.surfaceContainerLowest,
+                                    lightScheme.surfaceContainerLow
+                                )
                             )
                         )
                 ) {
@@ -1376,25 +1549,64 @@ private fun ShareableCard(
                             .fillMaxSize()
                             .background(
                                 brush = Brush.radialGradient(
-                                    colors = listOf(primaryColor.copy(alpha = 0.45f), Color.Transparent),
-                                    radius = 700f
+                                    colors = listOf(lightScheme.primaryContainer.copy(alpha = 0.45f), Color.Transparent),
+                                    radius = 800f
                                 )
                             )
                     )
                 }
             }
-            ShareThemeStyle.SOOTHING_GRADIENT -> {
+            ShareThemeStyle.EXPRESSIVE_DARK -> {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .background(
                             brush = Brush.verticalGradient(
-                                colors = listOf(primaryContainer, secondaryContainer, surfaceContainerLowest)
+                                colors = listOf(
+                                    darkScheme.surfaceContainerLowest,
+                                    darkScheme.surfaceContainerLow
+                                )
                             )
                         )
-                )
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                brush = Brush.radialGradient(
+                                    colors = listOf(darkScheme.primaryContainer.copy(alpha = 0.35f), Color.Transparent),
+                                    radius = 800f
+                                )
+                            )
+                    )
+                }
             }
             ShareThemeStyle.BLURRED_ARTWORK -> {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    SmartImage(
+                        model = com.saurav.pixelmusic.data.remote.youtube.YoutubeHelper.getHighResThumbnailUrl(song.albumArtUriString) ?: song.albumArtUriString,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        targetSize = Size.ORIGINAL,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .blur(24.dp)
+                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                brush = Brush.verticalGradient(
+                                    colors = listOf(
+                                        Color.White.copy(alpha = 0.65f),
+                                        Color.White.copy(alpha = 0.82f)
+                                    )
+                                )
+                            )
+                    )
+                }
+            }
+            ShareThemeStyle.ARTWORK_CLEAN -> {
                 Box(modifier = Modifier.fillMaxSize()) {
                     SmartImage(
                         model = com.saurav.pixelmusic.data.remote.youtube.YoutubeHelper.getHighResThumbnailUrl(song.albumArtUriString) ?: song.albumArtUriString,
@@ -1406,77 +1618,41 @@ private fun ShareableCard(
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(Color.Black.copy(alpha = 0.25f))
-                    )
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
                             .background(
                                 brush = Brush.verticalGradient(
-                                    colors = listOf(
-                                        primaryContainer.copy(alpha = 0.65f),
-                                        surfaceContainerLowest.copy(alpha = 0.85f)
-                                    )
+                                    0.0f to Color.Transparent,
+                                    0.45f to Color.Black.copy(alpha = 0.25f),
+                                    0.75f to Color.Black.copy(alpha = 0.65f),
+                                    1.0f to Color.Black.copy(alpha = 0.88f)
                                 )
                             )
                     )
                 }
             }
-            ShareThemeStyle.MIDNIGHT_MINIMAL -> {
+            ShareThemeStyle.MIDNIGHT_AURA -> {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(surfaceContainerLowest)
+                        .background(Color(0xFF0A0A0A))
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(420.dp)
-                            .align(Alignment.TopStart)
-                            .offset(x = (-120).dp, y = (-60).dp)
+                            .size(500.dp)
+                            .align(Alignment.Center)
                             .background(
                                 brush = Brush.radialGradient(
-                                    colors = listOf(primaryColor.copy(alpha = 0.18f), Color.Transparent)
-                                )
-                            )
-                    )
-                }
-            }
-            ShareThemeStyle.VIBRANT_GLOW -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            brush = Brush.verticalGradient(
-                                colors = listOf(primaryContainer, surfaceContainerLowest)
-                            )
-                        )
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(
-                                brush = Brush.linearGradient(
                                     colors = listOf(
-                                        primaryColor.copy(alpha = 0.38f),
-                                        secondaryColor.copy(alpha = 0.28f),
+                                        primaryColor.copy(alpha = 0.55f),
+                                        secondaryColor.copy(alpha = 0.25f),
                                         Color.Transparent
-                                    )
+                                    ),
+                                    radius = 700f
                                 )
                             )
                     )
                 }
             }
         }
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    brush = Brush.radialGradient(
-                        colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.45f)),
-                        radius = 1200f
-                    )
-                )
-        )
 
         Column(
             modifier = Modifier
@@ -1488,47 +1664,47 @@ private fun ShareableCard(
             Spacer(Modifier.weight(1f))
 
             if (!isLyricsMode) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .wrapContentHeight()
-                        .drawWithContent {
-                            val centerOffset = Offset(size.width / 2f, size.height / 2f)
-                            val bloomRadius = size.width * 0.55f
-                            drawCircle(
-                                brush = Brush.radialGradient(
-                                    colors = listOf(
-                                        lightScheme.primaryContainer.copy(alpha = 0.22f),
-                                        Color.Transparent
-                                    ),
-                                    center = centerOffset,
-                                    radius = bloomRadius
-                                ),
-                                radius = bloomRadius,
-                                center = centerOffset
-                            )
-                            drawContent()
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
+                val innerCardContainerColor = when (themeStyle) {
+                    ShareThemeStyle.EXPRESSIVE_LIGHT -> lightScheme.surfaceContainerHigh
+                    ShareThemeStyle.EXPRESSIVE_DARK -> darkScheme.surfaceContainerHigh
+                    ShareThemeStyle.BLURRED_ARTWORK -> Color.White.copy(alpha = 0.90f)
+                    ShareThemeStyle.ARTWORK_CLEAN -> Color.Black.copy(alpha = 0.44f)
+                    ShareThemeStyle.MIDNIGHT_AURA -> darkScheme.surfaceContainerHigh.copy(alpha = 0.95f)
+                }
+                val innerCardBorder = when (themeStyle) {
+                    ShareThemeStyle.EXPRESSIVE_LIGHT -> BorderStroke(1.dp, lightScheme.outlineVariant.copy(alpha = 0.45f))
+                    ShareThemeStyle.EXPRESSIVE_DARK -> BorderStroke(1.dp, darkScheme.outlineVariant.copy(alpha = 0.35f))
+                    ShareThemeStyle.BLURRED_ARTWORK -> BorderStroke(1.dp, Color.Black.copy(alpha = 0.08f))
+                    ShareThemeStyle.ARTWORK_CLEAN -> BorderStroke(1.dp, Color.White.copy(alpha = 0.25f))
+                    ShareThemeStyle.MIDNIGHT_AURA -> BorderStroke(1.dp, primaryColor.copy(alpha = 0.35f))
+                }
+
                 Card(
                     modifier = Modifier
                         .fillMaxWidth(0.88f)
                         .shadow(
-                            elevation = 20.dp,
-                            shape = RoundedCornerShape(12.dp),
-                            ambientColor = primaryColor.copy(alpha = 0.4f),
-                            spotColor = primaryColor.copy(alpha = 0.65f)
+                            elevation = 16.dp,
+                            shape = AbsoluteSmoothCornerShape(26.dp, 60),
+                            ambientColor = if (themeStyle == ShareThemeStyle.EXPRESSIVE_LIGHT) Color.Black.copy(alpha = 0.15f) else primaryColor.copy(alpha = 0.4f),
+                            spotColor = if (themeStyle == ShareThemeStyle.EXPRESSIVE_LIGHT) Color.Black.copy(alpha = 0.25f) else primaryColor.copy(alpha = 0.65f)
                         ),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = AbsoluteSmoothCornerShape(26.dp, 60),
                     colors = CardDefaults.cardColors(
-                        containerColor = lightScheme.primaryContainer.copy(alpha = 0.9f)
+                        containerColor = innerCardContainerColor
                     ),
-                    border = BorderStroke(1.2.dp, Color.White.copy(alpha = 0.45f))
+                    border = innerCardBorder
                 ) {
-                    SongMiniCard(song = song, lightScheme = lightScheme, currentPositionMs = currentPositionMs)
+                    SongMiniCard(
+                        song = song,
+                        cardTheme = themeStyle,
+                        lightScheme = lightScheme,
+                        darkScheme = darkScheme,
+                        shapeMorphProgress = shapeMorphProgress,
+                        previousShapeIndex = previousShapeIndex,
+                        currentShapeIndex = currentShapeIndex,
+                        onAlbumArtTap = onAlbumArtTap
+                    )
                 }
-                } 
             } else {
                 val containerColor = if (useSolidLyricsCard) {
                     lightScheme.primaryContainer.copy(alpha = 0.9f)
@@ -1563,9 +1739,14 @@ private fun ShareableCard(
                 }
             }
 
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(14.dp))
 
             val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
+            val isDarkTheme = themeStyle != ShareThemeStyle.EXPRESSIVE_LIGHT && themeStyle != ShareThemeStyle.BLURRED_ARTWORK
+            val pillBg = if (isDarkTheme) Color.Black.copy(alpha = 0.42f) else Color.White.copy(alpha = 0.88f)
+            val pillBorder = if (isDarkTheme) Color.White.copy(alpha = 0.16f) else Color.Black.copy(alpha = 0.10f)
+            val pillText = if (isDarkTheme) Color.White else Color(0xFF1E1E1E)
+
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(5.dp)
@@ -1573,32 +1754,32 @@ private fun ShareableCard(
                 Row(
                     modifier = Modifier
                         .clip(RoundedCornerShape(16.dp))
-                        .background(Color.Black.copy(alpha = 0.35f))
-                        .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(16.dp))
+                        .background(pillBg)
+                        .border(1.dp, pillBorder, RoundedCornerShape(16.dp))
                         .clickable {
                             try { uriHandler.openUri(GITHUB_LINK) } catch (e: Exception) { }
                         }
-                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                        .padding(horizontal = 14.dp, vertical = 7.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(5.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Rounded.Link,
+                        imageVector = Icons.Rounded.MusicNote,
                         contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(12.dp)
+                        tint = pillText,
+                        modifier = Modifier.size(13.dp)
                     )
                     Text(
-                        text = "Made with love by saurav",
+                        text = "PixelMusic",
                         fontFamily = GoogleSansRounded,
                         fontWeight = FontWeight.Bold,
                         fontSize = 11.sp,
-                        color = Color.White
+                        color = pillText
                     )
                     Icon(
                         imageVector = Icons.Rounded.ChevronRight,
                         contentDescription = null,
-                        tint = Color.White.copy(alpha = 0.7f),
+                        tint = pillText.copy(alpha = 0.7f),
                         modifier = Modifier.size(13.dp)
                     )
                 }
@@ -1607,7 +1788,7 @@ private fun ShareableCard(
                     fontFamily = GoogleSansRounded,
                     fontWeight = FontWeight.Medium,
                     fontSize = 8.sp,
-                    color = Color.White.copy(alpha = 0.38f),
+                    color = pillText.copy(alpha = 0.45f),
                     textAlign = TextAlign.Center
                 )
             }
@@ -1615,127 +1796,97 @@ private fun ShareableCard(
     }
 }
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun SongMiniCard(
     song: Song,
+    cardTheme: ShareThemeStyle,
     lightScheme: ColorScheme,
-    currentPositionMs: Long = 0L
+    darkScheme: ColorScheme,
+    shapeMorphProgress: Float,
+    previousShapeIndex: Int,
+    currentShapeIndex: Int,
+    onAlbumArtTap: () -> Unit
 ) {
-    val formattedDuration = remember(song.duration) {
-        val totalSecs = song.duration / 1000
-        val mins = totalSecs / 60
-        val secs = totalSecs % 60
-        String.format("%02d:%02d", mins, secs)
+    val titleColor = when (cardTheme) {
+        ShareThemeStyle.EXPRESSIVE_LIGHT -> lightScheme.onSurface
+        ShareThemeStyle.EXPRESSIVE_DARK -> darkScheme.onSurface
+        ShareThemeStyle.BLURRED_ARTWORK -> Color(0xFF1C1B1F)
+        ShareThemeStyle.ARTWORK_CLEAN -> Color.White
+        ShareThemeStyle.MIDNIGHT_AURA -> Color.White
     }
-    val effectiveProgressSecs = remember(song.duration, currentPositionMs) {
-        if (currentPositionMs > 0L) {
-            (currentPositionMs / 1000).coerceAtLeast(0L)
-        } else {
-            (song.duration * 0.4f / 1000).toLong()
-        }
-    }
-    val formattedProgress = remember(effectiveProgressSecs) {
-        val mins = effectiveProgressSecs / 60
-        val secs = effectiveProgressSecs % 60
-        String.format("%02d:%02d", mins, secs)
-    }
-    val progressFraction = remember(song.duration, currentPositionMs) {
-        if (song.duration > 0 && currentPositionMs > 0L) {
-            (currentPositionMs.toFloat() / song.duration).coerceIn(0f, 1f)
-        } else {
-            0.4f
-        }
+    val artistColor = when (cardTheme) {
+        ShareThemeStyle.EXPRESSIVE_LIGHT -> lightScheme.onSurfaceVariant
+        ShareThemeStyle.EXPRESSIVE_DARK -> darkScheme.onSurfaceVariant
+        ShareThemeStyle.BLURRED_ARTWORK -> Color(0xFF49454F)
+        ShareThemeStyle.ARTWORK_CLEAN -> Color.White.copy(alpha = 0.75f)
+        ShareThemeStyle.MIDNIGHT_AURA -> Color.White.copy(alpha = 0.75f)
     }
 
-    val density = LocalDensity.current
-    val stroke = remember(density) {
-        Stroke(width = with(density) { 3.dp.toPx() }, cap = StrokeCap.Round)
+    val currentShape = remember(previousShapeIndex, currentShapeIndex, shapeMorphProgress) {
+        MorphingExpressiveShape(
+            from = EXPRESSIVE_SHAPES[previousShapeIndex].radiusAt,
+            to = EXPRESSIVE_SHAPES[currentShapeIndex].radiusAt,
+            progress = shapeMorphProgress
+        )
     }
 
     Column(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.Start
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        SmartImage(
-            model = com.saurav.pixelmusic.data.remote.youtube.YoutubeHelper.getHighResThumbnailUrl(song.albumArtUriString) ?: song.albumArtUriString,
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            targetSize = Size.ORIGINAL,
+        Box(
             modifier = Modifier
-                .fillMaxWidth()
+                .fillMaxWidth(0.92f)
                 .aspectRatio(1f)
-                .clip(
-                    RoundedCornerShape(
-                        topStart = 12.dp,
-                        topEnd = 12.dp,
-                        bottomStart = 0.dp,
-                        bottomEnd = 0.dp
-                    )
-                )
-        )
+                .clip(currentShape)
+                .clickable(
+                    indication = null,
+                    interactionSource = remember { MutableInteractionSource() },
+                    onClick = onAlbumArtTap
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            SmartImage(
+                model = com.saurav.pixelmusic.data.remote.youtube.YoutubeHelper.getHighResThumbnailUrl(song.albumArtUriString) ?: song.albumArtUriString,
+                contentDescription = "Tap to change shape",
+                contentScale = ContentScale.Crop,
+                targetSize = Size.ORIGINAL,
+                modifier = Modifier.fillMaxSize()
+            )
+        }
 
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 14.dp)
-                .padding(top = 10.dp, bottom = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(2.dp)
+                .padding(horizontal = 6.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(3.dp)
         ) {
             Text(
                 text = song.title,
                 fontFamily = GoogleSansRounded,
                 fontWeight = FontWeight.Bold,
-                fontSize = 15.sp,
-                lineHeight = 18.sp,
-                color = lightScheme.onPrimaryContainer,
+                fontSize = 17.sp,
+                lineHeight = 21.sp,
+                color = titleColor,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center
             )
             Text(
                 text = song.displayArtist,
                 fontFamily = GoogleSansRounded,
                 fontWeight = FontWeight.Medium,
-                fontSize = 11.sp,
-                lineHeight = 14.sp,
-                color = lightScheme.onPrimaryContainer.copy(alpha = 0.55f),
+                fontSize = 12.sp,
+                lineHeight = 15.sp,
+                color = artistColor,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center
             )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                Text(
-                    text = formattedProgress,
-                    fontFamily = GoogleSansRounded,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 8.sp,
-                    color = lightScheme.onPrimaryContainer.copy(alpha = 0.6f)
-                )
-                LinearWavyProgressIndicator(
-                    progress = { progressFraction },
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(12.dp),
-                    color = lightScheme.primary,
-                    trackColor = lightScheme.primary.copy(alpha = 0.22f),
-                    stroke = stroke,
-                    trackStroke = stroke,
-                    wavelength = 12.dp,
-                    amplitude = { 0.5f },
-                    waveSpeed = 4.dp
-                )
-                Text(
-                    text = formattedDuration,
-                    fontFamily = GoogleSansRounded,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 8.sp,
-                    color = lightScheme.onPrimaryContainer.copy(alpha = 0.6f)
-                )
-            }
         }
     }
 }
@@ -2049,18 +2200,18 @@ private fun getGradientColors(
     secondaryColor: Color
 ): Pair<Color, Color> {
     val topColor = when (style) {
-        ShareThemeStyle.DYNAMIC_PALETTE -> colorScheme.primaryContainer
-        ShareThemeStyle.SOOTHING_GRADIENT -> primaryColor
-        ShareThemeStyle.BLURRED_ARTWORK -> primaryColor.copy(alpha = 0.5f)
-        ShareThemeStyle.MIDNIGHT_MINIMAL -> Color(0xFF0A0A0A)
-        ShareThemeStyle.VIBRANT_GLOW -> primaryColor
+        ShareThemeStyle.EXPRESSIVE_LIGHT -> colorScheme.primaryContainer
+        ShareThemeStyle.EXPRESSIVE_DARK -> Color(0xFF1E1E1E)
+        ShareThemeStyle.BLURRED_ARTWORK -> Color(0xFFF5F5F5)
+        ShareThemeStyle.ARTWORK_CLEAN -> Color(0xFF141414)
+        ShareThemeStyle.MIDNIGHT_AURA -> primaryColor
     }
     val bottomColor = when (style) {
-        ShareThemeStyle.DYNAMIC_PALETTE -> colorScheme.surfaceContainerLow
-        ShareThemeStyle.SOOTHING_GRADIENT -> colorScheme.surfaceContainerHighest
-        ShareThemeStyle.BLURRED_ARTWORK -> Color(0xFF141414)
-        ShareThemeStyle.MIDNIGHT_MINIMAL -> Color(0xFF0A0A0A)
-        ShareThemeStyle.VIBRANT_GLOW -> secondaryColor
+        ShareThemeStyle.EXPRESSIVE_LIGHT -> colorScheme.surfaceContainerLow
+        ShareThemeStyle.EXPRESSIVE_DARK -> Color(0xFF0F0F0F)
+        ShareThemeStyle.BLURRED_ARTWORK -> Color(0xFFE8E8E8)
+        ShareThemeStyle.ARTWORK_CLEAN -> Color(0xFF080808)
+        ShareThemeStyle.MIDNIGHT_AURA -> Color(0xFF0A0A0A)
     }
     return Pair(topColor, bottomColor)
 }
