@@ -420,18 +420,19 @@ fun FullPlayerContent(
     }
 
     if (showAodScreen) {
-    AodScreen(
-        songTitle = song.title,
-        artistName = song.artist,
-        albumArtUriString = song.albumArtUriString,
-        isPlayingProvider = isPlayingProvider,
-        currentPositionProvider = currentPositionProvider,
-        totalDurationProvider = totalDurationProvider,
-        onPlayPauseClick = { playerViewModel.playPause() },
-        onSkipNextClick = { playerViewModel.nextSong() },
-        onSkipPreviousClick = { playerViewModel.previousSong() },
-        onDismiss = { showAodScreen = false }
-    )
+        AodScreen(
+            songTitle = song.title,
+            artistName = song.artist,
+            albumArtUriString = song.albumArtUriString,
+            isPlayingProvider = isPlayingProvider,
+            currentPositionProvider = currentPositionProvider,
+            totalDurationProvider = totalDurationProvider,
+            onPlayPauseClick = { playerViewModel.playPause() },
+            onSkipNextClick = { playerViewModel.nextSong() },
+            onSkipPreviousClick = { playerViewModel.previousSong() },
+            onDismiss = { showAodScreen = false },
+            onSeekTo = { playerViewModel.seekTo(it) }
+        )
     }
 
     if (showFetchLyricsDialog) {

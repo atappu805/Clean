@@ -1,46 +1,276 @@
 package com.saurav.pixelmusic.presentation.components.player
 
-import androidx.compose.animation.core.*
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.SkipNext
-import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.SkipNext
+import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.Text
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Outline
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.util.lerp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.DialogWindowProvider
+import androidx.core.graphics.ColorUtils
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import com.saurav.pixelmusic.presentation.components.LocalMaterialTheme
 import com.saurav.pixelmusic.presentation.components.SmartImage
 import kotlinx.coroutines.delay
+import racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.min
+import kotlin.math.roundToInt
+import kotlin.math.sin
+import kotlin.random.Random
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+private data class ExpressivePolarShapeSpec(
+    val lobes1: Int,
+    val amp1: Float,
+    val phase1: Float = 0f,
+    val lobes2: Int = 0,
+    val amp2: Float = 0f,
+    val phase2: Float = 0f
+) {
+    fun radiusAt(theta: Double): Float {
+        var r = 1.0
+        if (lobes1 > 0 && amp1 != 0f) {
+            r += amp1 * cos(lobes1 * theta + phase1)
+        }
+        if (lobes2 > 0 && amp2 != 0f) {
+            r += amp2 * cos(lobes2 * theta + phase2)
+        }
+        return r.toFloat()
+    }
+}
+
+private val AOD_EXPRESSIVE_SHAPES = listOf(
+    // 0: 8-lobe Sunny Scallop Cookie
+    ExpressivePolarShapeSpec(lobes1 = 8, amp1 = 0.076f),
+    // 1: 6-lobe Soft Flower
+    ExpressivePolarShapeSpec(lobes1 = 6, amp1 = 0.096f),
+    // 2: 4-leaf Clover Cookie
+    ExpressivePolarShapeSpec(lobes1 = 4, amp1 = 0.115f, phase1 = (PI / 4.0).toFloat()),
+    // 3: 10-lobe Decagon Badge
+    ExpressivePolarShapeSpec(lobes1 = 10, amp1 = 0.058f),
+    // 4: 5-petal Blossom
+    ExpressivePolarShapeSpec(lobes1 = 5, amp1 = 0.095f, phase1 = (-PI / 2.0).toFloat()),
+    // 5: 7-lobe Heptagon Wave
+    ExpressivePolarShapeSpec(lobes1 = 7, amp1 = 0.082f),
+    // 6: 12-lobe Sunburst Seal
+    ExpressivePolarShapeSpec(lobes1 = 12, amp1 = 0.046f),
+    // 7: Soft Squircle Cushion
+    ExpressivePolarShapeSpec(
+        lobes1 = 4,
+        amp1 = 0.072f,
+        phase1 = (PI / 4.0).toFloat(),
+        lobes2 = 8,
+        amp2 = -0.016f
+    ),
+    // 8: 9-lobe Nonagon Rosette
+    ExpressivePolarShapeSpec(lobes1 = 9, amp1 = 0.066f),
+    // 9: 3-lobe Rounded Trefoil Pebble
+    ExpressivePolarShapeSpec(
+        lobes1 = 3,
+        amp1 = 0.098f,
+        phase1 = (PI / 6.0).toFloat(),
+        lobes2 = 6,
+        amp2 = 0.024f
+    ),
+    // 10: Harmonic 6-Star Cookie
+    ExpressivePolarShapeSpec(lobes1 = 6, amp1 = 0.078f, lobes2 = 12, amp2 = 0.025f),
+    // 11: Harmonic 8-Petal Lotus
+    ExpressivePolarShapeSpec(
+        lobes1 = 8,
+        amp1 = 0.062f,
+        lobes2 = 4,
+        amp2 = 0.048f,
+        phase2 = (PI / 4.0).toFloat()
+    )
+)
+
+private class MorphingExpressivePolarShape(
+    private val fromSpec: ExpressivePolarShapeSpec,
+    private val toSpec: ExpressivePolarShapeSpec,
+    private val morphProgress: Float,
+    private val steps: Int = 240
+) : Shape {
+    private var cachedWidth = -1f
+    private var cachedHeight = -1f
+    private var cachedOutline: Outline? = null
+
+    override fun createOutline(
+        size: Size,
+        layoutDirection: LayoutDirection,
+        density: Density
+    ): Outline {
+        val existing = cachedOutline
+        if (existing != null && size.width == cachedWidth && size.height == cachedHeight) {
+            return existing
+        }
+
+        val count = steps.coerceAtLeast(60)
+        val radii = FloatArray(count)
+        var maxRadius = 0.001f
+        val twoPi = 2.0 * PI
+        val clampedMorph = morphProgress.coerceIn(0f, 1f)
+
+        for (i in 0 until count) {
+            val theta = (twoPi * i) / count
+            val rFrom = fromSpec.radiusAt(theta)
+            val rTo = toSpec.radiusAt(theta)
+            val r = lerp(rFrom, rTo, clampedMorph)
+            radii[i] = r
+            if (r > maxRadius) maxRadius = r
+        }
+
+        val baseRadius = min(size.width, size.height) * 0.485f
+        val centerX = size.width * 0.5f
+        val centerY = size.height * 0.5f
+
+        val path = Path().apply {
+            for (i in 0 until count) {
+                val theta = (twoPi * i) / count
+                val normalizedR = baseRadius * (radii[i] / maxRadius)
+                val x = centerX + (normalizedR * cos(theta)).toFloat()
+                val y = centerY + (normalizedR * sin(theta)).toFloat()
+                if (i == 0) moveTo(x, y) else lineTo(x, y)
+            }
+            close()
+        }
+
+        val outline = Outline.Generic(path)
+        cachedWidth = size.width
+        cachedHeight = size.height
+        cachedOutline = outline
+        return outline
+    }
+}
+
+private data class AodPaletteColors(
+    val accent: Color,
+    val onAccent: Color,
+    val secondaryContainer: Color,
+    val onSecondaryContainer: Color,
+    val glow: Color
+)
+
+private fun deriveAodPaletteColors(seedColor: Color, fallbackPrimary: Color): AodPaletteColors {
+    val hsl = FloatArray(3)
+    ColorUtils.colorToHSL(seedColor.toArgb(), hsl)
+    val fallbackHsl = FloatArray(3)
+    ColorUtils.colorToHSL(fallbackPrimary.toArgb(), fallbackHsl)
+
+    val hasChroma = hsl[1] >= 0.12f
+    val hue = if (hasChroma) hsl[0] else fallbackHsl[0]
+    val baseSat = if (hasChroma) hsl[1].coerceIn(0.58f, 0.88f) else fallbackHsl[1].coerceIn(0.45f, 0.80f)
+
+    val accent = Color(ColorUtils.HSLToColor(floatArrayOf(hue, baseSat, 0.78f)))
+    val onAccent = Color(ColorUtils.HSLToColor(floatArrayOf(hue, (baseSat * 0.65f).coerceIn(0.25f, 0.65f), 0.12f)))
+    val secondaryContainer = Color(ColorUtils.HSLToColor(floatArrayOf(hue, (baseSat * 0.55f).coerceIn(0.20f, 0.50f), 0.18f)))
+    val onSecondaryContainer = Color(ColorUtils.HSLToColor(floatArrayOf(hue, (baseSat * 0.75f).coerceIn(0.30f, 0.80f), 0.88f)))
+    val glow = Color(ColorUtils.HSLToColor(floatArrayOf(hue, (baseSat * 0.90f).coerceIn(0.45f, 0.90f), 0.48f)))
+
+    return AodPaletteColors(
+        accent = accent,
+        onAccent = onAccent,
+        secondaryContainer = secondaryContainer,
+        onSecondaryContainer = onSecondaryContainer,
+        glow = glow
+    )
+}
+
+private fun pickNextRandomShapeIndex(currentIndex: Int): Int {
+    if (AOD_EXPRESSIVE_SHAPES.size <= 1) return 0
+    var candidate = Random.nextInt(AOD_EXPRESSIVE_SHAPES.size)
+    if (candidate == currentIndex) {
+        candidate = (currentIndex + Random.nextInt(1, AOD_EXPRESSIVE_SHAPES.size)) % AOD_EXPRESSIVE_SHAPES.size
+    }
+    return candidate
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun AodScreen(
     songTitle: String,
@@ -52,7 +282,8 @@ fun AodScreen(
     onPlayPauseClick: () -> Unit,
     onSkipNextClick: () -> Unit,
     onSkipPreviousClick: () -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onSeekTo: (Long) -> Unit = {}
 ) {
     Dialog(
         onDismissRequest = onDismiss,
@@ -63,6 +294,8 @@ fun AodScreen(
     ) {
         val context = LocalContext.current
         val view = LocalView.current
+        val hapticFeedback = LocalHapticFeedback.current
+        val baseTheme = LocalMaterialTheme.current
 
         val dialogWindow = (view.parent as? DialogWindowProvider)?.window
 
@@ -72,7 +305,8 @@ fun AodScreen(
             dialogWindow?.let { window ->
                 WindowCompat.setDecorFitsSystemWindows(window, false)
                 val insetsController = WindowInsetsControllerCompat(window, view)
-                insetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                insetsController.systemBarsBehavior =
+                    WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
                 insetsController.hide(WindowInsetsCompat.Type.systemBars())
             }
 
@@ -87,12 +321,88 @@ fun AodScreen(
 
         val effectiveQuality = com.saurav.pixelmusic.presentation.components.SmartImageCache.getEffectiveQuality()
         val optimizedAlbumArtUri = remember(albumArtUriString, effectiveQuality) {
-            com.saurav.pixelmusic.utils.ThumbnailUrlUtils.optimizeArtworkUrl(albumArtUriString, effectiveQuality) ?: (albumArtUriString ?: "")
+            com.saurav.pixelmusic.utils.ThumbnailUrlUtils.optimizeArtworkUrl(albumArtUriString, effectiveQuality)
+                ?: (albumArtUriString ?: "")
         }
 
-        var glowColor by remember { mutableStateOf(Color(0xFF888888)) }
-        LaunchedEffect(optimizedAlbumArtUri) {
-            glowColor = extractDominantColor(context, optimizedAlbumArtUri, Color(0xFF888888), isDarkTheme = true)
+        var rawSeedColor by remember { mutableStateOf(baseTheme.primary) }
+        LaunchedEffect(optimizedAlbumArtUri, baseTheme.primary) {
+            rawSeedColor = extractDominantColor(
+                context = context,
+                uriString = optimizedAlbumArtUri,
+                fallback = baseTheme.primary,
+                isDarkTheme = false
+            )
+        }
+
+        val targetPalette = remember(rawSeedColor, baseTheme.primary) {
+            deriveAodPaletteColors(rawSeedColor, baseTheme.primary)
+        }
+
+        val colorAnimSpec = tween<Color>(durationMillis = 600, easing = FastOutSlowInEasing)
+        val accentColor by animateColorAsState(targetPalette.accent, colorAnimSpec, label = "aodAccent")
+        val onAccentColor by animateColorAsState(targetPalette.onAccent, colorAnimSpec, label = "aodOnAccent")
+        val secondaryContainerColor by animateColorAsState(
+            targetPalette.secondaryContainer,
+            colorAnimSpec,
+            label = "aodSecondaryContainer"
+        )
+        val onSecondaryContainerColor by animateColorAsState(
+            targetPalette.onSecondaryContainer,
+            colorAnimSpec,
+            label = "aodOnSecondaryContainer"
+        )
+        val glowColor by animateColorAsState(targetPalette.glow, colorAnimSpec, label = "aodGlowColor")
+
+        // Random shape selection per song and on album art tap, with smooth morphing
+        var previousShapeIndex by remember { mutableIntStateOf(Random.nextInt(AOD_EXPRESSIVE_SHAPES.size)) }
+        var targetShapeIndex by remember { mutableIntStateOf(previousShapeIndex) }
+        val shapeMorphAnim = remember { Animatable(1f) }
+        val artTapPulse = remember { Animatable(1f) }
+
+        LaunchedEffect(songTitle, optimizedAlbumArtUri) {
+            val nextIdx = pickNextRandomShapeIndex(targetShapeIndex)
+            previousShapeIndex = targetShapeIndex
+            targetShapeIndex = nextIdx
+            shapeMorphAnim.snapTo(0f)
+            shapeMorphAnim.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(durationMillis = 650, easing = FastOutSlowInEasing)
+            )
+        }
+
+        val quantizedMorph = (shapeMorphAnim.value * 60f).roundToInt() / 60f
+        val albumShape = remember(previousShapeIndex, targetShapeIndex, quantizedMorph) {
+            MorphingExpressivePolarShape(
+                fromSpec = AOD_EXPRESSIVE_SHAPES[previousShapeIndex],
+                toSpec = AOD_EXPRESSIVE_SHAPES[targetShapeIndex],
+                morphProgress = quantizedMorph
+            )
+        }
+        val haloIndex = (targetShapeIndex + 3) % AOD_EXPRESSIVE_SHAPES.size
+        val haloShape = remember(haloIndex) {
+            MorphingExpressivePolarShape(
+                fromSpec = AOD_EXPRESSIVE_SHAPES[haloIndex],
+                toSpec = AOD_EXPRESSIVE_SHAPES[haloIndex],
+                morphProgress = 1f
+            )
+        }
+
+        val isPlaying = isPlayingProvider()
+
+        // Continuous slow rotation that pauses smoothly in place when playback pauses
+        val artRotation = remember { Animatable(0f) }
+        LaunchedEffect(isPlaying) {
+            if (isPlaying) {
+                while (true) {
+                    artRotation.animateTo(
+                        targetValue = artRotation.value + 360f,
+                        animationSpec = tween(durationMillis = 24000, easing = LinearEasing)
+                    )
+                }
+            } else {
+                artRotation.stop()
+            }
         }
 
         var positionMs by remember { mutableLongStateOf(currentPositionProvider()) }
@@ -105,15 +415,54 @@ fun AodScreen(
 
         val infiniteTransition = rememberInfiniteTransition(label = "aodGlow")
         val glowScale by infiniteTransition.animateFloat(
-            initialValue = 0.90f, targetValue = 1.2f,
-            animationSpec = infiniteRepeatable(tween(4000, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+            initialValue = 0.92f,
+            targetValue = 1.18f,
+            animationSpec = infiniteRepeatable(
+                tween(4200, easing = FastOutSlowInEasing),
+                RepeatMode.Reverse
+            ),
             label = "glowScale"
         )
         val glowAlpha by infiniteTransition.animateFloat(
-            initialValue = 0.40f, targetValue = 0.85f,
-            animationSpec = infiniteRepeatable(tween(3000, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+            initialValue = 0.42f,
+            targetValue = 0.82f,
+            animationSpec = infiniteRepeatable(
+                tween(3200, easing = FastOutSlowInEasing),
+                RepeatMode.Reverse
+            ),
             label = "glowAlpha"
         )
+
+        val artScale by animateFloatAsState(
+            targetValue = if (isPlaying) 1f else 0.93f,
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioMediumBouncy,
+                stiffness = Spring.StiffnessLow
+            ),
+            label = "artPlayingScale"
+        )
+
+        var shapeChangeTrigger by remember { mutableIntStateOf(0) }
+        LaunchedEffect(shapeChangeTrigger) {
+            if (shapeChangeTrigger > 0) {
+                val nextIdx = pickNextRandomShapeIndex(targetShapeIndex)
+                previousShapeIndex = targetShapeIndex
+                targetShapeIndex = nextIdx
+                artTapPulse.snapTo(0.94f)
+                shapeMorphAnim.snapTo(0f)
+                artTapPulse.animateTo(
+                    targetValue = 1f,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessLow
+                    )
+                )
+                shapeMorphAnim.animateTo(
+                    targetValue = 1f,
+                    animationSpec = tween(durationMillis = 520, easing = FastOutSlowInEasing)
+                )
+            }
+        }
 
         Box(
             modifier = Modifier
@@ -125,164 +474,555 @@ fun AodScreen(
                     )
                 }
         ) {
-             Column(
+            Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier
                     .fillMaxWidth()
                     .align(Alignment.Center)
+                    .padding(horizontal = 24.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     // Ambient radial glow animation
                     Box(
                         modifier = Modifier
-                            .requiredSize(340.dp)
+                            .requiredSize(360.dp)
                             .graphicsLayer {
                                 scaleX = glowScale
                                 scaleY = glowScale
-                                alpha = glowAlpha
+                                alpha = if (isPlaying) glowAlpha else glowAlpha * 0.65f
                             }
                             .background(
                                 brush = Brush.radialGradient(
                                     colors = listOf(
-                                        glowColor.copy(alpha = 0.7f),
+                                        glowColor.copy(alpha = 0.68f),
+                                        glowColor.copy(alpha = 0.22f),
                                         Color.Transparent
                                     )
                                 )
                             )
                     )
 
-                    // Sharp, in-focus, circular art — sized down from before
-                    SmartImage(
-                        model = optimizedAlbumArtUri,
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        targetSize = coil.size.Size.ORIGINAL,
+                    // Subtle counter-rotating Material You expressive halo silhouette
+                    Box(
                         modifier = Modifier
-                            .size(200.dp)
-                            .clip(CircleShape)
+                            .size(252.dp)
+                            .graphicsLayer {
+                                val combinedScale = artScale * artTapPulse.value
+                                scaleX = combinedScale
+                                scaleY = combinedScale
+                                rotationZ = -(artRotation.value * 0.5f) % 360f
+                            }
+                            .clip(haloShape)
+                            .background(accentColor.copy(alpha = 0.10f))
+                            .border(1.dp, accentColor.copy(alpha = 0.18f), haloShape)
                     )
+
+                    // Slowly rotating random expressive shaped album art (tap to morph shape)
+                    Box(
+                        modifier = Modifier
+                            .size(232.dp)
+                            .graphicsLayer {
+                                val combinedScale = artScale * artTapPulse.value
+                                scaleX = combinedScale
+                                scaleY = combinedScale
+                                rotationZ = artRotation.value % 360f
+                            }
+                            .clip(albumShape)
+                            .border(1.5.dp, accentColor.copy(alpha = 0.38f), albumShape)
+                            .pointerInput(Unit) {
+                                detectTapGestures(
+                                    onTap = {
+                                        hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        shapeChangeTrigger++
+                                    },
+                                    onDoubleTap = { onDismiss() }
+                                )
+                            }
+                    ) {
+                        SmartImage(
+                            model = optimizedAlbumArtUri,
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            targetSize = coil.size.Size.ORIGINAL,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
                 }
 
-                Spacer(Modifier.height(40.dp))
+                Spacer(Modifier.height(38.dp))
 
                 Text(
                     text = songTitle,
-                    color = Color.White.copy(alpha = 0.95f),
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 22.sp,
+                    color = Color.White.copy(alpha = 0.96f),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 23.sp,
+                    letterSpacing = (-0.3).sp,
                     maxLines = 1,
-                    modifier = Modifier.padding(horizontal = 32.dp)
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth(0.88f)
+                        .basicMarquee()
                 )
                 Spacer(Modifier.height(6.dp))
                 Text(
                     text = artistName,
-                    color = Color.White.copy(alpha = 0.5f),
+                    color = onSecondaryContainerColor.copy(alpha = 0.72f),
+                    fontWeight = FontWeight.Medium,
                     fontSize = 15.sp,
                     maxLines = 1,
-                    modifier = Modifier.padding(horizontal = 32.dp)
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth(0.82f)
+                        .basicMarquee()
                 )
 
-                Spacer(Modifier.height(40.dp))
+                Spacer(Modifier.height(34.dp))
 
-                val totalMs = totalDurationProvider()
-                val progress = if (totalMs > 0) (positionMs.toFloat() / totalMs.toFloat()).coerceIn(0f, 1f) else 0f
-
-                // Two-tone progress track with a thumb divider, matching the
-                // reference: solid white "played" portion, dim gray
-                // "remaining" portion, thin vertical white thumb at the seam.
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .fillMaxWidth(0.72f)
-                        .height(4.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .weight(progress.coerceAtLeast(0.001f))
-                            .fillMaxHeight()
-                            .clip(RoundedCornerShape(50))
-                            .background(Color.White)
-                    )
-                    Box(
-                        modifier = Modifier
-                            .width(3.dp)
-                            .height(18.dp)
-                            .clip(RoundedCornerShape(50))
-                            .background(Color.White)
-                    )
-                    Box(
-                        modifier = Modifier
-                            .weight((1f - progress).coerceAtLeast(0.001f))
-                            .fillMaxHeight()
-                            .clip(RoundedCornerShape(50))
-                            .background(Color.White.copy(alpha = 0.25f))
-                    )
+                val totalMs = totalDurationProvider().coerceAtLeast(0L)
+                val liveProgress = if (totalMs > 0L) {
+                    (positionMs.toFloat() / totalMs.toFloat()).coerceIn(0f, 1f)
+                } else {
+                    0f
                 }
 
-                Spacer(Modifier.height(10.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(0.72f),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = formatAodTime(positionMs),
-                        color = Color.White.copy(alpha = 0.6f),
-                        fontSize = 14.sp
-                    )
-                    Text(
-                        text = formatAodTime(totalMs),
-                        color = Color.White.copy(alpha = 0.6f),
-                        fontSize = 14.sp
-                    )
-                }
+                AodExpressiveProgressBar(
+                    progress = liveProgress,
+                    positionMs = positionMs,
+                    totalMs = totalMs,
+                    isPlaying = isPlaying,
+                    accentColor = accentColor,
+                    onSeekTo = onSeekTo,
+                    modifier = Modifier.fillMaxWidth(0.88f)
+                )
 
                 Spacer(Modifier.height(28.dp))
 
-                // Transport controls
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(36.dp)
-                ) {
-                    IconButton(onClick = onSkipPreviousClick, modifier = Modifier.size(44.dp)) {
-                        Icon(
-                            imageVector = Icons.Filled.SkipPrevious,
-                            contentDescription = "Previous",
-                            tint = Color.White,
-                            modifier = Modifier.size(32.dp)
-                        )
-                    }
-
-                    Box(
-                        modifier = Modifier
-                            .size(64.dp)
-                            .clip(CircleShape)
-                            .background(Color.White)
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null,
-                                onClick = onPlayPauseClick
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = if (isPlayingProvider()) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                            contentDescription = if (isPlayingProvider()) "Pause" else "Play",
-                            tint = Color.Black,
-                            modifier = Modifier.size(30.dp)
-                        )
-                    }
-
-                    IconButton(onClick = onSkipNextClick, modifier = Modifier.size(44.dp)) {
-                        Icon(
-                            imageVector = Icons.Filled.SkipNext,
-                            contentDescription = "Next",
-                            tint = Color.White,
-                            modifier = Modifier.size(32.dp)
-                        )
-                    }
-                }
+                AodReactiveTransportControls(
+                    isPlaying = isPlaying,
+                    accentColor = accentColor,
+                    onAccentColor = onAccentColor,
+                    secondaryContainerColor = secondaryContainerColor,
+                    onSecondaryContainerColor = onSecondaryContainerColor,
+                    onPrevious = onSkipPreviousClick,
+                    onPlayPause = onPlayPauseClick,
+                    onNext = onSkipNextClick,
+                    modifier = Modifier
+                        .fillMaxWidth(0.88f)
+                        .height(76.dp)
+                )
             }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun AodExpressiveProgressBar(
+    progress: Float,
+    positionMs: Long,
+    totalMs: Long,
+    isPlaying: Boolean,
+    accentColor: Color,
+    onSeekTo: (Long) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val density = LocalDensity.current
+    val hapticFeedback = LocalHapticFeedback.current
+    val latestOnSeekTo by rememberUpdatedState(onSeekTo)
+    val latestTotalMs by rememberUpdatedState(totalMs)
+
+    var isScrubbing by remember { mutableStateOf(false) }
+    var scrubProgress by remember { mutableFloatStateOf(progress) }
+    var lastHapticBucket by remember { mutableIntStateOf(-1) }
+
+    val displayedProgress = if (isScrubbing) scrubProgress else progress
+    val animatedProgress by animateFloatAsState(
+        targetValue = displayedProgress.coerceIn(0f, 1f),
+        animationSpec = if (isScrubbing) tween(40, easing = LinearEasing) else tween(180, easing = LinearEasing),
+        label = "aodProgress"
+    )
+
+    val interactionFraction by animateFloatAsState(
+        targetValue = if (isScrubbing) 1f else 0f,
+        animationSpec = tween(200, easing = FastOutSlowInEasing),
+        label = "aodScrubFraction"
+    )
+
+    val waveAmplitudeFraction by animateFloatAsState(
+        targetValue = if (isPlaying && !isScrubbing) 1f else 0f,
+        animationSpec = tween(350, easing = FastOutSlowInEasing),
+        label = "aodWaveAmp"
+    )
+
+    val strokeWidthDp = 8.dp
+    val edgeInsetDp = 8.dp
+    val strokeWidthPx = with(density) { strokeWidthDp.toPx() }
+    val edgeInsetPx = with(density) { edgeInsetDp.toPx() }
+    val restThumbWidthPx = with(density) { 6.dp.toPx() }
+    val activeThumbWidthPx = with(density) { 8.dp.toPx() }
+    val restThumbHeightPx = with(density) { 24.dp.toPx() }
+    val activeThumbHeightPx = with(density) { 30.dp.toPx() }
+
+    val trackStroke = remember(strokeWidthPx) {
+        Stroke(width = strokeWidthPx, cap = StrokeCap.Round)
+    }
+
+    Column(modifier = modifier) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(34.dp)
+                .pointerInput(Unit) {
+                    fun progressForX(x: Float): Float {
+                        val inset = edgeInsetPx.coerceIn(0f, size.width / 2f)
+                        val trackWidth = (size.width - inset * 2f).coerceAtLeast(1f)
+                        return ((x - inset) / trackWidth).coerceIn(0f, 1f)
+                    }
+
+                    awaitEachGesture {
+                        try {
+                            val down = awaitFirstDown(requireUnconsumed = false)
+                            isScrubbing = true
+                            down.consume()
+                            var currentVal = progressForX(down.position.x)
+                            scrubProgress = currentVal
+                            lastHapticBucket = (currentVal * 25f).toInt()
+                            hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+
+                            var pointerId = down.id
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                val change = event.changes.firstOrNull { it.id == pointerId }
+                                    ?: event.changes.firstOrNull { it.pressed }
+                                    ?: break
+                                pointerId = change.id
+                                if (!change.pressed) {
+                                    change.consume()
+                                    break
+                                }
+                                if (change.position != change.previousPosition) {
+                                    change.consume()
+                                    currentVal = progressForX(change.position.x)
+                                    scrubProgress = currentVal
+                                    val bucket = (currentVal * 25f).toInt()
+                                    if (bucket != lastHapticBucket) {
+                                        lastHapticBucket = bucket
+                                        hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    }
+                                }
+                            }
+                            if (latestTotalMs > 0L) {
+                                latestOnSeekTo((currentVal * latestTotalMs).toLong())
+                            }
+                        } finally {
+                            isScrubbing = false
+                        }
+                    }
+                },
+            contentAlignment = Alignment.Center
+        ) {
+            LinearWavyProgressIndicator(
+                progress = { animatedProgress },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = edgeInsetDp),
+                color = accentColor,
+                trackColor = accentColor.copy(alpha = 0.22f),
+                stroke = trackStroke,
+                trackStroke = trackStroke,
+                gapSize = 11.dp,
+                stopSize = 4.dp,
+                amplitude = { p -> if (p > 0f) waveAmplitudeFraction else 0f },
+                wavelength = 38.dp,
+                waveSpeed = 19.dp
+            )
+
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val inset = edgeInsetPx.coerceIn(0f, size.width / 2f)
+                val trackStart = inset
+                val trackEnd = size.width - inset
+                val trackWidth = (trackEnd - trackStart).coerceAtLeast(0f)
+
+                val thumbWidth = lerp(restThumbWidthPx, activeThumbWidthPx, interactionFraction)
+                val thumbHeight = lerp(restThumbHeightPx, activeThumbHeightPx, interactionFraction)
+                val rawThumbX = trackStart + trackWidth * animatedProgress
+                val minCenter = (thumbWidth / 2f).coerceAtMost(size.width / 2f)
+                val maxCenter = (size.width - thumbWidth / 2f).coerceAtLeast(minCenter)
+                val thumbX = rawThumbX.coerceIn(minCenter, maxCenter)
+                val thumbY = size.height / 2f
+
+                drawRoundRect(
+                    color = accentColor,
+                    topLeft = Offset(thumbX - thumbWidth / 2f, thumbY - thumbHeight / 2f),
+                    size = Size(thumbWidth, thumbHeight),
+                    cornerRadius = CornerRadius(thumbWidth / 2f, thumbWidth / 2f)
+                )
+            }
+        }
+
+        Spacer(Modifier.height(6.dp))
+
+        val shownPositionMs = if (isScrubbing && totalMs > 0L) {
+            (scrubProgress * totalMs).toLong()
+        } else {
+            positionMs
+        }
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = edgeInsetDp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = formatAodTime(shownPositionMs),
+                color = accentColor.copy(alpha = 0.92f),
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 13.sp
+            )
+            Text(
+                text = formatAodTime(totalMs),
+                color = Color.White.copy(alpha = 0.55f),
+                fontWeight = FontWeight.Medium,
+                fontSize = 13.sp
+            )
+        }
+    }
+}
+
+private enum class AodTransportButton { PREVIOUS, PLAY_PAUSE, NEXT }
+
+@Composable
+private fun AodReactiveTransportControls(
+    isPlaying: Boolean,
+    accentColor: Color,
+    onAccentColor: Color,
+    secondaryContainerColor: Color,
+    onSecondaryContainerColor: Color,
+    onPrevious: () -> Unit,
+    onPlayPause: () -> Unit,
+    onNext: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val hapticFeedback = LocalHapticFeedback.current
+    var recentClicked by remember { mutableStateOf<AodTransportButton?>(null) }
+
+    val prevInteraction = remember { MutableInteractionSource() }
+    val playInteraction = remember { MutableInteractionSource() }
+    val nextInteraction = remember { MutableInteractionSource() }
+
+    val isPrevPressed by prevInteraction.collectIsPressedAsState()
+    val isPlayPressed by playInteraction.collectIsPressedAsState()
+    val isNextPressed by nextInteraction.collectIsPressedAsState()
+
+    LaunchedEffect(recentClicked) {
+        if (recentClicked != null) {
+            delay(230L)
+            recentClicked = null
+        }
+    }
+
+    val activeButton: AodTransportButton? = when {
+        isPrevPressed -> AodTransportButton.PREVIOUS
+        isPlayPressed -> AodTransportButton.PLAY_PAUSE
+        isNextPressed -> AodTransportButton.NEXT
+        else -> recentClicked
+    }
+
+    val weightSpring = remember {
+        spring<Float>(
+            dampingRatio = 0.65f,
+            stiffness = Spring.StiffnessMediumLow
+        )
+    }
+    val cornerSpring = remember {
+        spring<Dp>(
+            dampingRatio = 0.72f,
+            stiffness = Spring.StiffnessMedium
+        )
+    }
+
+    val prevWeight by animateFloatAsState(
+        targetValue = when (activeButton) {
+            AodTransportButton.PREVIOUS -> 1.24f
+            null -> 1.0f
+            else -> 0.80f
+        },
+        animationSpec = weightSpring,
+        label = "aodPrevWeight"
+    )
+    val playWeight by animateFloatAsState(
+        targetValue = when (activeButton) {
+            AodTransportButton.PLAY_PAUSE -> 1.64f
+            null -> 1.36f
+            else -> 1.12f
+        },
+        animationSpec = weightSpring,
+        label = "aodPlayWeight"
+    )
+    val nextWeight by animateFloatAsState(
+        targetValue = when (activeButton) {
+            AodTransportButton.NEXT -> 1.24f
+            null -> 1.0f
+            else -> 0.80f
+        },
+        animationSpec = weightSpring,
+        label = "aodNextWeight"
+    )
+
+    val prevCorner by animateDpAsState(
+        targetValue = if (activeButton == AodTransportButton.PREVIOUS) 18.dp else 38.dp,
+        animationSpec = cornerSpring,
+        label = "aodPrevCorner"
+    )
+    val playCorner by animateDpAsState(
+        targetValue = when {
+            activeButton == AodTransportButton.PLAY_PAUSE -> 16.dp
+            isPlaying -> 22.dp
+            else -> 38.dp
+        },
+        animationSpec = cornerSpring,
+        label = "aodPlayCorner"
+    )
+    val nextCorner by animateDpAsState(
+        targetValue = if (activeButton == AodTransportButton.NEXT) 18.dp else 38.dp,
+        animationSpec = cornerSpring,
+        label = "aodNextCorner"
+    )
+
+    val prevIconOffset by animateDpAsState(
+        targetValue = if (activeButton == AodTransportButton.PREVIOUS) (-4).dp else 0.dp,
+        animationSpec = cornerSpring,
+        label = "aodPrevIconOffset"
+    )
+    val nextIconOffset by animateDpAsState(
+        targetValue = if (activeButton == AodTransportButton.NEXT) 4.dp else 0.dp,
+        animationSpec = cornerSpring,
+        label = "aodNextIconOffset"
+    )
+
+    val prevShape = AbsoluteSmoothCornerShape(
+        cornerRadiusTL = prevCorner,
+        smoothnessAsPercentTL = 60,
+        cornerRadiusTR = prevCorner,
+        smoothnessAsPercentTR = 60,
+        cornerRadiusBL = prevCorner,
+        smoothnessAsPercentBL = 60,
+        cornerRadiusBR = prevCorner,
+        smoothnessAsPercentBR = 60
+    )
+    val playShape = AbsoluteSmoothCornerShape(
+        cornerRadiusTL = playCorner,
+        smoothnessAsPercentTL = 60,
+        cornerRadiusTR = playCorner,
+        smoothnessAsPercentTR = 60,
+        cornerRadiusBL = playCorner,
+        smoothnessAsPercentBL = 60,
+        cornerRadiusBR = playCorner,
+        smoothnessAsPercentBR = 60
+    )
+    val nextShape = AbsoluteSmoothCornerShape(
+        cornerRadiusTL = nextCorner,
+        smoothnessAsPercentTL = 60,
+        cornerRadiusTR = nextCorner,
+        smoothnessAsPercentTR = 60,
+        cornerRadiusBL = nextCorner,
+        smoothnessAsPercentBL = 60,
+        cornerRadiusBR = nextCorner,
+        smoothnessAsPercentBR = 60
+    )
+
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .weight(prevWeight)
+                .fillMaxHeight()
+                .clip(prevShape)
+                .background(secondaryContainerColor)
+                .border(1.dp, accentColor.copy(alpha = 0.22f), prevShape)
+                .clickable(
+                    interactionSource = prevInteraction,
+                    indication = null,
+                    onClick = {
+                        recentClicked = AodTransportButton.PREVIOUS
+                        hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onPrevious()
+                    }
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.SkipPrevious,
+                contentDescription = "Previous",
+                tint = onSecondaryContainerColor,
+                modifier = Modifier
+                    .size(32.dp)
+                    .graphicsLayer { translationX = prevIconOffset.toPx() }
+            )
+        }
+
+        Box(
+            modifier = Modifier
+                .weight(playWeight)
+                .fillMaxHeight()
+                .clip(playShape)
+                .background(accentColor)
+                .clickable(
+                    interactionSource = playInteraction,
+                    indication = null,
+                    onClick = {
+                        recentClicked = AodTransportButton.PLAY_PAUSE
+                        hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onPlayPause()
+                    }
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Crossfade(
+                targetState = isPlaying,
+                animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing),
+                label = "aodPlayPauseIcon"
+            ) { playing ->
+                Icon(
+                    imageVector = if (playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                    contentDescription = if (playing) "Pause" else "Play",
+                    tint = onAccentColor,
+                    modifier = Modifier.size(34.dp)
+                )
+            }
+        }
+
+        Box(
+            modifier = Modifier
+                .weight(nextWeight)
+                .fillMaxHeight()
+                .clip(nextShape)
+                .background(secondaryContainerColor)
+                .border(1.dp, accentColor.copy(alpha = 0.22f), nextShape)
+                .clickable(
+                    interactionSource = nextInteraction,
+                    indication = null,
+                    onClick = {
+                        recentClicked = AodTransportButton.NEXT
+                        hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onNext()
+                    }
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.SkipNext,
+                contentDescription = "Next",
+                tint = onSecondaryContainerColor,
+                modifier = Modifier
+                    .size(32.dp)
+                    .graphicsLayer { translationX = nextIconOffset.toPx() }
+            )
         }
     }
 }
