@@ -273,8 +273,10 @@ class MainActivity : ComponentActivity() {
         requestHighRefreshRate()
         super.onCreate(savedInstanceState)
 
-        // MD3 Optimization: Release Splash Screen immediately to render UI skeleton.
-        // Data loading is handled via optimistic UI and smooth transitions.
+        // Suppress default system splash icon exit animation and release immediately to Compose splash.
+        splashScreen.setOnExitAnimationListener { splashScreenViewProvider ->
+            splashScreenViewProvider.remove()
+        }
         splashScreen.setKeepOnScreenCondition { false }
 
         // LEER SEÑAL DE BENCHMARK
@@ -374,16 +376,19 @@ class MainActivity : ComponentActivity() {
                 
                 val contentAlpha by animateFloatAsState(
                     targetValue = if (contentVisible) 1f else 0f,
-                    animationSpec = tween(durationMillis = 380, easing = LinearOutSlowInEasing),
+                    animationSpec = tween(durationMillis = 820, easing = FastOutSlowInEasing),
                     label = "AppContentAlpha"
+                )
+
+                val contentScale by animateFloatAsState(
+                    targetValue = if (contentVisible) 1f else 0.82f,
+                    animationSpec = tween(durationMillis = 850, easing = FastOutSlowInEasing),
+                    label = "AppContentScale"
                 )
                 
                 val contentOffset by animateDpAsState(
-                    targetValue = if (contentVisible) 0.dp else 24.dp,
-                    animationSpec = spring(
-                        dampingRatio = 0.72f,
-                        stiffness = Spring.StiffnessMediumLow
-                    ),
+                    targetValue = if (contentVisible) 0.dp else 18.dp,
+                    animationSpec = tween(durationMillis = 850, easing = FastOutSlowInEasing),
                     label = "AppContentOffset"
                 )
 
@@ -394,6 +399,8 @@ class MainActivity : ComponentActivity() {
                             .fillMaxSize()
                             .graphicsLayer {
                                 alpha = contentAlpha
+                                scaleX = contentScale
+                                scaleY = contentScale
                                 translationY = contentOffset.toPx()
                             },
                         color = MaterialTheme.colorScheme.background

@@ -43,18 +43,20 @@ fun AnimatedSplashScreen(
     onExitStarted: () -> Unit = {},
     onSplashFinished: () -> Unit
 ) {
-    val badgeScale = remember { Animatable(0.84f) }
-    val badgeRotation = remember { Animatable(-18f) }
-    val scallopMorph = remember { Animatable(0.095f) }
+    val badgeAlpha = remember { Animatable(0f) }
+    val badgeScale = remember { Animatable(0.42f) }
+    val badgeRotation = remember { Animatable(-60f) }
+    val scallopMorph = remember { Animatable(0.11f) }
     val haloProgress = remember { Animatable(0f) }
 
-    val outerScale = remember { Animatable(0.88f) }
-    val outerRotation = remember { Animatable(-6f) }
+    val outerAlpha = remember { Animatable(0f) }
+    val outerScale = remember { Animatable(0.48f) }
+    val outerRotation = remember { Animatable(-36f) }
 
     val notesAlpha = remember { Animatable(0f) }
-    val notesScale = remember { Animatable(0.54f) }
-    val notesOffsetY = remember { Animatable(14f) }
-    val notesRotation = remember { Animatable(-14f) }
+    val notesScale = remember { Animatable(0.36f) }
+    val notesOffsetY = remember { Animatable(22f) }
+    val notesRotation = remember { Animatable(-48f) }
 
     val exitProgress = remember { Animatable(0f) }
 
@@ -71,102 +73,102 @@ fun AnimatedSplashScreen(
     val scallopPath = remember { Path() }
 
     LaunchedEffect(Unit) {
-        // 1. Expressive scalloped badge & halo handoff from system splash
+        // 1. Slow, graceful badge entrance and continuous slow rotation across the full splash
+        launch {
+            badgeAlpha.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(durationMillis = 420, easing = LinearOutSlowInEasing)
+            )
+        }
         launch {
             badgeScale.animateTo(
                 targetValue = 1f,
                 animationSpec = spring(
-                    dampingRatio = 0.58f,
-                    stiffness = Spring.StiffnessMediumLow
+                    dampingRatio = 0.68f,
+                    stiffness = Spring.StiffnessVeryLow
                 )
             )
         }
         launch {
             badgeRotation.animateTo(
-                targetValue = 0f,
-                animationSpec = spring(
-                    dampingRatio = 0.68f,
-                    stiffness = Spring.StiffnessLow
-                )
+                targetValue = 120f,
+                animationSpec = tween(durationMillis = 2500, easing = LinearOutSlowInEasing)
             )
         }
         launch {
             scallopMorph.animateTo(
-                targetValue = 0.03f,
-                animationSpec = tween(durationMillis = 520, easing = FastOutSlowInEasing)
+                targetValue = 0.045f,
+                animationSpec = tween(durationMillis = 1650, easing = FastOutSlowInEasing)
             )
         }
         launch {
             haloProgress.animateTo(
                 targetValue = 1f,
-                animationSpec = tween(durationMillis = 540, easing = LinearOutSlowInEasing)
+                animationSpec = tween(durationMillis = 1650, easing = LinearOutSlowInEasing)
             )
         }
 
-        // 2. Outer "P" ribbon settles smoothly without a jarring shrink/pop reset
+        // 2. Outer "P" ribbon slowly rotates and scales into place
+        launch {
+            outerAlpha.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(durationMillis = 480, easing = LinearOutSlowInEasing)
+            )
+        }
         launch {
             outerScale.animateTo(
                 targetValue = 1f,
                 animationSpec = spring(
-                    dampingRatio = 0.62f,
-                    stiffness = Spring.StiffnessMediumLow
+                    dampingRatio = 0.66f,
+                    stiffness = Spring.StiffnessVeryLow
                 )
             )
         }
         launch {
             outerRotation.animateTo(
                 targetValue = 0f,
-                animationSpec = spring(
-                    dampingRatio = 0.65f,
-                    stiffness = Spring.StiffnessMediumLow
-                )
+                animationSpec = tween(durationMillis = 1400, easing = FastOutSlowInEasing)
             )
         }
 
-        // 3. Staggered inner eighth notes (♫) spring into the loop
+        // 3. Staggered inner eighth notes (♫) slowly rotate and rise into the loop
         launch {
-            delay(55L)
+            delay(180L)
             launch {
                 notesAlpha.animateTo(
                     targetValue = 1f,
-                    animationSpec = tween(durationMillis = 150, easing = LinearOutSlowInEasing)
+                    animationSpec = tween(durationMillis = 480, easing = LinearOutSlowInEasing)
                 )
             }
             launch {
                 notesScale.animateTo(
                     targetValue = 1f,
                     animationSpec = spring(
-                        dampingRatio = 0.52f,
-                        stiffness = Spring.StiffnessMediumLow
+                        dampingRatio = 0.62f,
+                        stiffness = Spring.StiffnessVeryLow
                     )
                 )
             }
             launch {
                 notesOffsetY.animateTo(
                     targetValue = 0f,
-                    animationSpec = spring(
-                        dampingRatio = 0.58f,
-                        stiffness = Spring.StiffnessMediumLow
-                    )
+                    animationSpec = tween(durationMillis = 1250, easing = FastOutSlowInEasing)
                 )
             }
             launch {
                 notesRotation.animateTo(
                     targetValue = 0f,
-                    animationSpec = spring(
-                        dampingRatio = 0.48f,
-                        stiffness = Spring.StiffnessMediumLow
-                    )
+                    animationSpec = tween(durationMillis = 1350, easing = FastOutSlowInEasing)
                 )
             }
         }
 
-        // 4. Trigger underlying UI slide-up and dissolve splash smoothly
-        delay(440L)
+        // 4. Hold for the longer rotation choreography, then trigger slow high-level zoom into Home
+        delay(1650L)
         onExitStarted()
         exitProgress.animateTo(
             targetValue = 1f,
-            animationSpec = tween(durationMillis = 220, easing = FastOutSlowInEasing)
+            animationSpec = tween(durationMillis = 850, easing = FastOutSlowInEasing)
         )
         onSplashFinished()
     }
@@ -185,40 +187,41 @@ fun AnimatedSplashScreen(
             .background(backgroundColor),
         contentAlignment = Alignment.Center
     ) {
-        // Subtle expanding harmonic halo ring
+        // Expanding harmonic halo ring with high-level zoom on exit
         Canvas(
             modifier = Modifier
-                .size(220.dp)
+                .size(240.dp)
                 .graphicsLayer {
                     val progress = haloProgress.value
-                    val exitScale = 1f + (exitProgress.value * 0.14f)
-                    scaleX = (0.68f + (progress * 0.42f)) * exitScale
-                    scaleY = (0.68f + (progress * 0.42f)) * exitScale
-                    alpha = (1f - progress) * 0.55f
+                    val exitZoom = 1f + (exitProgress.value * 3.6f)
+                    scaleX = (0.55f + (progress * 0.65f)) * exitZoom
+                    scaleY = (0.55f + (progress * 0.65f)) * exitZoom
+                    alpha = (1f - progress * 0.7f) * 0.55f
                 }
         ) {
             drawCircle(
                 color = haloColor,
                 radius = size.minDimension * 0.46f,
-                style = Stroke(width = 18.dp.toPx())
+                style = Stroke(width = 20.dp.toPx())
             )
         }
 
-        // Material 3 Expressive 12-lobe scalloped badge morphing toward a smooth circle
+        // Material 3 Expressive 12-lobe scalloped badge slowly rotating + high-level zoom on exit
         Canvas(
             modifier = Modifier
-                .size(148.dp)
+                .size(156.dp)
                 .graphicsLayer {
-                    val exitScale = 1f + (exitProgress.value * 0.12f)
-                    scaleX = badgeScale.value * exitScale
-                    scaleY = badgeScale.value * exitScale
+                    val exitZoom = 1f + (exitProgress.value * 3.4f)
+                    scaleX = badgeScale.value * exitZoom
+                    scaleY = badgeScale.value * exitZoom
                     rotationZ = badgeRotation.value
+                    alpha = badgeAlpha.value
                 }
         ) {
             val cx = size.width * 0.5f
             val cy = size.height * 0.5f
             val baseRadius = min(cx, cy) * 0.88f
-            val waveAmplitude = scallopMorph.value
+            val waveAmplitude = scallopMorph.value * (1f - exitProgress.value * 0.6f)
             val lobes = 12
             val steps = 144
 
@@ -242,15 +245,16 @@ fun AnimatedSplashScreen(
             )
         }
 
-        // Outer "P" Ribbon Layer (GPU Accelerated)
+        // Outer "P" Ribbon Layer (Slow rotation + high-level zoom on exit)
         Canvas(
             modifier = Modifier
-                .size(84.dp)
+                .size(88.dp)
                 .graphicsLayer {
-                    val exitScale = 1f + (exitProgress.value * 0.14f)
-                    scaleX = outerScale.value * exitScale
-                    scaleY = outerScale.value * exitScale
-                    rotationZ = outerRotation.value
+                    val exitZoom = 1f + (exitProgress.value * 3.8f)
+                    scaleX = outerScale.value * exitZoom
+                    scaleY = outerScale.value * exitZoom
+                    rotationZ = outerRotation.value + (exitProgress.value * 12f)
+                    alpha = outerAlpha.value
                 }
         ) {
             withTransform({
@@ -272,16 +276,16 @@ fun AnimatedSplashScreen(
             }
         }
 
-        // Inner Eighth Notes (♫) Layer (Staggered GPU Accelerated Spring)
+        // Inner Eighth Notes (♫) Layer (Staggered slow rotation + high-level zoom on exit)
         Canvas(
             modifier = Modifier
-                .size(84.dp)
+                .size(88.dp)
                 .graphicsLayer {
-                    val exitScale = 1f + (exitProgress.value * 0.14f)
-                    scaleX = notesScale.value * exitScale
-                    scaleY = notesScale.value * exitScale
+                    val exitZoom = 1f + (exitProgress.value * 3.8f)
+                    scaleX = notesScale.value * exitZoom
+                    scaleY = notesScale.value * exitZoom
                     translationY = notesOffsetY.value.dp.toPx()
-                    rotationZ = notesRotation.value
+                    rotationZ = notesRotation.value + (exitProgress.value * 12f)
                     alpha = notesAlpha.value
                 }
         ) {
