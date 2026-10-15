@@ -568,18 +568,29 @@ fun AodScreen(
 
                 Spacer(Modifier.height(28.dp))
 
-                AodReactiveTransportControls(
-                    isPlaying = isPlaying,
-                    accentColor = accentColor,
-                    onAccentColor = onAccentColor,
-                    secondaryContainerColor = secondaryContainerColor,
-                    onSecondaryContainerColor = onSecondaryContainerColor,
+                val controlAnimationSpec = remember {
+                    tween<Float>(durationMillis = 240, easing = FastOutSlowInEasing)
+                }
+
+                AnimatedPlaybackControls(
+                    modifier = Modifier.fillMaxWidth(0.88f),
+                    isPlayingProvider = isPlayingProvider,
                     onPrevious = onSkipPreviousClick,
                     onPlayPause = onPlayPauseClick,
                     onNext = onSkipNextClick,
-                    modifier = Modifier
-                        .fillMaxWidth(0.88f)
-                        .height(72.dp)
+                    height = 76.dp,
+                    pressAnimationSpec = controlAnimationSpec,
+                    releaseDelay = 220L,
+                    colorOtherButtons = secondaryContainerColor,
+                    colorPlayPause = accentColor,
+                    tintPlayPauseIcon = onAccentColor,
+                    tintOtherIcons = onSecondaryContainerColor,
+                    colorPreviousButton = secondaryContainerColor,
+                    colorNextButton = secondaryContainerColor,
+                    tintPreviousIcon = onSecondaryContainerColor,
+                    tintNextIcon = onSecondaryContainerColor,
+                    playPauseCornerPlaying = 38.dp,
+                    playPauseCornerPaused = 24.dp
                 )
             }
         }
@@ -762,159 +773,7 @@ private fun AodExpressiveProgressBar(
     }
 }
 
-@Composable
-private fun AodReactiveTransportControls(
-    isPlaying: Boolean,
-    accentColor: Color,
-    onAccentColor: Color,
-    secondaryContainerColor: Color,
-    onSecondaryContainerColor: Color,
-    onPrevious: () -> Unit,
-    onPlayPause: () -> Unit,
-    onNext: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val hapticFeedback = LocalHapticFeedback.current
 
-    val prevInteraction = remember { MutableInteractionSource() }
-    val playInteraction = remember { MutableInteractionSource() }
-    val nextInteraction = remember { MutableInteractionSource() }
-
-    val isPrevPressed by prevInteraction.collectIsPressedAsState()
-    val isPlayPressed by playInteraction.collectIsPressedAsState()
-    val isNextPressed by nextInteraction.collectIsPressedAsState()
-
-    val prevScale by animateFloatAsState(
-        targetValue = if (isPrevPressed) 0.92f else 1f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessHigh),
-        label = "aodPrevScale"
-    )
-    val playScale by animateFloatAsState(
-        targetValue = if (isPlayPressed) 0.94f else 1f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessHigh),
-        label = "aodPlayScale"
-    )
-    val nextScale by animateFloatAsState(
-        targetValue = if (isNextPressed) 0.92f else 1f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessHigh),
-        label = "aodNextScale"
-    )
-
-    val skipShape = remember {
-        AbsoluteSmoothCornerShape(
-            cornerRadiusTL = 28.dp,
-            smoothnessAsPercentTL = 60,
-            cornerRadiusTR = 28.dp,
-            smoothnessAsPercentTR = 60,
-            cornerRadiusBL = 28.dp,
-            smoothnessAsPercentBL = 60,
-            cornerRadiusBR = 28.dp,
-            smoothnessAsPercentBR = 60
-        )
-    }
-    val playShape = remember {
-        AbsoluteSmoothCornerShape(
-            cornerRadiusTL = 26.dp,
-            smoothnessAsPercentTL = 60,
-            cornerRadiusTR = 26.dp,
-            smoothnessAsPercentTR = 60,
-            cornerRadiusBL = 26.dp,
-            smoothnessAsPercentBL = 60,
-            cornerRadiusBR = 26.dp,
-            smoothnessAsPercentBR = 60
-        )
-    }
-
-    Row(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxHeight()
-                .graphicsLayer {
-                    scaleX = prevScale
-                    scaleY = prevScale
-                }
-                .clip(skipShape)
-                .background(secondaryContainerColor)
-                .clickable(
-                    interactionSource = prevInteraction,
-                    indication = null,
-                    onClick = {
-                        hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        onPrevious()
-                    }
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Rounded.SkipPrevious,
-                contentDescription = "Previous",
-                tint = onSecondaryContainerColor,
-                modifier = Modifier.size(30.dp)
-            )
-        }
-
-        Box(
-            modifier = Modifier
-                .weight(1.38f)
-                .fillMaxHeight()
-                .graphicsLayer {
-                    scaleX = playScale
-                    scaleY = playScale
-                }
-                .clip(playShape)
-                .background(accentColor)
-                .clickable(
-                    interactionSource = playInteraction,
-                    indication = null,
-                    onClick = {
-                        hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        onPlayPause()
-                    }
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-                contentDescription = if (isPlaying) "Pause" else "Play",
-                tint = onAccentColor,
-                modifier = Modifier.size(34.dp)
-            )
-        }
-
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxHeight()
-                .graphicsLayer {
-                    scaleX = nextScale
-                    scaleY = nextScale
-                }
-                .clip(skipShape)
-                .background(secondaryContainerColor)
-                .clickable(
-                    interactionSource = nextInteraction,
-                    indication = null,
-                    onClick = {
-                        hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        onNext()
-                    }
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Rounded.SkipNext,
-                contentDescription = "Next",
-                tint = onSecondaryContainerColor,
-                modifier = Modifier.size(30.dp)
-            )
-        }
-    }
-}
 
 private fun formatAodTime(ms: Long): String {
     val totalSeconds = (ms / 1000).coerceAtLeast(0)

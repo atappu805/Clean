@@ -142,6 +142,7 @@ fun AnimatedPlaybackControls(
                     .background(colorPreviousButton)
                     .clickable {
                         lastClicked = PlaybackButtonType.PREVIOUS
+                        hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         onPrevious()
                     },
                 contentAlignment = Alignment.Center
@@ -213,6 +214,7 @@ fun AnimatedPlaybackControls(
                     .background(colorNextButton)
                     .clickable {
                         lastClicked = PlaybackButtonType.NEXT
+                        hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         onNext()
                     },
                 contentAlignment = Alignment.Center
