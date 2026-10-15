@@ -7,7 +7,7 @@ object Constants {
     const val BETA_SUFFIX = "-beta"
 
     object Url {
-        const val DISCORD_INVITE = "https://discord.gg/mSPeHS5cF6"
+        const val DISCORD_INVITE = "https://pixelmusic.pages.dev"
 
         object Github {
             object Beta {

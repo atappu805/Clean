@@ -50,7 +50,7 @@ object LastFM {
         format: String = "json"
     ) {
         contentType(ContentType.Application.FormUrlEncoded)
-        userAgent("PixelMusic (https://github.com/ianshulyadav/PixelMusic)")
+        userAgent("PixelMusic (https://github.com/Saurav-02/PixelMusic)")
         val paramsForSig = mutableMapOf(
             "method" to method,
             "api_key" to apiKey
@@ -159,7 +159,7 @@ object LastFM {
 
     suspend fun get(method: String, params: Map<String, String>) = runCatching {
         client.get {
-            userAgent("PixelMusic (https://github.com/ianshulyadav/PixelMusic)")
+            userAgent("PixelMusic (https://github.com/Saurav-02/PixelMusic)")
             url {
                 parameters.append("method", method)
                 parameters.append("api_key", API_KEY)
