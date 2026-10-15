@@ -1659,11 +1659,11 @@ private fun ShareableCard(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 20.dp, vertical = 24.dp),
+                .padding(horizontal = 20.dp, vertical = 20.dp),
             verticalArrangement = Arrangement.Top,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(Modifier.weight(1f))
+            Spacer(Modifier.weight(0.35f))
 
             if (!isLyricsMode) {
                 val innerCardContainerColor = when (themeStyle) {
@@ -1794,6 +1794,8 @@ private fun ShareableCard(
                     textAlign = TextAlign.Center
                 )
             }
+
+            Spacer(Modifier.weight(0.75f))
         }
     }
 }
