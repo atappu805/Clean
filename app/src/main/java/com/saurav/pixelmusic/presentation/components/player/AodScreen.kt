@@ -93,6 +93,7 @@ import androidx.compose.ui.window.DialogWindowProvider
 import androidx.core.graphics.ColorUtils
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
+import android.view.WindowManager
 import androidx.core.view.WindowInsetsControllerCompat
 import com.saurav.pixelmusic.presentation.components.LocalMaterialTheme
 import com.saurav.pixelmusic.presentation.components.SmartImage
@@ -174,7 +175,7 @@ private class MorphingExpressivePolarShape(
     private val fromSpec: ExpressivePolarShapeSpec,
     private val toSpec: ExpressivePolarShapeSpec,
     private val morphProgress: Float,
-    private val steps: Int = 240
+    private val steps: Int = 120
 ) : Shape {
     private var cachedWidth = -1f
     private var cachedHeight = -1f
@@ -244,13 +245,13 @@ private fun deriveAodPaletteColors(seedColor: Color, fallbackPrimary: Color): Ao
 
     val hasChroma = hsl[1] >= 0.12f
     val hue = if (hasChroma) hsl[0] else fallbackHsl[0]
-    val baseSat = if (hasChroma) hsl[1].coerceIn(0.58f, 0.88f) else fallbackHsl[1].coerceIn(0.45f, 0.80f)
+    val baseSat = if (hasChroma) hsl[1].coerceIn(0.45f, 0.78f) else fallbackHsl[1].coerceIn(0.35f, 0.70f)
 
-    val accent = Color(ColorUtils.HSLToColor(floatArrayOf(hue, baseSat, 0.78f)))
-    val onAccent = Color(ColorUtils.HSLToColor(floatArrayOf(hue, (baseSat * 0.65f).coerceIn(0.25f, 0.65f), 0.12f)))
-    val secondaryContainer = Color(ColorUtils.HSLToColor(floatArrayOf(hue, (baseSat * 0.55f).coerceIn(0.20f, 0.50f), 0.18f)))
-    val onSecondaryContainer = Color(ColorUtils.HSLToColor(floatArrayOf(hue, (baseSat * 0.75f).coerceIn(0.30f, 0.80f), 0.88f)))
-    val glow = Color(ColorUtils.HSLToColor(floatArrayOf(hue, (baseSat * 0.90f).coerceIn(0.45f, 0.90f), 0.48f)))
+    val accent = Color(ColorUtils.HSLToColor(floatArrayOf(hue, baseSat, 0.66f)))
+    val onAccent = Color(ColorUtils.HSLToColor(floatArrayOf(hue, (baseSat * 0.65f).coerceIn(0.20f, 0.55f), 0.10f)))
+    val secondaryContainer = Color(ColorUtils.HSLToColor(floatArrayOf(hue, (baseSat * 0.45f).coerceIn(0.15f, 0.40f), 0.16f)))
+    val onSecondaryContainer = Color(ColorUtils.HSLToColor(floatArrayOf(hue, (baseSat * 0.65f).coerceIn(0.25f, 0.70f), 0.82f)))
+    val glow = Color(ColorUtils.HSLToColor(floatArrayOf(hue, (baseSat * 0.75f).coerceIn(0.35f, 0.75f), 0.42f)))
 
     return AodPaletteColors(
         accent = accent,
@@ -301,6 +302,8 @@ fun AodScreen(
 
         DisposableEffect(dialogWindow) {
             view.keepScreenOn = true
+            val originalBrightness = dialogWindow?.attributes?.screenBrightness
+                ?: WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
 
             dialogWindow?.let { window ->
                 WindowCompat.setDecorFitsSystemWindows(window, false)
@@ -308,6 +311,10 @@ fun AodScreen(
                 insetsController.systemBarsBehavior =
                     WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
                 insetsController.hide(WindowInsetsCompat.Type.systemBars())
+
+                val lp = window.attributes
+                lp.screenBrightness = 0.05f
+                window.attributes = lp
             }
 
             onDispose {
@@ -315,6 +322,10 @@ fun AodScreen(
                 dialogWindow?.let { window ->
                     val insetsController = WindowInsetsControllerCompat(window, view)
                     insetsController.show(WindowInsetsCompat.Type.systemBars())
+
+                    val lp = window.attributes
+                    lp.screenBrightness = originalBrightness
+                    window.attributes = lp
                 }
             }
         }
@@ -379,31 +390,8 @@ fun AodScreen(
                 morphProgress = quantizedMorph
             )
         }
-        val haloIndex = (targetShapeIndex + 3) % AOD_EXPRESSIVE_SHAPES.size
-        val haloShape = remember(haloIndex) {
-            MorphingExpressivePolarShape(
-                fromSpec = AOD_EXPRESSIVE_SHAPES[haloIndex],
-                toSpec = AOD_EXPRESSIVE_SHAPES[haloIndex],
-                morphProgress = 1f
-            )
-        }
 
         val isPlaying = isPlayingProvider()
-
-        // Continuous slow rotation that pauses smoothly in place when playback pauses
-        val artRotation = remember { Animatable(0f) }
-        LaunchedEffect(isPlaying) {
-            if (isPlaying) {
-                while (true) {
-                    artRotation.animateTo(
-                        targetValue = artRotation.value + 360f,
-                        animationSpec = tween(durationMillis = 24000, easing = LinearEasing)
-                    )
-                }
-            } else {
-                artRotation.stop()
-            }
-        }
 
         var positionMs by remember { mutableLongStateOf(currentPositionProvider()) }
         LaunchedEffect(Unit) {
@@ -415,19 +403,19 @@ fun AodScreen(
 
         val infiniteTransition = rememberInfiniteTransition(label = "aodGlow")
         val glowScale by infiniteTransition.animateFloat(
-            initialValue = 0.92f,
-            targetValue = 1.18f,
+            initialValue = 0.94f,
+            targetValue = 1.12f,
             animationSpec = infiniteRepeatable(
-                tween(4200, easing = FastOutSlowInEasing),
+                tween(4800, easing = FastOutSlowInEasing),
                 RepeatMode.Reverse
             ),
             label = "glowScale"
         )
         val glowAlpha by infiniteTransition.animateFloat(
-            initialValue = 0.42f,
-            targetValue = 0.82f,
+            initialValue = 0.18f,
+            targetValue = 0.32f,
             animationSpec = infiniteRepeatable(
-                tween(3200, easing = FastOutSlowInEasing),
+                tween(3600, easing = FastOutSlowInEasing),
                 RepeatMode.Reverse
             ),
             label = "glowAlpha"
@@ -482,42 +470,27 @@ fun AodScreen(
                     .padding(horizontal = 24.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    // Ambient radial glow animation
+                    // Subtle ambient radial glow
                     Box(
                         modifier = Modifier
-                            .requiredSize(360.dp)
+                            .requiredSize(320.dp)
                             .graphicsLayer {
                                 scaleX = glowScale
                                 scaleY = glowScale
-                                alpha = if (isPlaying) glowAlpha else glowAlpha * 0.65f
+                                alpha = if (isPlaying) glowAlpha else glowAlpha * 0.6f
                             }
                             .background(
                                 brush = Brush.radialGradient(
                                     colors = listOf(
-                                        glowColor.copy(alpha = 0.68f),
-                                        glowColor.copy(alpha = 0.22f),
+                                        glowColor.copy(alpha = 0.42f),
+                                        glowColor.copy(alpha = 0.12f),
                                         Color.Transparent
                                     )
                                 )
                             )
                     )
 
-                    // Subtle counter-rotating Material You expressive halo silhouette
-                    Box(
-                        modifier = Modifier
-                            .size(252.dp)
-                            .graphicsLayer {
-                                val combinedScale = artScale * artTapPulse.value
-                                scaleX = combinedScale
-                                scaleY = combinedScale
-                                rotationZ = -(artRotation.value * 0.5f) % 360f
-                            }
-                            .clip(haloShape)
-                            .background(accentColor.copy(alpha = 0.10f))
-                            .border(1.dp, accentColor.copy(alpha = 0.18f), haloShape)
-                    )
-
-                    // Slowly rotating random expressive shaped album art (tap to morph shape)
+                    // Expressive shaped album art (upright, tap to morph shape)
                     Box(
                         modifier = Modifier
                             .size(232.dp)
@@ -525,10 +498,8 @@ fun AodScreen(
                                 val combinedScale = artScale * artTapPulse.value
                                 scaleX = combinedScale
                                 scaleY = combinedScale
-                                rotationZ = artRotation.value % 360f
                             }
                             .clip(albumShape)
-                            .border(1.5.dp, accentColor.copy(alpha = 0.38f), albumShape)
                             .pointerInput(Unit) {
                                 detectTapGestures(
                                     onTap = {
@@ -553,7 +524,7 @@ fun AodScreen(
 
                 Text(
                     text = songTitle,
-                    color = Color.White.copy(alpha = 0.96f),
+                    color = Color.White.copy(alpha = 0.88f),
                     fontWeight = FontWeight.Bold,
                     fontSize = 23.sp,
                     letterSpacing = (-0.3).sp,
@@ -566,7 +537,7 @@ fun AodScreen(
                 Spacer(Modifier.height(6.dp))
                 Text(
                     text = artistName,
-                    color = onSecondaryContainerColor.copy(alpha = 0.72f),
+                    color = onSecondaryContainerColor.copy(alpha = 0.68f),
                     fontWeight = FontWeight.Medium,
                     fontSize = 15.sp,
                     maxLines = 1,
@@ -608,7 +579,7 @@ fun AodScreen(
                     onNext = onSkipNextClick,
                     modifier = Modifier
                         .fillMaxWidth(0.88f)
-                        .height(76.dp)
+                        .height(72.dp)
                 )
             }
         }
@@ -727,7 +698,7 @@ private fun AodExpressiveProgressBar(
                     .fillMaxWidth()
                     .padding(horizontal = edgeInsetDp),
                 color = accentColor,
-                trackColor = accentColor.copy(alpha = 0.22f),
+                trackColor = accentColor.copy(alpha = 0.18f),
                 stroke = trackStroke,
                 trackStroke = trackStroke,
                 gapSize = 11.dp,
@@ -777,21 +748,19 @@ private fun AodExpressiveProgressBar(
         ) {
             Text(
                 text = formatAodTime(shownPositionMs),
-                color = accentColor.copy(alpha = 0.92f),
+                color = accentColor.copy(alpha = 0.85f),
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 13.sp
             )
             Text(
                 text = formatAodTime(totalMs),
-                color = Color.White.copy(alpha = 0.55f),
+                color = Color.White.copy(alpha = 0.45f),
                 fontWeight = FontWeight.Medium,
                 fontSize = 13.sp
             )
         }
     }
 }
-
-private enum class AodTransportButton { PREVIOUS, PLAY_PAUSE, NEXT }
 
 @Composable
 private fun AodReactiveTransportControls(
@@ -806,7 +775,6 @@ private fun AodReactiveTransportControls(
     modifier: Modifier = Modifier
 ) {
     val hapticFeedback = LocalHapticFeedback.current
-    var recentClicked by remember { mutableStateOf<AodTransportButton?>(null) }
 
     val prevInteraction = remember { MutableInteractionSource() }
     val playInteraction = remember { MutableInteractionSource() }
@@ -816,140 +784,66 @@ private fun AodReactiveTransportControls(
     val isPlayPressed by playInteraction.collectIsPressedAsState()
     val isNextPressed by nextInteraction.collectIsPressedAsState()
 
-    LaunchedEffect(recentClicked) {
-        if (recentClicked != null) {
-            delay(230L)
-            recentClicked = null
-        }
-    }
+    val prevScale by animateFloatAsState(
+        targetValue = if (isPrevPressed) 0.92f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessHigh),
+        label = "aodPrevScale"
+    )
+    val playScale by animateFloatAsState(
+        targetValue = if (isPlayPressed) 0.94f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessHigh),
+        label = "aodPlayScale"
+    )
+    val nextScale by animateFloatAsState(
+        targetValue = if (isNextPressed) 0.92f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessHigh),
+        label = "aodNextScale"
+    )
 
-    val activeButton: AodTransportButton? = when {
-        isPrevPressed -> AodTransportButton.PREVIOUS
-        isPlayPressed -> AodTransportButton.PLAY_PAUSE
-        isNextPressed -> AodTransportButton.NEXT
-        else -> recentClicked
-    }
-
-    val weightSpring = remember {
-        spring<Float>(
-            dampingRatio = 0.65f,
-            stiffness = Spring.StiffnessMediumLow
+    val skipShape = remember {
+        AbsoluteSmoothCornerShape(
+            cornerRadiusTL = 28.dp,
+            smoothnessAsPercentTL = 60,
+            cornerRadiusTR = 28.dp,
+            smoothnessAsPercentTR = 60,
+            cornerRadiusBL = 28.dp,
+            smoothnessAsPercentBL = 60,
+            cornerRadiusBR = 28.dp,
+            smoothnessAsPercentBR = 60
         )
     }
-    val cornerSpring = remember {
-        spring<Dp>(
-            dampingRatio = 0.72f,
-            stiffness = Spring.StiffnessMedium
+    val playShape = remember {
+        AbsoluteSmoothCornerShape(
+            cornerRadiusTL = 26.dp,
+            smoothnessAsPercentTL = 60,
+            cornerRadiusTR = 26.dp,
+            smoothnessAsPercentTR = 60,
+            cornerRadiusBL = 26.dp,
+            smoothnessAsPercentBL = 60,
+            cornerRadiusBR = 26.dp,
+            smoothnessAsPercentBR = 60
         )
     }
-
-    val prevWeight by animateFloatAsState(
-        targetValue = when (activeButton) {
-            AodTransportButton.PREVIOUS -> 1.24f
-            null -> 1.0f
-            else -> 0.80f
-        },
-        animationSpec = weightSpring,
-        label = "aodPrevWeight"
-    )
-    val playWeight by animateFloatAsState(
-        targetValue = when (activeButton) {
-            AodTransportButton.PLAY_PAUSE -> 1.64f
-            null -> 1.36f
-            else -> 1.12f
-        },
-        animationSpec = weightSpring,
-        label = "aodPlayWeight"
-    )
-    val nextWeight by animateFloatAsState(
-        targetValue = when (activeButton) {
-            AodTransportButton.NEXT -> 1.24f
-            null -> 1.0f
-            else -> 0.80f
-        },
-        animationSpec = weightSpring,
-        label = "aodNextWeight"
-    )
-
-    val prevCorner by animateDpAsState(
-        targetValue = if (activeButton == AodTransportButton.PREVIOUS) 18.dp else 38.dp,
-        animationSpec = cornerSpring,
-        label = "aodPrevCorner"
-    )
-    val playCorner by animateDpAsState(
-        targetValue = when {
-            activeButton == AodTransportButton.PLAY_PAUSE -> 16.dp
-            isPlaying -> 22.dp
-            else -> 38.dp
-        },
-        animationSpec = cornerSpring,
-        label = "aodPlayCorner"
-    )
-    val nextCorner by animateDpAsState(
-        targetValue = if (activeButton == AodTransportButton.NEXT) 18.dp else 38.dp,
-        animationSpec = cornerSpring,
-        label = "aodNextCorner"
-    )
-
-    val prevIconOffset by animateDpAsState(
-        targetValue = if (activeButton == AodTransportButton.PREVIOUS) (-4).dp else 0.dp,
-        animationSpec = cornerSpring,
-        label = "aodPrevIconOffset"
-    )
-    val nextIconOffset by animateDpAsState(
-        targetValue = if (activeButton == AodTransportButton.NEXT) 4.dp else 0.dp,
-        animationSpec = cornerSpring,
-        label = "aodNextIconOffset"
-    )
-
-    val prevShape = AbsoluteSmoothCornerShape(
-        cornerRadiusTL = prevCorner,
-        smoothnessAsPercentTL = 60,
-        cornerRadiusTR = prevCorner,
-        smoothnessAsPercentTR = 60,
-        cornerRadiusBL = prevCorner,
-        smoothnessAsPercentBL = 60,
-        cornerRadiusBR = prevCorner,
-        smoothnessAsPercentBR = 60
-    )
-    val playShape = AbsoluteSmoothCornerShape(
-        cornerRadiusTL = playCorner,
-        smoothnessAsPercentTL = 60,
-        cornerRadiusTR = playCorner,
-        smoothnessAsPercentTR = 60,
-        cornerRadiusBL = playCorner,
-        smoothnessAsPercentBL = 60,
-        cornerRadiusBR = playCorner,
-        smoothnessAsPercentBR = 60
-    )
-    val nextShape = AbsoluteSmoothCornerShape(
-        cornerRadiusTL = nextCorner,
-        smoothnessAsPercentTL = 60,
-        cornerRadiusTR = nextCorner,
-        smoothnessAsPercentTR = 60,
-        cornerRadiusBL = nextCorner,
-        smoothnessAsPercentBL = 60,
-        cornerRadiusBR = nextCorner,
-        smoothnessAsPercentBR = 60
-    )
 
     Row(
         modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
             modifier = Modifier
-                .weight(prevWeight)
+                .weight(1f)
                 .fillMaxHeight()
-                .clip(prevShape)
+                .graphicsLayer {
+                    scaleX = prevScale
+                    scaleY = prevScale
+                }
+                .clip(skipShape)
                 .background(secondaryContainerColor)
-                .border(1.dp, accentColor.copy(alpha = 0.22f), prevShape)
                 .clickable(
                     interactionSource = prevInteraction,
                     indication = null,
                     onClick = {
-                        recentClicked = AodTransportButton.PREVIOUS
                         hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         onPrevious()
                     }
@@ -960,55 +854,52 @@ private fun AodReactiveTransportControls(
                 imageVector = Icons.Rounded.SkipPrevious,
                 contentDescription = "Previous",
                 tint = onSecondaryContainerColor,
-                modifier = Modifier
-                    .size(32.dp)
-                    .graphicsLayer { translationX = prevIconOffset.toPx() }
+                modifier = Modifier.size(30.dp)
             )
         }
 
         Box(
             modifier = Modifier
-                .weight(playWeight)
+                .weight(1.38f)
                 .fillMaxHeight()
+                .graphicsLayer {
+                    scaleX = playScale
+                    scaleY = playScale
+                }
                 .clip(playShape)
                 .background(accentColor)
                 .clickable(
                     interactionSource = playInteraction,
                     indication = null,
                     onClick = {
-                        recentClicked = AodTransportButton.PLAY_PAUSE
                         hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         onPlayPause()
                     }
                 ),
             contentAlignment = Alignment.Center
         ) {
-            Crossfade(
-                targetState = isPlaying,
-                animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing),
-                label = "aodPlayPauseIcon"
-            ) { playing ->
-                Icon(
-                    imageVector = if (playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-                    contentDescription = if (playing) "Pause" else "Play",
-                    tint = onAccentColor,
-                    modifier = Modifier.size(34.dp)
-                )
-            }
+            Icon(
+                imageVector = if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                contentDescription = if (isPlaying) "Pause" else "Play",
+                tint = onAccentColor,
+                modifier = Modifier.size(34.dp)
+            )
         }
 
         Box(
             modifier = Modifier
-                .weight(nextWeight)
+                .weight(1f)
                 .fillMaxHeight()
-                .clip(nextShape)
+                .graphicsLayer {
+                    scaleX = nextScale
+                    scaleY = nextScale
+                }
+                .clip(skipShape)
                 .background(secondaryContainerColor)
-                .border(1.dp, accentColor.copy(alpha = 0.22f), nextShape)
                 .clickable(
                     interactionSource = nextInteraction,
                     indication = null,
                     onClick = {
-                        recentClicked = AodTransportButton.NEXT
                         hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         onNext()
                     }
@@ -1019,9 +910,7 @@ private fun AodReactiveTransportControls(
                 imageVector = Icons.Rounded.SkipNext,
                 contentDescription = "Next",
                 tint = onSecondaryContainerColor,
-                modifier = Modifier
-                    .size(32.dp)
-                    .graphicsLayer { translationX = nextIconOffset.toPx() }
+                modifier = Modifier.size(30.dp)
             )
         }
     }
