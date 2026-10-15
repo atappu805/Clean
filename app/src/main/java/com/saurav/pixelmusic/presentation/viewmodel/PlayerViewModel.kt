@@ -6162,6 +6162,12 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
+    val isSearchLoading: StateFlow<Boolean>
+        get() = searchStateHolder.isSearching
+
+    val searchSuggestions: StateFlow<ImmutableList<String>>
+        get() = searchStateHolder.searchSuggestions
+
     fun updateSearchFilter(filterType: SearchFilterType) {
         searchStateHolder.updateSearchFilter(filterType)
     }

@@ -7,46 +7,40 @@ import com.saurav.pixelmusic.data.model.Playlist
 import com.saurav.pixelmusic.data.model.SearchFilterType
 import com.saurav.pixelmusic.data.model.SearchHistoryItem
 import com.saurav.pixelmusic.data.model.SearchResultItem
+import com.saurav.pixelmusic.data.preferences.SearchSource
+import com.saurav.pixelmusic.data.preferences.UserPreferencesRepository
 import com.saurav.pixelmusic.data.remote.youtube.toNativeSong
+import com.saurav.pixelmusic.data.repository.MusicRepository
+import java.util.concurrent.atomic.AtomicLong
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.async
-import timber.log.Timber
 import saurav.shru.pixelmusic.innertube.YouTube
 import saurav.shru.pixelmusic.innertube.models.AlbumItem
 import saurav.shru.pixelmusic.innertube.models.ArtistItem
 import saurav.shru.pixelmusic.innertube.models.PlaylistItem
 import saurav.shru.pixelmusic.innertube.models.SongItem
-import saurav.shru.pixelmusic.innertube.models.filterExplicit
 import saurav.shru.pixelmusic.innertube.models.filterVideo
-import java.util.concurrent.atomic.AtomicLong
-import javax.inject.Inject
-import javax.inject.Singleton
-import kotlinx.coroutines.FlowPreview
+import timber.log.Timber
 
-import com.saurav.pixelmusic.data.preferences.UserPreferencesRepository
-import com.saurav.pixelmusic.data.preferences.SearchSource
-import com.saurav.pixelmusic.data.repository.MusicRepository
-import kotlinx.coroutines.flow.first
-
-/**
- * Pure YouTube Music search — all local library search removed.
- * Queries go directly to YouTube Music API; results are cached in LRU.
- */
 @Singleton
 class SearchStateHolder @Inject constructor(
     @param:dagger.hilt.android.qualifiers.ApplicationContext private val appContext: android.content.Context,
@@ -54,14 +48,18 @@ class SearchStateHolder @Inject constructor(
     private val musicRepository: MusicRepository
 ) {
     companion object {
-        const val SEARCH_DEBOUNCE_MS = 250L
-        const val SEARCH_CACHE_SIZE = 100
+        const val SEARCH_DEBOUNCE_MS = 240L
+        const val SEARCH_CACHE_SIZE = 120
         val albumIdMap = java.util.concurrent.ConcurrentHashMap<Long, String>()
     }
 
     private val searchResultCache = LruCache<String, ImmutableList<SearchResultItem>>(SEARCH_CACHE_SIZE)
 
-    private data class SearchRequest(val query: String, val requestId: Long)
+    private data class SearchRequest(
+        val query: String,
+        val filter: SearchFilterType,
+        val requestId: Long
+    )
 
     private val _searchResults = MutableStateFlow<ImmutableList<SearchResultItem>>(persistentListOf())
     val searchResults = _searchResults.asStateFlow()
@@ -71,6 +69,12 @@ class SearchStateHolder @Inject constructor(
 
     private val _searchHistory = MutableStateFlow<ImmutableList<SearchHistoryItem>>(persistentListOf())
     val searchHistory = _searchHistory.asStateFlow()
+
+    private val _isSearching = MutableStateFlow(false)
+    val isSearching = _isSearching.asStateFlow()
+
+    private val _searchSuggestions = MutableStateFlow<ImmutableList<String>>(persistentListOf())
+    val searchSuggestions = _searchSuggestions.asStateFlow()
 
     private val searchRequests = MutableSharedFlow<SearchRequest>(
         extraBufferCapacity = 16,
@@ -86,22 +90,11 @@ class SearchStateHolder @Inject constructor(
     private var activeFilterType: SearchFilterType = SearchFilterType.ALL
     private var isLoadingMore = false
 
-    private fun getLongestPrefixMatch(query: String): ImmutableList<SearchResultItem>? {
-        if (query.isBlank()) return null
-        var longestPrefix: String? = null
-        var longestCached: ImmutableList<SearchResultItem>? = null
-        
-        val snapshot = searchResultCache.snapshot()
-        for (key in snapshot.keys) {
-            if (query.startsWith(key, ignoreCase = true)) {
-                if (longestPrefix == null || key.length > longestPrefix.length) {
-                    longestPrefix = key
-                    longestCached = snapshot[key]
-                }
-            }
-        }
-        return longestCached
-    }
+    private fun buildCacheKey(
+        source: SearchSource,
+        filter: SearchFilterType,
+        query: String
+    ): String = "${source.name}:${filter.name}:${query.trim().lowercase()}"
 
     fun initialize(scope: CoroutineScope) {
         this.scope = scope
@@ -115,46 +108,77 @@ class SearchStateHolder @Inject constructor(
             searchRequests
                 .debounce(SEARCH_DEBOUNCE_MS)
                 .collectLatest { request ->
-                    val query = request.query
+                    val query = request.query.trim()
+                    val filter = request.filter
                     if (query.isBlank()) {
+                        _isSearching.value = false
                         _searchResults.value = persistentListOf()
+                        _searchSuggestions.value = persistentListOf()
                         return@collectLatest
                     }
 
                     val source = userPreferencesRepository.searchSourceFlow.first()
+                    val cacheKey = buildCacheKey(source, filter, query)
+
                     if (source == SearchSource.LOCAL) {
+                        _searchSuggestions.value = persistentListOf()
+                        val cachedLocal = searchResultCache.get(cacheKey)
+                        if (cachedLocal != null) {
+                            _searchResults.value = cachedLocal
+                        }
                         try {
-                            val results = musicRepository.searchAllOnce(query, _selectedSearchFilter.value)
+                            val results = musicRepository.searchAllOnce(query, filter)
                             if (request.requestId == latestSearchRequestId.get()) {
-                                _searchResults.value = results.toImmutableList()
+                                val immutable = results.toImmutableList()
+                                _searchResults.value = immutable
+                                searchResultCache.put(cacheKey, immutable)
+                                _isSearching.value = false
                             }
                         } catch (_: CancellationException) {
+                            throw CancellationException()
                         } catch (e: Exception) {
                             if (request.requestId == latestSearchRequestId.get()) {
+                                _isSearching.value = false
                                 Timber.e(e, "Local search error: $query")
                             }
                         }
                         return@collectLatest
                     }
 
-                    // Instantly show cache if available, otherwise fallback to longest prefix match
-                    val cached = searchResultCache.get(query) ?: getLongestPrefixMatch(query)
+                    val cached = searchResultCache.get(cacheKey)
                     if (cached != null) {
                         _searchResults.value = cached
+                        _isSearching.value = false
+                    } else {
+                        _isSearching.value = true
+                    }
+
+                    scope?.launch(Dispatchers.IO) {
+                        val suggestions = runCatching {
+                            YouTube.searchSuggestions(query).getOrNull()?.queries
+                                ?.map { it.trim() }
+                                ?.filter { it.isNotEmpty() && !it.equals(query, ignoreCase = true) }
+                                ?.distinct()
+                                ?.take(8)
+                                .orEmpty()
+                        }.getOrDefault(emptyList())
+                        if (request.requestId == latestSearchRequestId.get()) {
+                            _searchSuggestions.value = suggestions.toImmutableList()
+                        }
                     }
 
                     try {
                         val results = withContext(Dispatchers.IO) {
-                            searchYouTube(query, _selectedSearchFilter.value)
+                            searchYouTube(query, filter)
                         }
                         if (request.requestId == latestSearchRequestId.get()) {
                             val immutable = results.toImmutableList()
                             _searchResults.value = immutable
+                            _isSearching.value = false
                             if (immutable.isNotEmpty()) {
-                                searchResultCache.put(query, immutable)
+                                searchResultCache.put(cacheKey, immutable)
                             }
 
-                            // Pre-fetch top song stream URL
                             scope?.launch(Dispatchers.IO) {
                                 try {
                                     val topSong = immutable.filterIsInstance<SearchResultItem.SongItem>().firstOrNull()
@@ -173,8 +197,10 @@ class SearchStateHolder @Inject constructor(
                             }
                         }
                     } catch (_: CancellationException) {
+                        throw CancellationException()
                     } catch (e: Exception) {
                         if (request.requestId == latestSearchRequestId.get()) {
+                            _isSearching.value = false
                             Timber.e(e, "YouTube search error: $query")
                         }
                     }
@@ -198,7 +224,7 @@ class SearchStateHolder @Inject constructor(
                     val hideVideo = userPreferencesRepository.hideVideoFlow.first()
                     val minSongDurationMs = userPreferencesRepository.minSongDurationFlow.first()
                     val minSongDurationSec = minSongDurationMs / 1000
-                    val shouldFilterVideos = pureYtMusicOnly || hideVideo
+                    val shouldFilterVideos = (pureYtMusicOnly || hideVideo) && filter != SearchFilterType.VIDEOS
                     val newItems = mutableListOf<SearchResultItem>()
                     result.items.forEach { item ->
                         when (item) {
@@ -260,7 +286,6 @@ class SearchStateHolder @Inject constructor(
 
         when (filter) {
             SearchFilterType.ALL -> {
-                // 1. Primary fast attempt: YouTube.searchSummary(query)
                 val summaryResult = runCatching {
                     YouTube.searchSummary(query).getOrNull()
                 }.getOrNull()
@@ -290,7 +315,6 @@ class SearchStateHolder @Inject constructor(
                     }
                 }
 
-                // 2. If summary search returned no songs, fall back to filtered search
                 if (items.none { it is SearchResultItem.SongItem }) {
                     coroutineScope {
                         val songsDeferred = async { YouTube.search(query, YouTube.SearchFilter.FILTER_SONG).getOrNull() }
@@ -323,7 +347,6 @@ class SearchStateHolder @Inject constructor(
                     }
                 }
 
-                // 3. Fallback to FILTER_VIDEO if still empty
                 if (items.isEmpty()) {
                     val videoResult = YouTube.search(query, YouTube.SearchFilter.FILTER_VIDEO).getOrNull()
                     val rawVideos = videoResult?.items?.filterIsInstance<SongItem>().orEmpty()
@@ -393,29 +416,35 @@ class SearchStateHolder @Inject constructor(
                 }
             }
             SearchFilterType.VIDEOS -> {
-                if (!shouldFilterVideos) {
-                    val result = YouTube.search(query, YouTube.SearchFilter.FILTER_VIDEO).getOrNull()
-                    lastContinuationToken = result?.continuation
-                    val rawVideos = result?.items?.filterIsInstance<SongItem>().orEmpty()
-                    val explicitFiltered = if (hideExplicit) rawVideos.filter { !it.explicit } else rawVideos
-                    val filteredVideos = explicitFiltered.filter { minSongDurationSec <= 0 || it.duration == null || it.duration >= minSongDurationSec }
-                    filteredVideos.forEach { items.add(SearchResultItem.SongItem(it.toNativeSong())) }
-                }
+                val result = YouTube.search(query, YouTube.SearchFilter.FILTER_VIDEO).getOrNull()
+                lastContinuationToken = result?.continuation
+                val rawVideos = result?.items?.filterIsInstance<SongItem>().orEmpty()
+                val explicitFiltered = if (hideExplicit) rawVideos.filter { !it.explicit } else rawVideos
+                val filteredVideos = explicitFiltered.filter { minSongDurationSec <= 0 || it.duration == null || it.duration >= minSongDurationSec }
+                filteredVideos.distinctBy { it.id }.forEach { items.add(SearchResultItem.SongItem(it.toNativeSong())) }
             }
         }
         return items
     }
 
     fun updateSearchFilter(filterType: SearchFilterType) {
-        _selectedSearchFilter.value = filterType
+        if (_selectedSearchFilter.value != filterType) {
+            _selectedSearchFilter.value = filterType
+        }
     }
 
     fun performSearch(query: String) {
+        val trimmed = query.trim()
+        val filter = _selectedSearchFilter.value
         val requestId = latestSearchRequestId.incrementAndGet()
-        if (query.trim().isBlank()) {
+        if (trimmed.isBlank()) {
+            _isSearching.value = false
             _searchResults.value = persistentListOf()
+            _searchSuggestions.value = persistentListOf()
+        } else {
+            _isSearching.value = true
         }
-        searchRequests.tryEmit(SearchRequest(query.trim(), requestId))
+        searchRequests.tryEmit(SearchRequest(trimmed, filter, requestId))
     }
 
     fun loadSearchHistory(limit: Int = 15) {
@@ -428,7 +457,7 @@ class SearchStateHolder @Inject constructor(
     fun onSearchQuerySubmitted(query: String) {
         scope?.launch {
             if (query.isNotBlank()) {
-                musicRepository.addSearchHistoryItem(query)
+                musicRepository.addSearchHistoryItem(query.trim())
                 loadSearchHistory()
             }
         }
