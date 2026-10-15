@@ -422,7 +422,7 @@ fun SongInfoBottomSheet(
                                                             val link = if (isYtSong) {
                                                                 "https://music.youtube.com/watch?v=${song.youtubeId}"
                                                             } else {
-                                                                "https://github.com/ianshulyadav/PixelMusic"
+                                                                "https://pixelmusic.pages.dev"
                                                             }
                                                             
                                                             // Copy to clipboard
