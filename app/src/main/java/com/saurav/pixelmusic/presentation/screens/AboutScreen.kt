@@ -6,7 +6,9 @@ import android.content.Intent
 import android.net.Uri
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.TextButton
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.material.icons.automirrored.rounded.Notes
+import androidx.compose.material.icons.automirrored.rounded.OpenInNew
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.animation.animateContentSize
@@ -885,18 +887,19 @@ private fun CreditsCard(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    val cardShape = AbsoluteSmoothCornerShape(30.dp, 60)
+    val cardShape = AbsoluteSmoothCornerShape(28.dp, 60)
 
     Surface(
         modifier = modifier,
         shape = cardShape,
         color = MaterialTheme.colorScheme.surfaceContainerLow,
         tonalElevation = 2.dp,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(220.dp)
+                .height(230.dp)
                 .clip(cardShape)
                 .clickable {
                     val intent = Intent(
@@ -917,25 +920,54 @@ private fun CreditsCard(
                 painter = painterResource(R.drawable.saurav_profile),
                 contentDescription = "Saurav",
                 contentScale = ContentScale.Crop,
+                alignment = Alignment.Center,
                 modifier = Modifier.fillMaxSize()
             )
 
-            // 2. Dark Gradient Overlay for optimal text readability
+            // 2. Cinematic Gradient Overlay (clear top, smooth readable scrim at bottom)
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(
                         androidx.compose.ui.graphics.Brush.verticalGradient(
-                            colors = listOf(
-                                androidx.compose.ui.graphics.Color.Transparent,
-                                androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.85f)
-                            ),
-                            startY = 100f
+                            0.0f to androidx.compose.ui.graphics.Color.Transparent,
+                            0.40f to androidx.compose.ui.graphics.Color.Transparent,
+                            0.68f to androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.45f),
+                            1.0f to androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.88f)
                         )
                     )
             )
 
-            // 3. Text and Instagram Tag
+            // 3. Top-end subtle badge
+            Surface(
+                shape = CircleShape,
+                color = androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.40f),
+                border = BorderStroke(1.dp, androidx.compose.ui.graphics.Color.White.copy(alpha = 0.18f)),
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(14.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(7.dp)
+                            .clip(CircleShape)
+                            .background(androidx.compose.ui.graphics.Color(0xFFE1306C))
+                    )
+                    Text(
+                        text = "Creator",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.92f)
+                    )
+                }
+            }
+
+            // 4. Bottom Text and Instagram Pill Button
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -950,17 +982,26 @@ private fun CreditsCard(
                     color = androidx.compose.ui.graphics.Color.White
                 )
 
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(2.dp))
 
-                // Glassmorphism-style Instagram pill button
+                Text(
+                    text = "Lead Developer • PixelMusic",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.76f)
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Modern Frosted Instagram Pill
                 Surface(
                     shape = CircleShape,
-                    color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.2f),
+                    color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.18f),
+                    border = BorderStroke(1.dp, androidx.compose.ui.graphics.Color.White.copy(alpha = 0.28f)),
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        horizontalArrangement = Arrangement.spacedBy(7.dp)
                     ) {
                         Icon(
                             painter = painterResource(R.drawable.ic_instagram),
@@ -971,8 +1012,14 @@ private fun CreditsCard(
                         Text(
                             text = "@holy_saurav",
                             style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.SemiBold,
+                            fontWeight = FontWeight.Bold,
                             color = androidx.compose.ui.graphics.Color.White
+                        )
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Rounded.OpenInNew,
+                            contentDescription = null,
+                            tint = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.80f),
+                            modifier = Modifier.size(13.dp)
                         )
                     }
                 }
