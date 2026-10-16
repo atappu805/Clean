@@ -70,6 +70,13 @@ android {
         }
         jniLibs {
             useLegacyPackaging = true
+            keepDebugSymbols += listOf(
+                "**/libandroidx.graphics.path.so",
+                "**/libdatastore_shared_counter.so",
+                "**/libffmpegJNI.so",
+                "**/libquickjs.so",
+                "**/libtaglib.so"
+            )
         }
     }
 

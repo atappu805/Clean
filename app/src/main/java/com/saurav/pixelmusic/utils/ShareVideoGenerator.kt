@@ -173,7 +173,7 @@ object ShareVideoGenerator {
         }
 
         if (!videoId.isNullOrBlank()) {
-            val cleanVideoId = videoId!!
+            val cleanVideoId = videoId
             PixelLogger.d(PixelLogger.Category.PLAYER, "ShareVideo", "Checking offline & cached sources for videoId=$cleanVideoId")
 
             // 3A. Check YouTube downloaded audio file in local database
