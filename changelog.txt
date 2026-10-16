@@ -1,7 +1,11 @@
 **Sub release 4.4.7**
 
 * 🎨 **Monochrome Zinc & Yellow Palette:** Applied an iOS and Nothing OS-inspired cool zinc palette to the Black & White theme, paired with refined cool zinc containers and high-contrast FAB styling for the yellow monochrome theme.
-* 🧭 **Search & Explore Categories:** Added YouTube Music-style Explore categories and destination screens directly within Search, powered by InnerTube browse endpoints, curated mood playlists, and real-time YouTube charts.
+* 🎴 **Expressive Song Share Cards:** Overhauled song card sharing with 5 dynamic background themes (Material Light, Material Dark, Blurred Light, Full Artwork, and Midnight Aura), 25 tap-morphing album art shapes with fluid animated transitions, balanced vertical spacing, PixelMusic branding, and unified photo and video export.
+* 🔍 **Search Experience & Stability:** Upgraded SearchScreen UI architecture to eliminate search bar overlay and clipping issues, added smooth shimmer loading placeholders with fallback protection, refined search history management with instant clear-all support, and optimized query execution.
+* 🧭 **Explore Page & Dynamic Feed:** Modernized the Explore hub with fluid category discovery, borderless Material You filter chips (All, For You, New Releases, Charts, Moods & Genres), and infinite scroll continuation for seamless music browsing.
+* 📊 **Charts Podium & Region Selector:** Added ranked Top Charts with a visual podium display and top 12 track deck, dynamic country/region switching (Global, US, India, UK, etc.), and graceful retry recovery.
+* 🎭 **Moods & Genre Hub:** Integrated dedicated mood-based browsing with interactive quick-vibe chips (Relax, Workout, Focus, Party, etc.), curated InnerTube mood playlists, and seamless destination screens.
 * ⚡ **Resilient Downloads & 403 Fallback:** Resolved HTTP 403 download errors by injecting GoogleVideo CDN headers and adding JioSaavn as a seamless fallback provider.
 * 🌊 **Native AGSL Scroll Motion Blur:** Implemented directional AGSL runtime shaders (`RenderEffect`) for fluid scroll motion blur across all screens and sheets, optimized specifically for high refresh rate displays without navigation stutter.
 * 🎛️ **Smooth Modal Bottom Sheets:** Upgraded player, options, and screen bottom sheets to `SmoothModalBottomSheet` with fluid dismiss animations and system back-gesture support.
