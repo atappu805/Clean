@@ -212,13 +212,14 @@ fun AnimatedPlaybackControls(
                                         blur(12.dp.toPx())
                                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                                             lens(
-                                                refractionHeight = 14.dp.toPx(),
-                                                refractionAmount = 30.dp.toPx()
+                                                refractionHeight = 20.dp.toPx(),
+                                                refractionAmount = 45.dp.toPx()
                                             )
                                         }
                                     },
                                     onDrawSurface = {
-                                        drawRect(if (isDark) Color(0x351E1E22) else Color(0x40FFFFFF))
+                                        drawRect(colorPreviousButton, blendMode = BlendMode.Hue)
+                                        drawRect(colorPreviousButton.copy(alpha = 0.90f))
                                     }
                                 )
                                 .border(BorderStroke(1.2.dp, prevBorderBrush), prevShape)
@@ -242,27 +243,23 @@ fun AnimatedPlaybackControls(
                         }
                     )
                     .pointerInput(onPrevious) {
-                        detectTapGestures(
-                            onPress = {
-                                val pressSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
-                                val jiggleSpec = spring<Float>(dampingRatio = 0.32f, stiffness = 280f)
-                                val job = coroutineScope.launch { prevPress.animateTo(1f, pressSpec) }
-                                val released = tryAwaitRelease()
-                                job.cancel()
-                                coroutineScope.launch {
-                                    prevPress.animateTo(0f, pressSpec)
-                                    if (released) {
-                                        prevJiggle.snapTo(1f)
-                                        prevJiggle.animateTo(0f, jiggleSpec)
-                                    }
-                                }
-                            },
-                            onTap = {
+                        val pressSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
+                        val jiggleSpec = spring<Float>(dampingRatio = 0.32f, stiffness = 280f)
+                        awaitEachGesture {
+                            awaitFirstDown(requireUnconsumed = false)
+                            coroutineScope.launch {
+                                prevJiggle.snapTo(1f)
+                                prevJiggle.animateTo(0f, jiggleSpec)
+                            }
+                            coroutineScope.launch { prevPress.animateTo(1f, pressSpec) }
+                            val up = waitForUpOrCancellation()
+                            coroutineScope.launch { prevPress.animateTo(0f, pressSpec) }
+                            if (up != null) {
                                 lastClicked = PlaybackButtonType.PREVIOUS
                                 hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 onPrevious()
                             }
-                        )
+                        }
                     },
                 contentAlignment = Alignment.Center
             ) {
@@ -286,7 +283,7 @@ fun AnimatedPlaybackControls(
                 Icon(
                     imageVector = Icons.Rounded.SkipPrevious,
                     contentDescription = "Anterior",
-                    tint = if (isGlassActive) (if (isDark) Color.White else Color(0xFF1C1C1E)) else tintPreviousIcon,
+                    tint = tintPreviousIcon,
                     modifier = Modifier.size(iconSize)
                 )
             }
@@ -349,14 +346,14 @@ fun AnimatedPlaybackControls(
                                         blur(12.dp.toPx())
                                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                                             lens(
-                                                refractionHeight = 14.dp.toPx(),
-                                                refractionAmount = 30.dp.toPx()
+                                                refractionHeight = 20.dp.toPx(),
+                                                refractionAmount = 45.dp.toPx()
                                             )
                                         }
                                     },
                                     onDrawSurface = {
                                         drawRect(colorPlayPause, blendMode = BlendMode.Hue)
-                                        drawRect(colorPlayPause.copy(alpha = 0.50f))
+                                        drawRect(colorPlayPause.copy(alpha = 0.92f))
                                     }
                                 )
                                 .border(BorderStroke(1.5.dp, playBorderBrush), playShape)
@@ -380,27 +377,23 @@ fun AnimatedPlaybackControls(
                         }
                     )
                     .pointerInput(onPlayPause) {
-                        detectTapGestures(
-                            onPress = {
-                                val pressSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
-                                val jiggleSpec = spring<Float>(dampingRatio = 0.32f, stiffness = 280f)
-                                val job = coroutineScope.launch { playPausePress.animateTo(1f, pressSpec) }
-                                val released = tryAwaitRelease()
-                                job.cancel()
-                                coroutineScope.launch {
-                                    playPausePress.animateTo(0f, pressSpec)
-                                    if (released) {
-                                        playPauseJiggle.snapTo(1f)
-                                        playPauseJiggle.animateTo(0f, jiggleSpec)
-                                    }
-                                }
-                            },
-                            onTap = {
+                        val pressSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
+                        val jiggleSpec = spring<Float>(dampingRatio = 0.32f, stiffness = 280f)
+                        awaitEachGesture {
+                            awaitFirstDown(requireUnconsumed = false)
+                            coroutineScope.launch {
+                                playPauseJiggle.snapTo(1f)
+                                playPauseJiggle.animateTo(0f, jiggleSpec)
+                            }
+                            coroutineScope.launch { playPausePress.animateTo(1f, pressSpec) }
+                            val up = waitForUpOrCancellation()
+                            coroutineScope.launch { playPausePress.animateTo(0f, pressSpec) }
+                            if (up != null) {
                                 lastClicked = PlaybackButtonType.PLAY_PAUSE
                                 hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 onPlayPause()
                             }
-                        )
+                        }
                     },
                 contentAlignment = Alignment.Center
             ) {
@@ -454,13 +447,14 @@ fun AnimatedPlaybackControls(
                                         blur(12.dp.toPx())
                                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                                             lens(
-                                                refractionHeight = 14.dp.toPx(),
-                                                refractionAmount = 30.dp.toPx()
+                                                refractionHeight = 20.dp.toPx(),
+                                                refractionAmount = 45.dp.toPx()
                                             )
                                         }
                                     },
                                     onDrawSurface = {
-                                        drawRect(if (isDark) Color(0x351E1E22) else Color(0x40FFFFFF))
+                                        drawRect(colorNextButton, blendMode = BlendMode.Hue)
+                                        drawRect(colorNextButton.copy(alpha = 0.90f))
                                     }
                                 )
                                 .border(BorderStroke(1.2.dp, prevBorderBrush), nextShape)
@@ -484,27 +478,23 @@ fun AnimatedPlaybackControls(
                         }
                     )
                     .pointerInput(onNext) {
-                        detectTapGestures(
-                            onPress = {
-                                val pressSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
-                                val jiggleSpec = spring<Float>(dampingRatio = 0.32f, stiffness = 280f)
-                                val job = coroutineScope.launch { nextPress.animateTo(1f, pressSpec) }
-                                val released = tryAwaitRelease()
-                                job.cancel()
-                                coroutineScope.launch {
-                                    nextPress.animateTo(0f, pressSpec)
-                                    if (released) {
-                                        nextJiggle.snapTo(1f)
-                                        nextJiggle.animateTo(0f, jiggleSpec)
-                                    }
-                                }
-                            },
-                            onTap = {
+                        val pressSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
+                        val jiggleSpec = spring<Float>(dampingRatio = 0.32f, stiffness = 280f)
+                        awaitEachGesture {
+                            awaitFirstDown(requireUnconsumed = false)
+                            coroutineScope.launch {
+                                nextJiggle.snapTo(1f)
+                                nextJiggle.animateTo(0f, jiggleSpec)
+                            }
+                            coroutineScope.launch { nextPress.animateTo(1f, pressSpec) }
+                            val up = waitForUpOrCancellation()
+                            coroutineScope.launch { nextPress.animateTo(0f, pressSpec) }
+                            if (up != null) {
                                 lastClicked = PlaybackButtonType.NEXT
                                 hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 onNext()
                             }
-                        )
+                        }
                     },
                 contentAlignment = Alignment.Center
             ) {
@@ -528,7 +518,7 @@ fun AnimatedPlaybackControls(
                 Icon(
                     imageVector = Icons.Rounded.SkipNext,
                     contentDescription = "Siguiente",
-                    tint = if (isGlassActive) (if (isDark) Color.White else Color(0xFF1C1C1E)) else tintNextIcon,
+                    tint = tintNextIcon,
                     modifier = Modifier.size(iconSize)
                 )
             }

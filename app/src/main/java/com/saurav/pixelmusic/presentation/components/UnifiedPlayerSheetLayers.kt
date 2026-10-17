@@ -94,6 +94,77 @@ internal fun BoxScope.UnifiedPlayerMiniAndFullLayers(
     onShowCastClicked: () -> Unit
 ) {
     val isLiquidGlassActive = isLiquidGlass && backdrop != null
+    val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+
+    if (isLiquidGlassActive) {
+        val fraction = playerContentExpansionFraction.value.coerceIn(0f, 1f)
+        val currentCornerRadius = overallSheetTopCornerRadiusProvider()
+        val dynamicShape = RoundedCornerShape(currentCornerRadius)
+        val pillBorderAlpha = (1f - fraction * 2.5f).coerceIn(0f, 1f)
+        val pillShadowElevation = (10.dp * (1f - fraction)).coerceAtLeast(0.dp)
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .then(
+                    if (pillShadowElevation > 0.dp) {
+                        Modifier.shadow(elevation = pillShadowElevation, shape = dynamicShape)
+                    } else Modifier
+                )
+                .drawBackdrop(
+                    backdrop = backdrop,
+                    shape = { dynamicShape },
+                    effects = {
+                        vibrancy()
+                        blur(10.dp.toPx())
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            lens(
+                                refractionHeight = 20.dp.toPx(),
+                                refractionAmount = 46.dp.toPx()
+                            )
+                        }
+                    },
+                    onDrawSurface = {
+                        drawRect(if (isDark) Color(0x301C1C1E) else Color(0x25F5F5F7))
+                    }
+                )
+                .then(
+                    if (pillBorderAlpha > 0f) {
+                        Modifier.border(
+                            border = BorderStroke(
+                                1.dp,
+                                Brush.verticalGradient(
+                                    colors = listOf(
+                                        Color.White.copy(alpha = (if (isDark) 0.70f else 0.90f) * pillBorderAlpha),
+                                        Color.White.copy(alpha = (if (isDark) 0.15f else 0.30f) * pillBorderAlpha)
+                                    )
+                                )
+                            ),
+                            shape = dynamicShape
+                        )
+                    } else Modifier
+                )
+        ) {
+            if (pillBorderAlpha > 0f) {
+                // Top gloss reflection
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(32.dp)
+                        .align(Alignment.TopCenter)
+                        .background(
+                            brush = Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.White.copy(alpha = (if (isDark) 0.12f else 0.22f) * pillBorderAlpha),
+                                    Color.Transparent
+                                )
+                            ),
+                            shape = dynamicShape
+                        )
+                )
+            }
+        }
+    }
 
     currentSong?.let { currentSongNonNull ->
         miniPlayerScheme?.let { readyScheme ->
@@ -105,8 +176,6 @@ internal fun BoxScope.UnifiedPlayerMiniAndFullLayers(
                         if (playerContentExpansionFraction.value < 0.5f) 1f else 0f
                     }
                 }
-                val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
-                val isLiquidGlassActive = isLiquidGlass && backdrop != null
 
                 Box(
                     modifier = Modifier
@@ -121,58 +190,6 @@ internal fun BoxScope.UnifiedPlayerMiniAndFullLayers(
                         }
                         .zIndex(miniPlayerZIndex)
                 ) {
-                    if (isLiquidGlassActive) {
-                        val currentCornerRadius = overallSheetTopCornerRadiusProvider()
-                        val dynamicMiniShape = RoundedCornerShape(currentCornerRadius)
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .shadow(elevation = 10.dp, shape = dynamicMiniShape)
-                                .drawBackdrop(
-                                    backdrop = backdrop,
-                                    shape = { dynamicMiniShape },
-                                    effects = {
-                                        vibrancy()
-                                        blur(10.dp.toPx())
-                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                            lens(12.dp.toPx(), 28.dp.toPx())
-                                        }
-                                    },
-                                    onDrawSurface = {
-                                        drawRect(if (isDark) Color(0x301C1C1E) else Color(0x25F5F5F7))
-                                    }
-                                )
-                                .border(
-                                    border = BorderStroke(
-                                        1.dp,
-                                        Brush.verticalGradient(
-                                            colors = listOf(
-                                                Color.White.copy(alpha = if (isDark) 0.70f else 0.90f),
-                                                Color.White.copy(alpha = if (isDark) 0.15f else 0.30f)
-                                            )
-                                        )
-                                    ),
-                                    shape = dynamicMiniShape
-                                )
-                        ) {
-                            // Top gloss reflection
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .fillMaxHeight(0.5f)
-                                    .align(Alignment.TopCenter)
-                                    .background(
-                                        brush = Brush.verticalGradient(
-                                            colors = listOf(
-                                                Color.White.copy(alpha = if (isDark) 0.12f else 0.22f),
-                                                Color.Transparent
-                                            )
-                                        ),
-                                        shape = dynamicMiniShape
-                                    )
-                            )
-                        }
-                    }
                     val miniAlbumCornerRadius by remember(overallSheetTopCornerRadiusProvider) {
                         derivedStateOf {
                             (overallSheetTopCornerRadiusProvider().value * 0.5f).dp

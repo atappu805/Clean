@@ -96,7 +96,7 @@ fun DismissUndoBar(
                         vibrancy()
                         blur(10.dp.toPx())
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                            lens(12.dp.toPx(), 28.dp.toPx())
+                            lens(18.dp.toPx(), 42.dp.toPx())
                         }
                     },
                     onDrawSurface = {

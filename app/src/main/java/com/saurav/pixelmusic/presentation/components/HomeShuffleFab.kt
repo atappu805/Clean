@@ -99,6 +99,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
@@ -387,8 +388,8 @@ fun HomeShuffleFab(
                                 blur(10.dp.toPx())
                                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                                     lens(
-                                        refractionHeight = 12.dp.toPx(),
-                                        refractionAmount = 28.dp.toPx()
+                                        refractionHeight = 18.dp.toPx(),
+                                        refractionAmount = 42.dp.toPx()
                                     )
                                 }
                             },
@@ -477,32 +478,30 @@ fun HomeShuffleFab(
                                 }
                                 .clip(CircleShape)
                                 .pointerInput(onClick, onLongClick) {
-                                    detectTapGestures(
-                                        onPress = {
-                                            val pressSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
-                                            val jiggleSpec = spring<Float>(dampingRatio = 0.32f, stiffness = 280f)
-                                            val job = coroutineScope.launch { shufflePress.animateTo(1f, pressSpec) }
-                                            val released = tryAwaitRelease()
-                                            job.cancel()
-                                            coroutineScope.launch {
-                                                shufflePress.animateTo(0f, pressSpec)
-                                                if (released) {
-                                                    shuffleJiggle.snapTo(1f)
-                                                    shuffleJiggle.animateTo(0f, jiggleSpec)
-                                                }
-                                            }
-                                        },
-                                        onLongPress = onLongClick?.let { longClick ->
-                                            {
-                                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                longClick.invoke()
-                                            }
-                                        },
-                                        onTap = {
+                                    val pressSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
+                                    val jiggleSpec = spring<Float>(dampingRatio = 0.32f, stiffness = 280f)
+                                    awaitEachGesture {
+                                        awaitFirstDown(requireUnconsumed = false)
+                                        coroutineScope.launch {
+                                            shuffleJiggle.snapTo(1f)
+                                            shuffleJiggle.animateTo(0f, jiggleSpec)
+                                        }
+                                        coroutineScope.launch { shufflePress.animateTo(1f, pressSpec) }
+                                        val up = withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) {
+                                            waitForUpOrCancellation()
+                                        }
+                                        coroutineScope.launch { shufflePress.animateTo(0f, pressSpec) }
+                                        if (up != null) {
                                             hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                             onClick()
+                                        } else {
+                                            if (onLongClick != null) {
+                                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                onLongClick.invoke()
+                                                waitForUpOrCancellation()
+                                            }
                                         }
-                                    )
+                                    }
                                 },
                             contentAlignment = Alignment.Center
                         ) {
@@ -529,26 +528,22 @@ fun HomeShuffleFab(
                                     }
                                     .clip(CircleShape)
                                     .pointerInput(onListenTogetherClick) {
-                                        detectTapGestures(
-                                            onPress = {
-                                                val pressSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
-                                                val jiggleSpec = spring<Float>(dampingRatio = 0.32f, stiffness = 280f)
-                                                val job = coroutineScope.launch { ltPress.animateTo(1f, pressSpec) }
-                                                val released = tryAwaitRelease()
-                                                job.cancel()
-                                                coroutineScope.launch {
-                                                    ltPress.animateTo(0f, pressSpec)
-                                                    if (released) {
-                                                        ltJiggle.snapTo(1f)
-                                                        ltJiggle.animateTo(0f, jiggleSpec)
-                                                    }
-                                                }
-                                            },
-                                            onTap = {
+                                        val pressSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
+                                        val jiggleSpec = spring<Float>(dampingRatio = 0.32f, stiffness = 280f)
+                                        awaitEachGesture {
+                                            awaitFirstDown(requireUnconsumed = false)
+                                            coroutineScope.launch {
+                                                ltJiggle.snapTo(1f)
+                                                ltJiggle.animateTo(0f, jiggleSpec)
+                                            }
+                                            coroutineScope.launch { ltPress.animateTo(1f, pressSpec) }
+                                            val up = waitForUpOrCancellation()
+                                            coroutineScope.launch { ltPress.animateTo(0f, pressSpec) }
+                                            if (up != null) {
                                                 hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                                 onListenTogetherClick?.invoke()
                                             }
-                                        )
+                                        }
                                     },
                                 contentAlignment = Alignment.Center
                             ) {

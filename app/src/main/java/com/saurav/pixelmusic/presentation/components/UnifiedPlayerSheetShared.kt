@@ -211,26 +211,22 @@ internal fun MiniPlayerContentInternal(
                 )
                 .pointerInput(controlsEnabled, onPrevious) {
                     if (!controlsEnabled) return@pointerInput
-                    detectTapGestures(
-                        onPress = {
-                            val pressSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
-                            val jiggleSpec = spring<Float>(dampingRatio = 0.32f, stiffness = 280f)
-                            val job = coroutineScope.launch { prevPress.animateTo(1f, pressSpec) }
-                            val released = tryAwaitRelease()
-                            job.cancel()
-                            coroutineScope.launch {
-                                prevPress.animateTo(0f, pressSpec)
-                                if (released) {
-                                    prevJiggle.snapTo(1f)
-                                    prevJiggle.animateTo(0f, jiggleSpec)
-                                }
-                            }
-                        },
-                        onTap = {
+                    val pressSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
+                    val jiggleSpec = spring<Float>(dampingRatio = 0.32f, stiffness = 280f)
+                    awaitEachGesture {
+                        awaitFirstDown(requireUnconsumed = false)
+                        coroutineScope.launch {
+                            prevJiggle.snapTo(1f)
+                            prevJiggle.animateTo(0f, jiggleSpec)
+                        }
+                        coroutineScope.launch { prevPress.animateTo(1f, pressSpec) }
+                        val up = waitForUpOrCancellation()
+                        coroutineScope.launch { prevPress.animateTo(0f, pressSpec) }
+                        if (up != null) {
                             hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             onPrevious()
                         }
-                    )
+                    }
                 },
             contentAlignment = Alignment.Center
         ) {
@@ -280,26 +276,22 @@ internal fun MiniPlayerContentInternal(
                 )
                 .pointerInput(controlsEnabled, onPlayPause) {
                     if (!controlsEnabled) return@pointerInput
-                    detectTapGestures(
-                        onPress = {
-                            val pressSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
-                            val jiggleSpec = spring<Float>(dampingRatio = 0.32f, stiffness = 280f)
-                            val job = coroutineScope.launch { playPausePress.animateTo(1f, pressSpec) }
-                            val released = tryAwaitRelease()
-                            job.cancel()
-                            coroutineScope.launch {
-                                playPausePress.animateTo(0f, pressSpec)
-                                if (released) {
-                                    playPauseJiggle.snapTo(1f)
-                                    playPauseJiggle.animateTo(0f, jiggleSpec)
-                                }
-                            }
-                        },
-                        onTap = {
+                    val pressSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
+                    val jiggleSpec = spring<Float>(dampingRatio = 0.32f, stiffness = 280f)
+                    awaitEachGesture {
+                        awaitFirstDown(requireUnconsumed = false)
+                        coroutineScope.launch {
+                            playPauseJiggle.snapTo(1f)
+                            playPauseJiggle.animateTo(0f, jiggleSpec)
+                        }
+                        coroutineScope.launch { playPausePress.animateTo(1f, pressSpec) }
+                        val up = waitForUpOrCancellation()
+                        coroutineScope.launch { playPausePress.animateTo(0f, pressSpec) }
+                        if (up != null) {
                             hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             onPlayPause()
                         }
-                    )
+                    }
                 },
             contentAlignment = Alignment.Center
         ) {
@@ -351,26 +343,22 @@ internal fun MiniPlayerContentInternal(
                 )
                 .pointerInput(controlsEnabled, onNext) {
                     if (!controlsEnabled) return@pointerInput
-                    detectTapGestures(
-                        onPress = {
-                            val pressSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
-                            val jiggleSpec = spring<Float>(dampingRatio = 0.32f, stiffness = 280f)
-                            val job = coroutineScope.launch { nextPress.animateTo(1f, pressSpec) }
-                            val released = tryAwaitRelease()
-                            job.cancel()
-                            coroutineScope.launch {
-                                nextPress.animateTo(0f, pressSpec)
-                                if (released) {
-                                    nextJiggle.snapTo(1f)
-                                    nextJiggle.animateTo(0f, jiggleSpec)
-                                }
-                            }
-                        },
-                        onTap = {
+                    val pressSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
+                    val jiggleSpec = spring<Float>(dampingRatio = 0.32f, stiffness = 280f)
+                    awaitEachGesture {
+                        awaitFirstDown(requireUnconsumed = false)
+                        coroutineScope.launch {
+                            nextJiggle.snapTo(1f)
+                            nextJiggle.animateTo(0f, jiggleSpec)
+                        }
+                        coroutineScope.launch { nextPress.animateTo(1f, pressSpec) }
+                        val up = waitForUpOrCancellation()
+                        coroutineScope.launch { nextPress.animateTo(0f, pressSpec) }
+                        if (up != null) {
                             hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             onNext()
                         }
-                    )
+                    }
                 },
             contentAlignment = Alignment.Center
         ) {

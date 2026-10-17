@@ -229,15 +229,15 @@ private fun ToggleSegmentButtonContainer(
                 val pressSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
                 val jiggleSpec = spring<Float>(dampingRatio = 0.35f, stiffness = 320f)
                 awaitEachGesture {
-                    awaitFirstDown()
+                    awaitFirstDown(requireUnconsumed = false)
+                    coroutineScope.launch {
+                        jiggle.snapTo(1f)
+                        jiggle.animateTo(0f, jiggleSpec)
+                    }
                     coroutineScope.launch { press.animateTo(1f, pressSpec) }
                     val up = waitForUpOrCancellation()
                     coroutineScope.launch {
                         press.animateTo(0f, pressSpec)
-                        if (up != null) {
-                            jiggle.snapTo(1f)
-                            jiggle.animateTo(0f, jiggleSpec)
-                        }
                     }
                 }
             }

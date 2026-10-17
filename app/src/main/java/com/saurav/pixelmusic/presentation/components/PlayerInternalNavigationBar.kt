@@ -245,8 +245,8 @@ fun PlayerInternalNavigationBar(
                                 blur(10.dp.toPx())
                                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                                     lens(
-                                        refractionHeight = 12.dp.toPx(),
-                                        refractionAmount = 28.dp.toPx()
+                                        refractionHeight = 18.dp.toPx(),
+                                        refractionAmount = 42.dp.toPx()
                                     )
                                 }
                             },
@@ -460,30 +460,24 @@ fun PlayerInternalNavigationBar(
                                     scaleY = tabWaterDropScaleY
                                 }
                                 .pointerInput(latestNavigationEnabled, latestCurrentRoute, item.screen.route, isDragging) {
-                                    detectTapGestures(
-                                        onPress = {
-                                            val pressSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
-                                            val jiggleSpec = spring<Float>(dampingRatio = 0.32f, stiffness = 280f)
-                                            val job = coroutineScope.launch { tabPress.animateTo(1f, pressSpec) }
-                                            val released = tryAwaitRelease()
-                                            job.cancel()
-                                            coroutineScope.launch {
-                                                tabPress.animateTo(0f, pressSpec)
-                                                if (released) {
-                                                    tabJiggle.snapTo(1f)
-                                                    tabJiggle.animateTo(0f, jiggleSpec)
-                                                }
-                                            }
-                                        },
-                                        onTap = {
-                                            if (!isDragging) {
-                                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                                if (latestNavigationEnabled && latestCurrentRoute != item.screen.route) {
-                                                    navController.navigateToTopLevelSafely(item.screen.route)
-                                                }
+                                    val pressSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
+                                    val jiggleSpec = spring<Float>(dampingRatio = 0.32f, stiffness = 280f)
+                                    awaitEachGesture {
+                                        awaitFirstDown(requireUnconsumed = false)
+                                        coroutineScope.launch {
+                                            tabJiggle.snapTo(1f)
+                                            tabJiggle.animateTo(0f, jiggleSpec)
+                                        }
+                                        coroutineScope.launch { tabPress.animateTo(1f, pressSpec) }
+                                        val up = waitForUpOrCancellation()
+                                        coroutineScope.launch { tabPress.animateTo(0f, pressSpec) }
+                                        if (up != null && !isDragging) {
+                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                            if (latestNavigationEnabled && latestCurrentRoute != item.screen.route) {
+                                                navController.navigateToTopLevelSafely(item.screen.route)
                                             }
                                         }
-                                    )
+                                    }
                                 },
                             contentAlignment = Alignment.Center
                         ) {
@@ -662,8 +656,8 @@ fun PlayerInternalNavigationBar(
                                 blur(10.dp.toPx())
                                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                                     lens(
-                                        refractionHeight = 12.dp.toPx(),
-                                        refractionAmount = 28.dp.toPx()
+                                        refractionHeight = 18.dp.toPx(),
+                                        refractionAmount = 42.dp.toPx()
                                     )
                                 }
                             },
@@ -701,23 +695,18 @@ fun PlayerInternalNavigationBar(
                 )
                 .clip(searchShape)
                 .pointerInput(latestNavigationEnabled, isSearchSelected, onSearchIconDoubleTap) {
-                    detectTapGestures(
-                        onPress = {
-                            val pressSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
-                            val jiggleSpec = spring<Float>(dampingRatio = 0.32f, stiffness = 280f)
-                            val job = coroutineScope.launch { searchPress.animateTo(1f, pressSpec) }
-                            val released = tryAwaitRelease()
-                            job.cancel()
-                            coroutineScope.launch {
-                                searchPress.animateTo(0f, pressSpec)
-                                if (released) {
-                                    searchJiggle.snapTo(1f)
-                                    searchJiggle.animateTo(0f, jiggleSpec)
-                                }
-                            }
-                        },
-                        onTap = {
-                            if (!latestNavigationEnabled) return@detectTapGestures
+                    val pressSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
+                    val jiggleSpec = spring<Float>(dampingRatio = 0.32f, stiffness = 280f)
+                    awaitEachGesture {
+                        awaitFirstDown(requireUnconsumed = false)
+                        coroutineScope.launch {
+                            searchJiggle.snapTo(1f)
+                            searchJiggle.animateTo(0f, jiggleSpec)
+                        }
+                        coroutineScope.launch { searchPress.animateTo(1f, pressSpec) }
+                        val up = waitForUpOrCancellation()
+                        coroutineScope.launch { searchPress.animateTo(0f, pressSpec) }
+                        if (up != null && latestNavigationEnabled) {
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             if (!isSearchSelected) {
                                 navController.navigateToTopLevelSafely(Screen.Search.route)
@@ -725,7 +714,7 @@ fun PlayerInternalNavigationBar(
                                 onSearchIconDoubleTap()
                             }
                         }
-                    )
+                    }
                 }
 
             Box(
