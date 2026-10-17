@@ -1,5 +1,6 @@
 **Sub release 4.4.7**
 
+* 🔮 **Liquid Glass Headers:** Applied iOS-style liquid glass refraction with spring physics and tactile feedback to Home & Explore header pills and settings icon, with a dedicated toggle in Settings.
 * 🎨 **Monochrome Zinc & Yellow Palette:** Applied an iOS and Nothing OS-inspired cool zinc palette to the Black & White theme, paired with refined cool zinc containers and high-contrast FAB styling for the yellow monochrome theme.
 * 🎴 **Expressive Song Share Cards:** Overhauled song card sharing with 5 dynamic background themes (Material Light, Material Dark, Blurred Light, Full Artwork, and Midnight Aura), 25 tap-morphing album art shapes with fluid animated transitions, balanced vertical spacing, PixelMusic branding, and unified photo and video export.
 * 🔍 **Search Experience & Stability:** Upgraded SearchScreen UI architecture to eliminate search bar overlay and clipping issues, added smooth shimmer loading placeholders with fallback protection, refined search history management with instant clear-all support, and optimized query execution.
