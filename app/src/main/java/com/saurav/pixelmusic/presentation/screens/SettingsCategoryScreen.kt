@@ -2027,6 +2027,26 @@ fun SettingsCategoryScreen(
                                 ) {
                                     Column {
                                         Spacer(modifier = Modifier.height(16.dp))
+                                        SettingsSubsection(title = stringResource(R.string.settings_liquid_glass_intensity_section)) {
+                                            SliderSettingsItem(
+                                                label = stringResource(R.string.settings_liquid_glass_blur_intensity_title),
+                                                value = uiState.liquidGlassBlurIntensity,
+                                                valueRange = 0.2f..2.0f,
+                                                steps = 17,
+                                                onValueChange = { settingsViewModel.setLiquidGlassBlurIntensity(it) },
+                                                valueText = { "${kotlin.math.roundToInt(it * 100)}%" }
+                                            )
+                                            Spacer(modifier = Modifier.height(8.dp))
+                                            SliderSettingsItem(
+                                                label = stringResource(R.string.settings_liquid_glass_refraction_intensity_title),
+                                                value = uiState.liquidGlassRefractionIntensity,
+                                                valueRange = 0.0f..2.0f,
+                                                steps = 19,
+                                                onValueChange = { settingsViewModel.setLiquidGlassRefractionIntensity(it) },
+                                                valueText = { "${kotlin.math.roundToInt(it * 100)}%" }
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.height(16.dp))
                                         SettingsSubsection(title = "Components") {
                                             SwitchSettingItem(
                                                 title = stringResource(R.string.settings_liquid_glass_nav_bar_title),

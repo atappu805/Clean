@@ -333,6 +333,8 @@ constructor(
         val LIQUID_GLASS_MINI_PLAYER_ENABLED = booleanPreferencesKey("liquid_glass_mini_player_enabled")
         val LIQUID_GLASS_DISMISS_PROMPT_ENABLED = booleanPreferencesKey("liquid_glass_dismiss_prompt_enabled")
         val LIQUID_GLASS_HEADER_ENABLED = booleanPreferencesKey("liquid_glass_header_enabled")
+        val LIQUID_GLASS_BLUR_INTENSITY = androidx.datastore.preferences.core.floatPreferencesKey("liquid_glass_blur_intensity")
+        val LIQUID_GLASS_REFRACTION_INTENSITY = androidx.datastore.preferences.core.floatPreferencesKey("liquid_glass_refraction_intensity")
 
         // Genre View Preference
         val IS_GENRE_GRID_VIEW = booleanPreferencesKey("is_genre_grid_view")
@@ -2070,6 +2072,28 @@ constructor(
     suspend fun setLiquidGlassHeaderEnabled(enabled: Boolean) {
         dataStore.edit { preferences ->
             preferences[PreferencesKeys.LIQUID_GLASS_HEADER_ENABLED] = enabled
+        }
+    }
+
+    val liquidGlassBlurIntensityFlow: Flow<Float> = dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.LIQUID_GLASS_BLUR_INTENSITY] ?: 1.0f
+        }
+
+    suspend fun setLiquidGlassBlurIntensity(intensity: Float) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.LIQUID_GLASS_BLUR_INTENSITY] = intensity.coerceIn(0.1f, 2.0f)
+        }
+    }
+
+    val liquidGlassRefractionIntensityFlow: Flow<Float> = dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.LIQUID_GLASS_REFRACTION_INTENSITY] ?: 1.0f
+        }
+
+    suspend fun setLiquidGlassRefractionIntensity(intensity: Float) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.LIQUID_GLASS_REFRACTION_INTENSITY] = intensity.coerceIn(0.0f, 2.0f)
         }
     }
 

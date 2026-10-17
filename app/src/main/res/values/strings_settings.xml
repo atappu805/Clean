@@ -56,6 +56,9 @@
     <string name="settings_liquid_glass_dismiss_prompt_desc">Apply liquid glass refraction to the playlist dismiss undo bar</string>
     <string name="settings_liquid_glass_header_title">Headers &amp; Top Bars</string>
     <string name="settings_liquid_glass_header_desc">Apply liquid glass refraction to the Home and Explore header pills and settings icon</string>
+    <string name="settings_liquid_glass_intensity_section">Glass Intensity</string>
+    <string name="settings_liquid_glass_blur_intensity_title">Blur Intensity</string>
+    <string name="settings_liquid_glass_refraction_intensity_title">Glass Refraction Intensity</string>
 
     <!-- Common toggles / labels used in ThemeSelectorItem maps -->
     <string name="label_on">On</string>

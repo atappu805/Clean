@@ -54,6 +54,8 @@ import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.lens
 import com.kyant.backdrop.effects.vibrancy
 import com.saurav.pixelmusic.presentation.components.LocalMaterialTheme
+import com.saurav.pixelmusic.ui.theme.LocalLiquidGlassBlurIntensity
+import com.saurav.pixelmusic.ui.theme.LocalLiquidGlassRefractionIntensity
 import kotlinx.coroutines.delay
 import racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape
 
@@ -131,6 +133,8 @@ fun AnimatedPlaybackControls(
 
     val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
     val isGlassActive = isLiquidGlass && backdrop != null
+    val glassBlurIntensity = LocalLiquidGlassBlurIntensity.current
+    val glassRefractionIntensity = LocalLiquidGlassRefractionIntensity.current
 
     Box(
         modifier = modifier
@@ -167,11 +171,12 @@ fun AnimatedPlaybackControls(
                                     shape = { prevShape },
                                     effects = {
                                         vibrancy()
-                                        blur(12.dp.toPx())
-                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                        val blurRadius = (12.dp.toPx() * glassBlurIntensity).coerceAtLeast(1f)
+                                        blur(blurRadius)
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && glassRefractionIntensity > 0.01f) {
                                             lens(
-                                                refractionHeight = 18.dp.toPx(),
-                                                refractionAmount = 42.dp.toPx()
+                                                refractionHeight = 18.dp.toPx() * glassRefractionIntensity,
+                                                refractionAmount = 42.dp.toPx() * glassRefractionIntensity
                                             )
                                         }
                                     },
@@ -182,14 +187,14 @@ fun AnimatedPlaybackControls(
                                 )
                                 .border(
                                     BorderStroke(
-                                        1.2.dp,
+                                        0.85.dp,
                                         Brush.verticalGradient(
                                             colors = if (isDark) listOf(
-                                                Color.White.copy(alpha = 0.70f),
-                                                Color.White.copy(alpha = 0.20f)
+                                                Color.White.copy(alpha = 0.25f),
+                                                Color.White.copy(alpha = 0.06f)
                                             ) else listOf(
-                                                Color.White.copy(alpha = 0.90f),
-                                                Color.White.copy(alpha = 0.35f)
+                                                Color.White.copy(alpha = 0.42f),
+                                                Color.White.copy(alpha = 0.12f)
                                             )
                                         )
                                     ),
@@ -268,11 +273,12 @@ fun AnimatedPlaybackControls(
                                     shape = { playGlassCornerShape },
                                     effects = {
                                         vibrancy()
-                                        blur(12.dp.toPx())
-                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                        val blurRadius = (12.dp.toPx() * glassBlurIntensity).coerceAtLeast(1f)
+                                        blur(blurRadius)
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && glassRefractionIntensity > 0.01f) {
                                             lens(
-                                                refractionHeight = 18.dp.toPx(),
-                                                refractionAmount = 42.dp.toPx()
+                                                refractionHeight = 18.dp.toPx() * glassRefractionIntensity,
+                                                refractionAmount = 42.dp.toPx() * glassRefractionIntensity
                                             )
                                         }
                                     },
@@ -283,14 +289,14 @@ fun AnimatedPlaybackControls(
                                 )
                                 .border(
                                     BorderStroke(
-                                        1.5.dp,
+                                        1.dp,
                                         Brush.verticalGradient(
                                             colors = if (isDark) listOf(
-                                                Color.White.copy(alpha = 0.90f),
-                                                Color.White.copy(alpha = 0.30f)
+                                                Color.White.copy(alpha = 0.30f),
+                                                Color.White.copy(alpha = 0.08f)
                                             ) else listOf(
-                                                Color.White.copy(alpha = 0.95f),
-                                                Color.White.copy(alpha = 0.40f)
+                                                Color.White.copy(alpha = 0.48f),
+                                                Color.White.copy(alpha = 0.15f)
                                             )
                                         )
                                     ),
@@ -353,11 +359,12 @@ fun AnimatedPlaybackControls(
                                     shape = { nextShape },
                                     effects = {
                                         vibrancy()
-                                        blur(12.dp.toPx())
-                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                        val blurRadius = (12.dp.toPx() * glassBlurIntensity).coerceAtLeast(1f)
+                                        blur(blurRadius)
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && glassRefractionIntensity > 0.01f) {
                                             lens(
-                                                refractionHeight = 18.dp.toPx(),
-                                                refractionAmount = 42.dp.toPx()
+                                                refractionHeight = 18.dp.toPx() * glassRefractionIntensity,
+                                                refractionAmount = 42.dp.toPx() * glassRefractionIntensity
                                             )
                                         }
                                     },
@@ -368,14 +375,14 @@ fun AnimatedPlaybackControls(
                                 )
                                 .border(
                                     BorderStroke(
-                                        1.2.dp,
+                                        0.85.dp,
                                         Brush.verticalGradient(
                                             colors = if (isDark) listOf(
-                                                Color.White.copy(alpha = 0.70f),
-                                                Color.White.copy(alpha = 0.20f)
+                                                Color.White.copy(alpha = 0.25f),
+                                                Color.White.copy(alpha = 0.06f)
                                             ) else listOf(
-                                                Color.White.copy(alpha = 0.90f),
-                                                Color.White.copy(alpha = 0.35f)
+                                                Color.White.copy(alpha = 0.42f),
+                                                Color.White.copy(alpha = 0.12f)
                                             )
                                         )
                                     ),

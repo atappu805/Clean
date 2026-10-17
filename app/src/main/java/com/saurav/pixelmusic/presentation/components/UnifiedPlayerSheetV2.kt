@@ -69,6 +69,8 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import com.kyant.backdrop.Backdrop
 import com.saurav.pixelmusic.data.model.Song
 import com.saurav.pixelmusic.data.preferences.sanitizeNavBarCornerRadius
+import com.saurav.pixelmusic.ui.theme.LocalLiquidGlassBlurIntensity
+import com.saurav.pixelmusic.ui.theme.LocalLiquidGlassRefractionIntensity
 import com.saurav.pixelmusic.presentation.components.scoped.PlayerAlbumNavigationEffect
 import com.saurav.pixelmusic.presentation.components.scoped.PlayerArtistNavigationEffect
 import com.saurav.pixelmusic.presentation.components.scoped.PlayerSheetPredictiveBackHandler
@@ -130,6 +132,8 @@ fun UnifiedPlayerSheetV2(
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val latestContext by rememberUpdatedState(context)
+    val glassBlurIntensity = LocalLiquidGlassBlurIntensity.current
+    val glassRefractionIntensity = LocalLiquidGlassRefractionIntensity.current
     var showNoInternetDialog by remember { mutableStateOf(false) }
 
     // MediaStore write-permission launcher (for metadata editing without MANAGE_EXTERNAL_STORAGE)
@@ -698,11 +702,12 @@ fun UnifiedPlayerSheetV2(
                                         shape = { RoundedCornerShape(overallSheetTopCornerRadiusProvider()) },
                                         effects = {
                                             vibrancy()
-                                            blur(10.dp.toPx())
-                                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                            val blurRadius = (10.dp.toPx() * glassBlurIntensity).coerceAtLeast(1f)
+                                            blur(blurRadius)
+                                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && glassRefractionIntensity > 0.01f) {
                                                 lens(
-                                                    refractionHeight = 18.dp.toPx(),
-                                                    refractionAmount = 42.dp.toPx()
+                                                    refractionHeight = 18.dp.toPx() * glassRefractionIntensity,
+                                                    refractionAmount = 42.dp.toPx() * glassRefractionIntensity
                                                 )
                                             }
                                         },

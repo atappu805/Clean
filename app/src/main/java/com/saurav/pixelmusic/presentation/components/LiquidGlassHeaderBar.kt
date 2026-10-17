@@ -43,6 +43,8 @@ import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.lens
 import com.kyant.backdrop.effects.vibrancy
 import com.saurav.pixelmusic.R
+import com.saurav.pixelmusic.ui.theme.LocalLiquidGlassBlurIntensity
+import com.saurav.pixelmusic.ui.theme.LocalLiquidGlassRefractionIntensity
 import com.saurav.pixelmusic.ui.theme.GoogleSansRounded
 import kotlinx.coroutines.launch
 
@@ -60,16 +62,18 @@ fun LiquidGlassHeaderBar(
     val haptic = LocalHapticFeedback.current
     val coroutineScope = rememberCoroutineScope()
     val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+    val glassBlurIntensity = LocalLiquidGlassBlurIntensity.current
+    val glassRefractionIntensity = LocalLiquidGlassRefractionIntensity.current
 
     // iOS Liquid Glass specular rim gradient
     val glassBorderBrush = remember(isDark) {
         Brush.verticalGradient(
             colors = if (isDark) listOf(
-                Color.White.copy(alpha = 0.45f),
-                Color.White.copy(alpha = 0.10f)
+                Color.White.copy(alpha = 0.20f),
+                Color.White.copy(alpha = 0.05f)
             ) else listOf(
-                Color.White.copy(alpha = 0.85f),
-                Color.White.copy(alpha = 0.35f)
+                Color.White.copy(alpha = 0.38f),
+                Color.White.copy(alpha = 0.12f)
             )
         )
     }
@@ -109,11 +113,12 @@ fun LiquidGlassHeaderBar(
                     shape = { pillShape },
                     effects = {
                         vibrancy()
-                        blur(10.dp.toPx())
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        val blurRadius = (10.dp.toPx() * glassBlurIntensity).coerceAtLeast(1f)
+                        blur(blurRadius)
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && glassRefractionIntensity > 0.01f) {
                             lens(
-                                refractionHeight = 18.dp.toPx(),
-                                refractionAmount = 42.dp.toPx()
+                                refractionHeight = 18.dp.toPx() * glassRefractionIntensity,
+                                refractionAmount = 42.dp.toPx() * glassRefractionIntensity
                             )
                         }
                     },
@@ -121,7 +126,7 @@ fun LiquidGlassHeaderBar(
                         drawRect(if (isDark) Color(0x351E1E22) else Color(0x40FFFFFF))
                     }
                 )
-                .border(BorderStroke(1.2.dp, glassBorderBrush), pillShape)
+                .border(BorderStroke(0.85.dp, glassBorderBrush), pillShape)
                 .clip(pillShape)
         } else {
             Modifier
@@ -202,11 +207,12 @@ fun LiquidGlassHeaderBar(
                     shape = { settingsShape },
                     effects = {
                         vibrancy()
-                        blur(10.dp.toPx())
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        val blurRadius = (10.dp.toPx() * glassBlurIntensity).coerceAtLeast(1f)
+                        blur(blurRadius)
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && glassRefractionIntensity > 0.01f) {
                             lens(
-                                refractionHeight = 18.dp.toPx(),
-                                refractionAmount = 42.dp.toPx()
+                                refractionHeight = 18.dp.toPx() * glassRefractionIntensity,
+                                refractionAmount = 42.dp.toPx() * glassRefractionIntensity
                             )
                         }
                     },
@@ -214,7 +220,7 @@ fun LiquidGlassHeaderBar(
                         drawRect(if (isDark) Color(0x351E1E22) else Color(0x40FFFFFF))
                     }
                 )
-                .border(BorderStroke(1.2.dp, glassBorderBrush), settingsShape)
+                .border(BorderStroke(0.85.dp, glassBorderBrush), settingsShape)
                 .clip(settingsShape)
         } else {
             Modifier

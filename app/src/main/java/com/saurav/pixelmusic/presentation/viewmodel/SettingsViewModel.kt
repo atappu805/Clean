@@ -115,6 +115,8 @@ data class SettingsUiState(
     val liquidGlassMiniPlayerEnabled: Boolean = true,
     val liquidGlassDismissPromptEnabled: Boolean = true,
     val liquidGlassHeaderEnabled: Boolean = true,
+    val liquidGlassBlurIntensity: Float = 1.0f,
+    val liquidGlassRefractionIntensity: Float = 1.0f,
     // Developer Options
     val albumArtQuality: AlbumArtQuality = AlbumArtQuality.HIGH,
     val albumArtCacheLimitMb: Int = 200,
@@ -818,6 +820,16 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             userPreferencesRepository.liquidGlassHeaderEnabledFlow.collect { enabled ->
                 _uiState.update { it.copy(liquidGlassHeaderEnabled = enabled) }
+            }
+        }
+        viewModelScope.launch {
+            userPreferencesRepository.liquidGlassBlurIntensityFlow.collect { intensity ->
+                _uiState.update { it.copy(liquidGlassBlurIntensity = intensity) }
+            }
+        }
+        viewModelScope.launch {
+            userPreferencesRepository.liquidGlassRefractionIntensityFlow.collect { intensity ->
+                _uiState.update { it.copy(liquidGlassRefractionIntensity = intensity) }
             }
         }
 
@@ -1912,6 +1924,18 @@ class SettingsViewModel @Inject constructor(
     fun setLiquidGlassHeaderEnabled(enabled: Boolean) {
         viewModelScope.launch {
             userPreferencesRepository.setLiquidGlassHeaderEnabled(enabled)
+        }
+    }
+
+    fun setLiquidGlassBlurIntensity(intensity: Float) {
+        viewModelScope.launch {
+            userPreferencesRepository.setLiquidGlassBlurIntensity(intensity)
+        }
+    }
+
+    fun setLiquidGlassRefractionIntensity(intensity: Float) {
+        viewModelScope.launch {
+            userPreferencesRepository.setLiquidGlassRefractionIntensity(intensity)
         }
     }
 

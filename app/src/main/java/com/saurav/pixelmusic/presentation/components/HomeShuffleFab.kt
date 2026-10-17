@@ -78,6 +78,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.saurav.pixelmusic.R
 import com.saurav.pixelmusic.ui.theme.GoogleSansRounded
+import com.saurav.pixelmusic.ui.theme.LocalLiquidGlassBlurIntensity
+import com.saurav.pixelmusic.ui.theme.LocalLiquidGlassRefractionIntensity
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.drawBackdrop
 import com.kyant.backdrop.effects.blur
@@ -346,14 +348,16 @@ fun HomeShuffleFab(
         }
 
         val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+        val glassBlurIntensity = LocalLiquidGlassBlurIntensity.current
+        val glassRefractionIntensity = LocalLiquidGlassRefractionIntensity.current
         val glassBorderBrush = remember(isDark) {
             Brush.verticalGradient(
                 colors = if (isDark) listOf(
-                    Color.White.copy(alpha = 0.65f),
-                    Color.White.copy(alpha = 0.20f)
+                    Color.White.copy(alpha = 0.22f),
+                    Color.White.copy(alpha = 0.06f)
                 ) else listOf(
-                    Color.White.copy(alpha = 0.90f),
-                    Color.White.copy(alpha = 0.35f)
+                    Color.White.copy(alpha = 0.40f),
+                    Color.White.copy(alpha = 0.12f)
                 )
             )
         }
@@ -385,11 +389,12 @@ fun HomeShuffleFab(
                             shape = { fabShape },
                             effects = {
                                 vibrancy()
-                                blur(10.dp.toPx())
-                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                val blurRadius = (10.dp.toPx() * glassBlurIntensity).coerceAtLeast(1f)
+                                blur(blurRadius)
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && glassRefractionIntensity > 0.01f) {
                                     lens(
-                                        refractionHeight = 18.dp.toPx(),
-                                        refractionAmount = 42.dp.toPx()
+                                        refractionHeight = 18.dp.toPx() * glassRefractionIntensity,
+                                        refractionAmount = 42.dp.toPx() * glassRefractionIntensity
                                     )
                                 }
                             },
@@ -401,7 +406,7 @@ fun HomeShuffleFab(
                         Modifier.background(if (isDark) Color(0x351E1E22) else Color(0x40FFFFFF), fabShape)
                     }
                 )
-                .border(BorderStroke(1.2.dp, glassBorderBrush), fabShape)
+                .border(BorderStroke(0.85.dp, glassBorderBrush), fabShape)
                 .clip(fabShape)
                 .then(fabDragModifier)
                 .animateContentSize(

@@ -57,6 +57,8 @@ import com.kyant.backdrop.effects.lens
 import com.kyant.backdrop.effects.vibrancy
 import com.saurav.pixelmusic.R
 import com.saurav.pixelmusic.ui.theme.GoogleSansRounded
+import com.saurav.pixelmusic.ui.theme.LocalLiquidGlassBlurIntensity
+import com.saurav.pixelmusic.ui.theme.LocalLiquidGlassRefractionIntensity
 import kotlinx.coroutines.launch
 import racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape
 
@@ -72,6 +74,8 @@ fun DismissUndoBar(
     val progress = remember { Animatable(1f) }
     val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
     val coroutineScope = rememberCoroutineScope()
+    val glassBlurIntensity = LocalLiquidGlassBlurIntensity.current
+    val glassRefractionIntensity = LocalLiquidGlassRefractionIntensity.current
 
     LaunchedEffect(key1 = onUndo) {
         progress.snapTo(1f)
@@ -94,9 +98,13 @@ fun DismissUndoBar(
                     shape = { undoBarShape },
                     effects = {
                         vibrancy()
-                        blur(10.dp.toPx())
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                            lens(18.dp.toPx(), 42.dp.toPx())
+                        val blurRadius = (10.dp.toPx() * glassBlurIntensity).coerceAtLeast(1f)
+                        blur(blurRadius)
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && glassRefractionIntensity > 0.01f) {
+                            lens(
+                                refractionHeight = 18.dp.toPx() * glassRefractionIntensity,
+                                refractionAmount = 42.dp.toPx() * glassRefractionIntensity
+                            )
                         }
                     },
                     onDrawSurface = {
@@ -105,11 +113,11 @@ fun DismissUndoBar(
                 )
                 .border(
                     border = BorderStroke(
-                        1.dp,
+                        0.85.dp,
                         Brush.verticalGradient(
                             colors = listOf(
-                                Color.White.copy(alpha = if (isDark) 0.65f else 0.85f),
-                                Color.White.copy(alpha = if (isDark) 0.15f else 0.30f)
+                                Color.White.copy(alpha = if (isDark) 0.25f else 0.40f),
+                                Color.White.copy(alpha = if (isDark) 0.06f else 0.12f)
                             )
                         )
                     ),

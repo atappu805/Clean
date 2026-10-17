@@ -3428,11 +3428,11 @@ private fun BottomToggleRow(
         modifier = modifier
             .border(
                 border = BorderStroke(
-                    1.dp,
+                    0.85.dp,
                     Brush.verticalGradient(
                         colors = listOf(
-                            Color.White.copy(alpha = if (isDark) 0.55f else 0.75f),
-                            Color.White.copy(alpha = if (isDark) 0.12f else 0.25f)
+                            Color.White.copy(alpha = if (isDark) 0.22f else 0.38f),
+                            Color.White.copy(alpha = if (isDark) 0.05f else 0.12f)
                         )
                     )
                 ),

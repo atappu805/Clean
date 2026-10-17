@@ -51,6 +51,8 @@ import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.res.painterResource
 import com.saurav.pixelmusic.ui.theme.GoogleSansRounded
+import com.saurav.pixelmusic.ui.theme.LocalLiquidGlassBlurIntensity
+import com.saurav.pixelmusic.ui.theme.LocalLiquidGlassRefractionIntensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -200,16 +202,18 @@ fun PlayerInternalNavigationBar(
 
     val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
     val primaryColor = MaterialTheme.colorScheme.primary
+    val glassBlurIntensity = LocalLiquidGlassBlurIntensity.current
+    val glassRefractionIntensity = LocalLiquidGlassRefractionIntensity.current
 
     // iOS Liquid Glass specular rim gradient and translucent fill colors
     val glassBorderBrush = remember(isDark) {
         Brush.verticalGradient(
             colors = if (isDark) listOf(
-                Color.White.copy(alpha = 0.45f),
-                Color.White.copy(alpha = 0.10f)
+                Color.White.copy(alpha = 0.20f),
+                Color.White.copy(alpha = 0.05f)
             ) else listOf(
-                Color.White.copy(alpha = 0.85f),
-                Color.White.copy(alpha = 0.35f)
+                Color.White.copy(alpha = 0.38f),
+                Color.White.copy(alpha = 0.12f)
             )
         )
     }
@@ -242,11 +246,12 @@ fun PlayerInternalNavigationBar(
                             shape = { capsuleShape },
                             effects = {
                                 vibrancy()
-                                blur(10.dp.toPx())
-                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                val blurRadius = (10.dp.toPx() * glassBlurIntensity).coerceAtLeast(1f)
+                                blur(blurRadius)
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && glassRefractionIntensity > 0.01f) {
                                     lens(
-                                        refractionHeight = 18.dp.toPx(),
-                                        refractionAmount = 42.dp.toPx()
+                                        refractionHeight = 18.dp.toPx() * glassRefractionIntensity,
+                                        refractionAmount = 42.dp.toPx() * glassRefractionIntensity
                                     )
                                 }
                             },
@@ -258,7 +263,7 @@ fun PlayerInternalNavigationBar(
                         Modifier.background(if (isDark) Color(0x351E1E22) else Color(0x40FFFFFF), capsuleShape)
                     }
                 )
-                .border(BorderStroke(1.2.dp, glassBorderBrush), capsuleShape)
+                .border(BorderStroke(0.85.dp, glassBorderBrush), capsuleShape)
 
             val density = LocalDensity.current
             var isDragging by remember { mutableStateOf(false) }
@@ -653,11 +658,12 @@ fun PlayerInternalNavigationBar(
                             shape = { searchShape },
                             effects = {
                                 vibrancy()
-                                blur(10.dp.toPx())
-                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                val blurRadius = (10.dp.toPx() * glassBlurIntensity).coerceAtLeast(1f)
+                                blur(blurRadius)
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && glassRefractionIntensity > 0.01f) {
                                     lens(
-                                        refractionHeight = 18.dp.toPx(),
-                                        refractionAmount = 42.dp.toPx()
+                                        refractionHeight = 18.dp.toPx() * glassRefractionIntensity,
+                                        refractionAmount = 42.dp.toPx() * glassRefractionIntensity
                                     )
                                 }
                             },
@@ -680,16 +686,16 @@ fun PlayerInternalNavigationBar(
                 .border(
                     if (isSearchSelected) {
                         BorderStroke(
-                            1.2.dp,
+                            0.85.dp,
                             Brush.verticalGradient(
                                 listOf(
-                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
-                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.50f),
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.20f)
                                 )
                             )
                         )
                     } else {
-                        BorderStroke(1.2.dp, glassBorderBrush)
+                        BorderStroke(0.85.dp, glassBorderBrush)
                     },
                     searchShape
                 )

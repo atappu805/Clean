@@ -162,6 +162,8 @@ import com.saurav.pixelmusic.presentation.utils.AppHapticsConfig
 import com.saurav.pixelmusic.presentation.utils.LocalAppHapticsConfig
 import com.saurav.pixelmusic.ui.modifiers.LocalMotionBlurEnabled
 import com.saurav.pixelmusic.ui.modifiers.LocalMotionBlurIntensity
+import com.saurav.pixelmusic.ui.theme.LocalLiquidGlassBlurIntensity
+import com.saurav.pixelmusic.ui.theme.LocalLiquidGlassRefractionIntensity
 import com.saurav.pixelmusic.presentation.utils.NoOpHapticFeedback
 import com.saurav.pixelmusic.utils.CrashLogData
 import javax.annotation.concurrent.Immutable
@@ -889,6 +891,8 @@ class MainActivity : ComponentActivity() {
         val liquidGlassNavBarEnabled by playerViewModel.userPreferencesRepository.liquidGlassNavBarEnabledFlow.collectAsStateWithLifecycle(initialValue = true)
         val liquidGlassMiniPlayerEnabled by playerViewModel.userPreferencesRepository.liquidGlassMiniPlayerEnabledFlow.collectAsStateWithLifecycle(initialValue = true)
         val liquidGlassDismissPromptEnabled by playerViewModel.userPreferencesRepository.liquidGlassDismissPromptEnabledFlow.collectAsStateWithLifecycle(initialValue = true)
+        val liquidGlassBlurIntensity by playerViewModel.userPreferencesRepository.liquidGlassBlurIntensityFlow.collectAsStateWithLifecycle(initialValue = 1f)
+        val liquidGlassRefractionIntensity by playerViewModel.userPreferencesRepository.liquidGlassRefractionIntensityFlow.collectAsStateWithLifecycle(initialValue = 1f)
         val isDarkTheme = MaterialTheme.colorScheme.surface.luminance() < 0.5f
         val isLiquidGlassOnNavBar = liquidGlassEnabled && liquidGlassNavBarEnabled
         val isLiquidGlassOnMiniPlayer = liquidGlassEnabled && liquidGlassMiniPlayerEnabled
@@ -1022,7 +1026,9 @@ class MainActivity : ComponentActivity() {
             LocalAppHapticsConfig provides appHapticsConfig,
             LocalHapticFeedback provides scopedHapticFeedback,
             LocalMotionBlurIntensity provides motionBlurIntensity,
-            LocalMotionBlurEnabled provides motionBlurEnabled
+            LocalMotionBlurEnabled provides motionBlurEnabled,
+            LocalLiquidGlassBlurIntensity provides liquidGlassBlurIntensity,
+            LocalLiquidGlassRefractionIntensity provides liquidGlassRefractionIntensity
         ) {
             AppSidebarDrawer(
                 drawerState = drawerState,
