@@ -164,6 +164,7 @@ import com.saurav.pixelmusic.ui.modifiers.LocalMotionBlurEnabled
 import com.saurav.pixelmusic.ui.modifiers.LocalMotionBlurIntensity
 import com.saurav.pixelmusic.ui.theme.LocalLiquidGlassBlurIntensity
 import com.saurav.pixelmusic.ui.theme.LocalLiquidGlassRefractionIntensity
+import com.saurav.pixelmusic.ui.theme.LocalLiquidGlassEnabled
 import com.saurav.pixelmusic.presentation.utils.NoOpHapticFeedback
 import com.saurav.pixelmusic.utils.CrashLogData
 import javax.annotation.concurrent.Immutable
@@ -1028,7 +1029,8 @@ class MainActivity : ComponentActivity() {
             LocalMotionBlurIntensity provides motionBlurIntensity,
             LocalMotionBlurEnabled provides motionBlurEnabled,
             LocalLiquidGlassBlurIntensity provides liquidGlassBlurIntensity,
-            LocalLiquidGlassRefractionIntensity provides liquidGlassRefractionIntensity
+            LocalLiquidGlassRefractionIntensity provides liquidGlassRefractionIntensity,
+            LocalLiquidGlassEnabled provides liquidGlassEnabled
         ) {
             AppSidebarDrawer(
                 drawerState = drawerState,

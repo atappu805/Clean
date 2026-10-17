@@ -21,10 +21,22 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.saurav.pixelmusic.ui.theme.LocalLiquidGlassEnabled
 import kotlinx.coroutines.launch
 
 /**
@@ -82,6 +94,50 @@ fun SmoothModalBottomSheet(
         }
     }
 
+    val isLiquidGlass = LocalLiquidGlassEnabled.current
+    val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+
+    val effectiveContainerColor = if (isLiquidGlass) {
+        if (isDark) Color(0x351C1C22) else Color(0x55FFFFFF)
+    } else {
+        containerColor
+    }
+
+    val effectiveScrimColor = if (isLiquidGlass) {
+        Color.Black.copy(alpha = 0.35f)
+    } else {
+        scrimColor
+    }
+
+    val glassBorder = remember(isLiquidGlass, isDark) {
+        if (!isLiquidGlass) null
+        else BorderStroke(
+            0.75.dp,
+            Brush.verticalGradient(
+                listOf(
+                    Color.White.copy(alpha = if (isDark) 0.12f else 0.22f),
+                    Color.White.copy(alpha = if (isDark) 0.02f else 0.05f)
+                )
+            )
+        )
+    }
+
+    val effectiveDragHandle: @Composable (() -> Unit)? = if (dragHandle == null) null else {
+        {
+            if (isLiquidGlass) {
+                Box(
+                    modifier = Modifier
+                        .padding(vertical = 12.dp)
+                        .size(width = 36.dp, height = 4.5.dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = if (isDark) 0.25f else 0.40f))
+                )
+            } else {
+                dragHandle()
+            }
+        }
+    }
+
     ModalBottomSheet(
         onDismissRequest = {
             if (!isDismissing && sheetState.isVisible) {
@@ -90,15 +146,15 @@ fun SmoothModalBottomSheet(
                 onDismissRequest()
             }
         },
-        modifier = modifier,
+        modifier = modifier.then(if (glassBorder != null) Modifier.border(glassBorder, shape) else Modifier),
         sheetState = sheetState,
         sheetMaxWidth = sheetMaxWidth,
         shape = shape,
-        containerColor = containerColor,
+        containerColor = effectiveContainerColor,
         contentColor = contentColor,
-        tonalElevation = tonalElevation,
-        scrimColor = scrimColor,
-        dragHandle = dragHandle,
+        tonalElevation = if (isLiquidGlass) 0.dp else tonalElevation,
+        scrimColor = effectiveScrimColor,
+        dragHandle = effectiveDragHandle,
         contentWindowInsets = contentWindowInsets,
         properties = properties,
         content = {

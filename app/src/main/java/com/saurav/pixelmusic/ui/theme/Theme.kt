@@ -42,6 +42,7 @@ val LocalPixelMusicDarkTheme = staticCompositionLocalOf { false }
 val LocalIsBlackAndWhiteTheme = staticCompositionLocalOf { false }
 val LocalLiquidGlassBlurIntensity = staticCompositionLocalOf { 1.0f }
 val LocalLiquidGlassRefractionIntensity = staticCompositionLocalOf { 1.0f }
+val LocalLiquidGlassEnabled = staticCompositionLocalOf { true }
 
 private tailrec fun Context.findActivity(): Activity? = when (this) {
     is Activity -> this

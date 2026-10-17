@@ -28,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import com.saurav.pixelmusic.presentation.components.LiquidGlassDropdownMenu
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -223,7 +224,7 @@ fun ChartsScreen(
                                 }
                             }
 
-                            DropdownMenu(
+                            LiquidGlassDropdownMenu(
                                 expanded = showCountryMenu,
                                 onDismissRequest = { showCountryMenu = false }
                             ) {

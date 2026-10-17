@@ -51,8 +51,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.luminance
+import com.saurav.pixelmusic.ui.theme.LocalLiquidGlassEnabled
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -125,9 +130,30 @@ fun openSetting(setting: SearchableSetting, queryUsed: String) {
         Column(modifier = Modifier.fillMaxSize()) {
 
             // ─── Search bar header ─────────────────────────────────────────────
+            val isLiquidGlass = LocalLiquidGlassEnabled.current
+            val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+            val headerBorder = remember(isLiquidGlass, isDark) {
+                if (!isLiquidGlass) null
+                else BorderStroke(
+                    0.75.dp,
+                    Brush.verticalGradient(
+                        listOf(
+                            Color.White.copy(alpha = if (isDark) 0.10f else 0.20f),
+                            Color.White.copy(alpha = if (isDark) 0.02f else 0.05f)
+                        )
+                    )
+                )
+            }
             Surface(
-                color = MaterialTheme.colorScheme.surfaceContainer,
-                shape = RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp)
+                color = if (isLiquidGlass) {
+                    if (isDark) Color(0x301E1E24) else Color(0x55FFFFFF)
+                } else {
+                    MaterialTheme.colorScheme.surfaceContainer
+                },
+                shape = RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp),
+                modifier = Modifier.then(
+                    if (headerBorder != null) Modifier.border(headerBorder, RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp)) else Modifier
+                )
             ) {
                 Row(
                     modifier = Modifier

@@ -28,6 +28,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import com.saurav.pixelmusic.presentation.components.LiquidGlassToggle
+import com.saurav.pixelmusic.ui.theme.LocalLiquidGlassEnabled
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
@@ -274,41 +276,60 @@ fun SwitchSettingItem(
                     )
                 }
 
-                Switch(
-                    checked = checked,
-                    onCheckedChange = { newValue ->
-                        if (enabled) {
-                            performAppCompatHapticFeedback(
-                                view,
-                                appHapticsConfig,
-                                HapticFeedbackConstantsCompat.GESTURE_START
-                            )
-                            onCheckedChange(newValue)
-                        }
-                    },
-                    enabled = enabled,
-                    thumbContent = {
-                        AnimatedContent(
-                            targetState = checked,
-                            transitionSpec = { fadeIn(tween(100)) togetherWith fadeOut(tween(100)) },
-                            label = "switch_thumb_icon"
-                        ) { isChecked ->
-                            Icon(
-                                imageVector = if (isChecked) Icons.Rounded.Check else Icons.Rounded.Close,
-                                contentDescription = null,
-                                modifier = Modifier.size(SwitchDefaults.IconSize)
-                            )
-                        }
-                    },
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
-                        checkedTrackColor = MaterialTheme.colorScheme.primary,
-                        checkedIconColor = MaterialTheme.colorScheme.primary,
-                        uncheckedThumbColor = MaterialTheme.colorScheme.onSurface,
-                        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
-                        uncheckedIconColor = MaterialTheme.colorScheme.surfaceVariant
+                val isLiquidGlass = LocalLiquidGlassEnabled.current
+
+                if (isLiquidGlass) {
+                    LiquidGlassToggle(
+                        checked = checked,
+                        onCheckedChange = { newValue ->
+                            if (enabled) {
+                                performAppCompatHapticFeedback(
+                                    view,
+                                    appHapticsConfig,
+                                    HapticFeedbackConstantsCompat.GESTURE_START
+                                )
+                                onCheckedChange(newValue)
+                            }
+                        },
+                        enabled = enabled
                     )
-                )
+                } else {
+                    Switch(
+                        checked = checked,
+                        onCheckedChange = { newValue ->
+                            if (enabled) {
+                                performAppCompatHapticFeedback(
+                                    view,
+                                    appHapticsConfig,
+                                    HapticFeedbackConstantsCompat.GESTURE_START
+                                )
+                                onCheckedChange(newValue)
+                            }
+                        },
+                        enabled = enabled,
+                        thumbContent = {
+                            AnimatedContent(
+                                targetState = checked,
+                                transitionSpec = { fadeIn(tween(100)) togetherWith fadeOut(tween(100)) },
+                                label = "switch_thumb_icon"
+                            ) { isChecked ->
+                                Icon(
+                                    imageVector = if (isChecked) Icons.Rounded.Check else Icons.Rounded.Close,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(SwitchDefaults.IconSize)
+                                )
+                            }
+                        },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                            checkedTrackColor = MaterialTheme.colorScheme.primary,
+                            checkedIconColor = MaterialTheme.colorScheme.primary,
+                            uncheckedThumbColor = MaterialTheme.colorScheme.onSurface,
+                            uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+                            uncheckedIconColor = MaterialTheme.colorScheme.surfaceVariant
+                        )
+                    )
+                }
             }
         }
         if (highlighted) {

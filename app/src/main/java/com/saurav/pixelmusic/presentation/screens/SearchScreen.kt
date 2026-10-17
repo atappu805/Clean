@@ -58,8 +58,11 @@ import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Podcasts
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.SentimentSatisfied
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import com.saurav.pixelmusic.ui.theme.LocalLiquidGlassEnabled
 import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -273,6 +276,22 @@ fun SearchScreen(
             modifier = Modifier.fillMaxSize()
         ) {
             // ── Top Search Header ───────────────────────────────────────────────
+            val isLiquidGlass = LocalLiquidGlassEnabled.current
+            val isDark = colorScheme.surface.luminance() < 0.5f
+
+            val searchBarBorder = remember(isLiquidGlass, isDark) {
+                if (!isLiquidGlass) null
+                else BorderStroke(
+                    0.75.dp,
+                    Brush.verticalGradient(
+                        listOf(
+                            Color.White.copy(alpha = if (isDark) 0.10f else 0.20f),
+                            Color.White.copy(alpha = if (isDark) 0.02f else 0.05f)
+                        )
+                    )
+                )
+            }
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -288,10 +307,15 @@ fun SearchScreen(
                 Surface(
                     modifier = Modifier
                         .weight(1f)
-                        .height(56.dp),
+                        .height(56.dp)
+                        .then(if (searchBarBorder != null) Modifier.border(searchBarBorder, RoundedCornerShape(28.dp)) else Modifier),
                     shape = RoundedCornerShape(28.dp),
-                    color = colorScheme.surfaceContainerHigh,
-                    tonalElevation = 2.dp
+                    color = if (isLiquidGlass) {
+                        if (isDark) Color(0x22FFFFFF) else Color(0x55FFFFFF)
+                    } else {
+                        colorScheme.surfaceContainerHigh
+                    },
+                    tonalElevation = if (isLiquidGlass) 0.dp else 2.dp
                 ) {
                     Row(
                         modifier = Modifier
@@ -377,11 +401,26 @@ fun SearchScreen(
                         Surface(
                             onClick = { playerViewModel.toggleSearchSource() },
                             shape = CircleShape,
-                            color = if (searchSource == SearchSource.LOCAL) {
-                                colorScheme.secondaryContainer
+                            color = if (isLiquidGlass) {
+                                if (searchSource == SearchSource.LOCAL) {
+                                    colorScheme.secondary.copy(alpha = if (isDark) 0.35f else 0.25f)
+                                } else {
+                                    colorScheme.primary.copy(alpha = if (isDark) 0.35f else 0.25f)
+                                }
                             } else {
-                                colorScheme.primaryContainer.copy(alpha = 0.75f)
+                                if (searchSource == SearchSource.LOCAL) {
+                                    colorScheme.secondaryContainer
+                                } else {
+                                    colorScheme.primaryContainer.copy(alpha = 0.75f)
+                                }
                             },
+                            border = if (isLiquidGlass) {
+                                BorderStroke(
+                                    0.75.dp,
+                                    if (searchSource == SearchSource.LOCAL) colorScheme.secondary.copy(alpha = 0.40f)
+                                    else colorScheme.primary.copy(alpha = 0.40f)
+                                )
+                            } else null,
                             modifier = Modifier.height(38.dp)
                         ) {
                             Row(
@@ -421,18 +460,24 @@ fun SearchScreen(
                 }
 
                 FilledIconButton(
-                    modifier = Modifier.size(52.dp),
+                    modifier = Modifier
+                        .size(56.dp)
+                        .then(if (searchBarBorder != null) Modifier.border(searchBarBorder, CircleShape) else Modifier),
                     shape = CircleShape,
                     colors = IconButtonDefaults.filledIconButtonColors(
-                        containerColor = colorScheme.primaryContainer,
-                        contentColor = colorScheme.onPrimaryContainer
+                        containerColor = if (isLiquidGlass) {
+                            if (isDark) Color(0x22FFFFFF) else Color(0x55FFFFFF)
+                        } else {
+                            colorScheme.primaryContainer
+                        },
+                        contentColor = if (isLiquidGlass) colorScheme.primary else colorScheme.onPrimaryContainer
                     ),
                     onClick = { navController.navigateSafely(Screen.Settings.route) }
                 ) {
                     Icon(
                         painter = painterResource(R.drawable.rounded_settings_24),
                         contentDescription = stringResource(R.string.presentation_batch_d_open_settings_cd),
-                        modifier = Modifier.size(22.dp)
+                        modifier = Modifier.size(24.dp)
                     )
                 }
             }
