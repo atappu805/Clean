@@ -63,6 +63,11 @@ import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.drawBackdrop
 import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.lens
+import com.kyant.backdrop.effects.vibrancy
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import androidx.compose.ui.graphics.Color
@@ -185,9 +190,9 @@ fun PlayerInternalNavigationBar(
 
     val glassContainerColor = remember(isDark) {
         if (isDark) {
-            Color(0x35FFFFFF).compositeOver(Color(0xD018181B))
+            Color(0x18FFFFFF)
         } else {
-            Color(0x60FFFFFF).compositeOver(Color(0xD0F2F2F7))
+            Color(0x38FFFFFF)
         }
     }
 
@@ -199,146 +204,147 @@ fun PlayerInternalNavigationBar(
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (isLiquidGlass) {
-            val glassCapsuleModifier = if (backdrop != null) {
-                Modifier
-                    .weight(1f)
-                    .height(settingsButtonSize)
-                    .drawBackdrop(
-                        backdrop = backdrop,
-                        shape = { CircleShape },
-                        effects = {
-                            blur(20.dp.toPx())
-                            lens(16.dp.toPx(), 32.dp.toPx())
-                        }
-                    )
-            } else {
-                Modifier
-                    .weight(1f)
-                    .height(settingsButtonSize)
-            }
+            val glassCapsuleModifier = Modifier
+                .weight(1f)
+                .height(settingsButtonSize)
+                .shadow(elevation = 12.dp, shape = CircleShape)
+                .then(
+                    if (backdrop != null) {
+                        Modifier.drawBackdrop(
+                            backdrop = backdrop,
+                            shape = { CircleShape },
+                            effects = {
+                                vibrancy()
+                                blur(8.dp.toPx())
+                                lens(16.dp.toPx(), 32.dp.toPx())
+                            }
+                        )
+                    } else {
+                        Modifier
+                    }
+                )
+                .background(color = glassContainerColor, shape = CircleShape)
+                .border(BorderStroke(1.dp, glassBorderBrush), shape = CircleShape)
+                .clip(CircleShape)
 
             // iOS 26 Liquid Glass Navigation Capsule
-            Surface(
+            Box(
                 modifier = glassCapsuleModifier,
-                shape = CircleShape,
-                color = glassContainerColor,
-                border = BorderStroke(1.dp, glassBorderBrush),
-                shadowElevation = 10.dp
+                contentAlignment = Alignment.Center
             ) {
+                // Specular gloss reflection across the top half of the capsule
                 Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    // Specular gloss reflection across the top half of the capsule
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .fillMaxHeight(0.5f)
-                            .align(Alignment.TopCenter)
-                            .background(
-                                brush = Brush.verticalGradient(
-                                    colors = listOf(
-                                        Color.White.copy(alpha = if (isDark) 0.12f else 0.22f),
-                                        Color.Transparent
-                                    )
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .fillMaxHeight(0.5f)
+                        .align(Alignment.TopCenter)
+                        .background(
+                            brush = Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.White.copy(alpha = if (isDark) 0.15f else 0.30f),
+                                    Color.Transparent
                                 )
                             )
-                    )
+                        )
+                )
 
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(toolbarRowHeight)
-                            .padding(horizontal = 6.dp),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        mainItems.forEachIndexed { index, item ->
-                            val isSelected = index == selectedIndex
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(toolbarRowHeight)
+                        .padding(horizontal = 6.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    mainItems.forEachIndexed { index, item ->
+                        val isSelected = index == selectedIndex
 
-                            val animatedWeight by animateFloatAsState(
-                                targetValue = if (isSelected) selectedItemWeight else 1f,
-                                animationSpec = spring(
-                                    dampingRatio = Spring.DampingRatioMediumBouncy,
-                                    stiffness = Spring.StiffnessLow
-                                ),
-                                label = "glass_weight_$index"
-                            )
+                        val animatedWeight by animateFloatAsState(
+                            targetValue = if (isSelected) selectedItemWeight else 1f,
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                stiffness = Spring.StiffnessLow
+                            ),
+                            label = "glass_weight_$index"
+                        )
 
-                            val dropletColor by animateColorAsState(
-                                targetValue = if (isSelected) {
-                                    if (isDark) Color.White.copy(alpha = 0.22f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
-                                } else {
-                                    Color.Transparent
-                                },
-                                animationSpec = tween(220),
-                                label = "droplet_color_$index"
-                            )
+                        val dropletColor by animateColorAsState(
+                            targetValue = if (isSelected) {
+                                if (isDark) Color.White.copy(alpha = 0.22f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.20f)
+                            } else {
+                                Color.Transparent
+                            },
+                            animationSpec = tween(220),
+                            label = "droplet_color_$index"
+                        )
 
-                            val itemContentColor by animateColorAsState(
-                                targetValue = if (isSelected) {
-                                    if (isDark) Color.White else MaterialTheme.colorScheme.primary
-                                } else {
-                                    if (isDark) Color.White.copy(alpha = 0.60f) else Color.Black.copy(alpha = 0.55f)
-                                },
-                                animationSpec = tween(200),
-                                label = "glass_content_color_$index"
-                            )
+                        val itemContentColor by animateColorAsState(
+                            targetValue = if (isSelected) {
+                                if (isDark) Color.White else MaterialTheme.colorScheme.primary
+                            } else {
+                                if (isDark) Color.White.copy(alpha = 0.70f) else Color.Black.copy(alpha = 0.60f)
+                            },
+                            animationSpec = tween(200),
+                            label = "glass_content_color_$index"
+                        )
 
-                            Surface(
-                                onClick = {
+                        Box(
+                            modifier = Modifier
+                                .weight(animatedWeight)
+                                .height(toolbarRowHeight)
+                                .clip(CircleShape)
+                                .background(dropletColor, CircleShape)
+                                .then(
+                                    if (isSelected) {
+                                        Modifier.border(
+                                            0.5.dp,
+                                            if (isDark) Color.White.copy(alpha = 0.35f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.35f),
+                                            CircleShape
+                                        )
+                                    } else Modifier
+                                )
+                                .clickable {
                                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                     if (latestNavigationEnabled && latestCurrentRoute != item.screen.route) {
                                         navController.navigateToTopLevelSafely(item.screen.route)
                                     }
                                 },
-                                modifier = Modifier
-                                    .weight(animatedWeight)
-                                    .height(toolbarRowHeight),
-                                shape = CircleShape,
-                                color = dropletColor,
-                                border = if (isSelected) {
-                                    BorderStroke(
-                                        0.5.dp,
-                                        if (isDark) Color.White.copy(alpha = 0.30f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
-                                    )
-                                } else null
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center,
+                                modifier = Modifier.fillMaxSize()
                             ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.Center,
-                                    modifier = Modifier.fillMaxSize()
+                                val iconRes = if (isSelected && item.selectedIconResId != null && item.selectedIconResId != 0) {
+                                    item.selectedIconResId
+                                } else {
+                                    item.iconResId
+                                }
+
+                                Icon(
+                                    painter = painterResource(id = iconRes),
+                                    contentDescription = item.label,
+                                    tint = itemContentColor,
+                                    modifier = Modifier.size(itemIconSize)
+                                )
+
+                                AnimatedVisibility(
+                                    visible = isSelected && !shouldHideLabel,
+                                    enter = fadeIn(animationSpec = tween(200)) + expandHorizontally(expandFrom = Alignment.Start),
+                                    exit = fadeOut(animationSpec = tween(150)) + shrinkHorizontally(shrinkTowards = Alignment.Start)
                                 ) {
-                                    val iconRes = if (isSelected && item.selectedIconResId != null && item.selectedIconResId != 0) {
-                                        item.selectedIconResId
-                                    } else {
-                                        item.iconResId
-                                    }
-
-                                    Icon(
-                                        painter = painterResource(id = iconRes),
-                                        contentDescription = item.label,
-                                        tint = itemContentColor,
-                                        modifier = Modifier.size(itemIconSize)
-                                    )
-
-                                    AnimatedVisibility(
-                                        visible = isSelected && !shouldHideLabel,
-                                        enter = fadeIn(animationSpec = tween(200)) + expandHorizontally(expandFrom = Alignment.Start),
-                                        exit = fadeOut(animationSpec = tween(150)) + shrinkHorizontally(shrinkTowards = Alignment.Start)
-                                    ) {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Spacer(modifier = Modifier.width(6.dp))
-                                            Text(
-                                                text = item.label,
-                                                fontFamily = GoogleSansRounded,
-                                                style = if (compactMode) MaterialTheme.typography.labelMedium else MaterialTheme.typography.labelLarge,
-                                                maxLines = 1,
-                                                fontWeight = FontWeight.Bold,
-                                                color = itemContentColor,
-                                                softWrap = false
-                                            )
-                                        }
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = item.label,
+                                            fontFamily = GoogleSansRounded,
+                                            style = if (compactMode) MaterialTheme.typography.labelMedium else MaterialTheme.typography.labelLarge,
+                                            maxLines = 1,
+                                            fontWeight = FontWeight.Bold,
+                                            color = itemContentColor,
+                                            softWrap = false
+                                        )
                                     }
                                 }
                             }
@@ -445,30 +451,6 @@ fun PlayerInternalNavigationBar(
 
         // Detached Search Button
         val isSearchSelected = latestCurrentRoute == Screen.Search.route
-        val searchButtonModifier = if (isLiquidGlass && backdrop != null) {
-            Modifier
-                .size(settingsButtonSize)
-                .drawBackdrop(
-                    backdrop = backdrop,
-                    shape = { CircleShape },
-                    effects = {
-                        blur(20.dp.toPx())
-                        lens(16.dp.toPx(), 32.dp.toPx())
-                    }
-                )
-        } else {
-            Modifier.size(settingsButtonSize)
-        }
-        val searchGlassColor by animateColorAsState(
-            targetValue = if (isSearchSelected) {
-                if (isDark) MaterialTheme.colorScheme.primary.copy(alpha = 0.40f).compositeOver(glassContainerColor)
-                else MaterialTheme.colorScheme.primary.copy(alpha = 0.30f).compositeOver(glassContainerColor)
-            } else {
-                glassContainerColor
-            },
-            animationSpec = tween(220),
-            label = "search_glass_color"
-        )
         val searchContentColor by animateColorAsState(
             targetValue = if (isSearchSelected) {
                 if (isDark) Color.White else MaterialTheme.colorScheme.primary
@@ -479,59 +461,104 @@ fun PlayerInternalNavigationBar(
             label = "search_content_color"
         )
 
-        Surface(
-            onClick = {
-                if (!latestNavigationEnabled) return@Surface
-                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                if (!isSearchSelected) {
-                    navController.navigateToTopLevelSafely(Screen.Search.route)
-                } else {
-                    onSearchIconDoubleTap()
-                }
-            },
-            modifier = searchButtonModifier,
-            shape = CircleShape,
-            color = if (isLiquidGlass) searchGlassColor else (if (isSearchSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer),
-            contentColor = if (isLiquidGlass) searchContentColor else (if (isSearchSelected) MaterialTheme.colorScheme.background else MaterialTheme.colorScheme.onPrimaryContainer),
-            border = if (isLiquidGlass) {
+        if (isLiquidGlass) {
+            val searchGlassBg = if (isSearchSelected) {
+                if (isDark) MaterialTheme.colorScheme.primary.copy(alpha = 0.40f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.30f)
+            } else {
+                glassContainerColor
+            }
+            val searchGlassBorder = if (isSearchSelected) {
                 BorderStroke(
                     1.dp,
-                    if (isSearchSelected) {
-                        Brush.verticalGradient(
-                            listOf(
-                                MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
-                                MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
-                            )
+                    Brush.verticalGradient(
+                        listOf(
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
                         )
-                    } else {
-                        glassBorderBrush
-                    }
+                    )
                 )
-            } else null,
-            shadowElevation = if (isLiquidGlass) 10.dp else 8.dp
-        ) {
-            Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                if (isLiquidGlass) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .fillMaxHeight(0.5f)
-                            .align(Alignment.TopCenter)
-                            .background(
-                                brush = Brush.verticalGradient(
-                                    colors = listOf(
-                                        Color.White.copy(alpha = if (isDark) 0.15f else 0.25f),
-                                        Color.Transparent
-                                    )
+            } else {
+                BorderStroke(1.dp, glassBorderBrush)
+            }
+
+            val searchButtonModifier = Modifier
+                .size(settingsButtonSize)
+                .shadow(elevation = 12.dp, shape = CircleShape)
+                .then(
+                    if (backdrop != null) {
+                        Modifier.drawBackdrop(
+                            backdrop = backdrop,
+                            shape = { CircleShape },
+                            effects = {
+                                vibrancy()
+                                blur(8.dp.toPx())
+                                lens(16.dp.toPx(), 32.dp.toPx())
+                            }
+                        )
+                    } else Modifier
+                )
+                .background(searchGlassBg, CircleShape)
+                .border(searchGlassBorder, CircleShape)
+                .clip(CircleShape)
+                .clickable {
+                    if (!latestNavigationEnabled) return@clickable
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    if (!isSearchSelected) {
+                        navController.navigateToTopLevelSafely(Screen.Search.route)
+                    } else {
+                        onSearchIconDoubleTap()
+                    }
+                }
+
+            Box(
+                modifier = searchButtonModifier,
+                contentAlignment = Alignment.Center
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .fillMaxHeight(0.5f)
+                        .align(Alignment.TopCenter)
+                        .background(
+                            brush = Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.White.copy(alpha = if (isDark) 0.15f else 0.30f),
+                                    Color.Transparent
                                 )
                             )
-                    )
-                }
+                        )
+                )
                 Icon(
                     painter = painterResource(id = R.drawable.rounded_search_24),
                     contentDescription = "Search",
+                    tint = searchContentColor,
                     modifier = Modifier.size(itemIconSize)
                 )
+            }
+        } else {
+            Surface(
+                onClick = {
+                    if (!latestNavigationEnabled) return@Surface
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    if (!isSearchSelected) {
+                        navController.navigateToTopLevelSafely(Screen.Search.route)
+                    } else {
+                        onSearchIconDoubleTap()
+                    }
+                },
+                modifier = Modifier.size(settingsButtonSize),
+                shape = CircleShape,
+                color = if (isSearchSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer,
+                contentColor = if (isSearchSelected) MaterialTheme.colorScheme.background else MaterialTheme.colorScheme.onPrimaryContainer,
+                shadowElevation = 8.dp
+            ) {
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.rounded_search_24),
+                        contentDescription = "Search",
+                        modifier = Modifier.size(itemIconSize)
+                    )
+                }
             }
         }
     }
