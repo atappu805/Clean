@@ -60,6 +60,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.offset
 import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.mutableFloatStateOf
@@ -435,32 +436,10 @@ fun PlayerInternalNavigationBar(
 
                         val tabPress = remember { Animatable(0f) }
                         val tabJiggle = remember { Animatable(0f) }
-                        val tabWaterDropScaleX = 1f + (tabPress.value * 0.10f) + (tabJiggle.value * 0.12f)
-                        val tabWaterDropScaleY = 1f - (tabPress.value * 0.08f) - (tabJiggle.value * 0.10f)
+                        val tabWaterDropScaleX = 1f + (tabPress.value * 0.10f) + (tabJiggle.value * 0.15f)
+                        val tabWaterDropScaleY = 1f - (tabPress.value * 0.08f) - (tabJiggle.value * 0.13f)
 
-                        // Animated icon lift and jiggle when tab is selected
-                        val iconBounceY = remember { Animatable(0f) }
-                        LaunchedEffect(isSelected) {
-                            if (isSelected) {
-                                tabJiggle.snapTo(1f)
-                                tabJiggle.animateTo(
-                                    targetValue = 0f,
-                                    animationSpec = spring(
-                                        dampingRatio = 0.35f,
-                                        stiffness = 320f
-                                    )
-                                )
-                                iconBounceY.snapTo(-2.5f)
-                                iconBounceY.animateTo(
-                                    targetValue = 0f,
-                                    animationSpec = spring(
-                                        dampingRatio = 0.45f,
-                                        stiffness = 380f
-                                    )
-                                )
-                            }
-                        }
-                        val iconLiftY = iconBounceY.value.dp
+                        val iconLiftY = 0.dp
 
                         val iconScale by animateFloatAsState(
                             targetValue = if (isSelected) 1.06f else 1.0f,
@@ -480,32 +459,31 @@ fun PlayerInternalNavigationBar(
                                     scaleX = tabWaterDropScaleX
                                     scaleY = tabWaterDropScaleY
                                 }
-                                .pointerInput(Unit) {
-                                    val pressSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
-                                    val jiggleSpec = spring<Float>(dampingRatio = 0.35f, stiffness = 320f)
-                                    awaitEachGesture {
-                                        awaitFirstDown()
-                                        coroutineScope.launch { tabPress.animateTo(1f, pressSpec) }
-                                        val up = waitForUpOrCancellation()
-                                        coroutineScope.launch {
-                                            tabPress.animateTo(0f, pressSpec)
-                                            if (up != null) {
-                                                tabJiggle.snapTo(1f)
-                                                tabJiggle.animateTo(0f, jiggleSpec)
+                                .pointerInput(latestNavigationEnabled, latestCurrentRoute, item.screen.route, isDragging) {
+                                    detectTapGestures(
+                                        onPress = {
+                                            val pressSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
+                                            val jiggleSpec = spring<Float>(dampingRatio = 0.32f, stiffness = 280f)
+                                            val job = launch { tabPress.animateTo(1f, pressSpec) }
+                                            val released = tryAwaitRelease()
+                                            job.cancel()
+                                            launch {
+                                                tabPress.animateTo(0f, pressSpec)
+                                                if (released) {
+                                                    tabJiggle.snapTo(1f)
+                                                    tabJiggle.animateTo(0f, jiggleSpec)
+                                                }
+                                            }
+                                        },
+                                        onTap = {
+                                            if (!isDragging) {
+                                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                if (latestNavigationEnabled && latestCurrentRoute != item.screen.route) {
+                                                    navController.navigateToTopLevelSafely(item.screen.route)
+                                                }
                                             }
                                         }
-                                    }
-                                }
-                                .clickable(
-                                    indication = null,
-                                    interactionSource = remember { MutableInteractionSource() }
-                                ) {
-                                    if (!isDragging) {
-                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                        if (latestNavigationEnabled && latestCurrentRoute != item.screen.route) {
-                                            navController.navigateToTopLevelSafely(item.screen.route)
-                                        }
-                                    }
+                                    )
                                 },
                             contentAlignment = Alignment.Center
                         ) {
@@ -664,8 +642,8 @@ fun PlayerInternalNavigationBar(
             val searchShape = CircleShape
             val searchPress = remember { Animatable(0f) }
             val searchJiggle = remember { Animatable(0f) }
-            val searchWaterDropScaleX = 1f + (searchPress.value * 0.10f) + (searchJiggle.value * 0.12f)
-            val searchWaterDropScaleY = 1f - (searchPress.value * 0.08f) - (searchJiggle.value * 0.10f)
+            val searchWaterDropScaleX = 1f + (searchPress.value * 0.10f) + (searchJiggle.value * 0.15f)
+            val searchWaterDropScaleY = 1f - (searchPress.value * 0.08f) - (searchJiggle.value * 0.13f)
 
             val searchButtonModifier = Modifier
                 .size(settingsButtonSize)
@@ -722,34 +700,32 @@ fun PlayerInternalNavigationBar(
                     searchShape
                 )
                 .clip(searchShape)
-                .pointerInput(Unit) {
-                    val pressSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
-                    val releaseSpec = spring<Float>(dampingRatio = 0.45f, stiffness = 350f)
-                    val jiggleSpec = spring<Float>(dampingRatio = 0.35f, stiffness = 320f)
-                    awaitEachGesture {
-                        awaitFirstDown()
-                        coroutineScope.launch { searchPress.animateTo(1f, pressSpec) }
-                        val up = waitForUpOrCancellation()
-                        coroutineScope.launch {
-                            searchPress.animateTo(0f, releaseSpec)
-                            if (up != null) {
-                                searchJiggle.snapTo(1f)
-                                searchJiggle.animateTo(0f, jiggleSpec)
+                .pointerInput(latestNavigationEnabled, isSearchSelected, onSearchIconDoubleTap) {
+                    detectTapGestures(
+                        onPress = {
+                            val pressSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
+                            val jiggleSpec = spring<Float>(dampingRatio = 0.32f, stiffness = 280f)
+                            val job = launch { searchPress.animateTo(1f, pressSpec) }
+                            val released = tryAwaitRelease()
+                            job.cancel()
+                            launch {
+                                searchPress.animateTo(0f, pressSpec)
+                                if (released) {
+                                    searchJiggle.snapTo(1f)
+                                    searchJiggle.animateTo(0f, jiggleSpec)
+                                }
+                            }
+                        },
+                        onTap = {
+                            if (!latestNavigationEnabled) return@detectTapGestures
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            if (!isSearchSelected) {
+                                navController.navigateToTopLevelSafely(Screen.Search.route)
+                            } else {
+                                onSearchIconDoubleTap()
                             }
                         }
-                    }
-                }
-                .clickable(
-                    indication = null,
-                    interactionSource = remember { MutableInteractionSource() }
-                ) {
-                    if (!latestNavigationEnabled) return@clickable
-                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                    if (!isSearchSelected) {
-                        navController.navigateToTopLevelSafely(Screen.Search.route)
-                    } else {
-                        onSearchIconDoubleTap()
-                    }
+                    )
                 }
 
             Box(

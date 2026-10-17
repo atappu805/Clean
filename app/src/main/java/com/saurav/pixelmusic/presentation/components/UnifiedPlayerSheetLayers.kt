@@ -119,14 +119,15 @@ internal fun BoxScope.UnifiedPlayerMiniAndFullLayers(
                         .zIndex(miniPlayerZIndex)
                 ) {
                     if (isLiquidGlassActive) {
-                        val miniPillShape = CircleShape
+                        val currentCornerRadius = overallSheetTopCornerRadiusProvider()
+                        val dynamicMiniShape = RoundedCornerShape(currentCornerRadius)
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .shadow(elevation = 10.dp, shape = miniPillShape)
+                                .shadow(elevation = 10.dp, shape = dynamicMiniShape)
                                 .drawBackdrop(
                                     backdrop = backdrop,
-                                    shape = { miniPillShape },
+                                    shape = { dynamicMiniShape },
                                     effects = {
                                         vibrancy()
                                         blur(10.dp.toPx())
@@ -148,7 +149,7 @@ internal fun BoxScope.UnifiedPlayerMiniAndFullLayers(
                                             )
                                         )
                                     ),
-                                    shape = miniPillShape
+                                    shape = dynamicMiniShape
                                 )
                         ) {
                             // Top gloss reflection
@@ -164,7 +165,7 @@ internal fun BoxScope.UnifiedPlayerMiniAndFullLayers(
                                                 Color.Transparent
                                             )
                                         ),
-                                        shape = miniPillShape
+                                        shape = dynamicMiniShape
                                     )
                             )
                         }
@@ -320,7 +321,9 @@ internal fun BoxScope.UnifiedPlayerMiniAndFullLayers(
                         onShowCastClicked = onShowCastClicked,
                         onShuffleToggle = onShuffleToggle,
                         onRepeatToggle = onRepeatToggle,
-                        onFavoriteToggle = onFavoriteToggle
+                        onFavoriteToggle = onFavoriteToggle,
+                        isLiquidGlass = isLiquidGlassActive,
+                        backdrop = backdrop
                     )
                 }
             }
@@ -417,7 +420,9 @@ internal fun UnifiedPlayerPrewarmLayer(
                     onShowCastClicked = {},
                     onShuffleToggle = onShuffleToggle,
                     onRepeatToggle = onRepeatToggle,
-                    onFavoriteToggle = onFavoriteToggle
+                    onFavoriteToggle = onFavoriteToggle,
+                    isLiquidGlass = false,
+                    backdrop = null
                 )
             }
         }

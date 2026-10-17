@@ -277,7 +277,9 @@ fun FullPlayerContent(
     onShowCastClicked: () -> Unit,
     onShuffleToggle: () -> Unit,
     onRepeatToggle: () -> Unit,
-    onFavoriteToggle: () -> Unit
+    onFavoriteToggle: () -> Unit,
+    isLiquidGlass: Boolean = false,
+    backdrop: com.kyant.backdrop.Backdrop? = null
 ) {
     var retainedSong by remember { mutableStateOf(currentSong) }
     LaunchedEffect(currentSong?.id) {
@@ -1957,7 +1959,9 @@ private fun FullPlayerControlsSection(
                 colorPreviousButton = transportSkipColors.container,
                 colorNextButton = transportSkipColors.container,
                 tintPreviousIcon = transportSkipColors.content,
-                tintNextIcon = transportSkipColors.content
+                tintNextIcon = transportSkipColors.content,
+                isLiquidGlass = isLiquidGlass,
+                backdrop = backdrop
             )
 
             Spacer(modifier = Modifier.height(14.dp))

@@ -55,6 +55,17 @@ import androidx.compose.ui.unit.dp
 import com.saurav.pixelmusic.presentation.components.LocalMaterialTheme
 import kotlinx.coroutines.delay
 import racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape
+import com.kyant.backdrop.Backdrop
+import com.kyant.backdrop.drawBackdrop
+import com.kyant.backdrop.effects.blur
+import com.kyant.backdrop.effects.lens
+import com.kyant.backdrop.effects.vibrancy
+import android.os.Build
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.material3.MaterialTheme
 
 private enum class PlaybackButtonType { NONE, PREVIOUS, PLAY_PAUSE, NEXT }
 
@@ -84,6 +95,8 @@ fun AnimatedPlaybackControls(
     tintNextIcon: Color = tintOtherIcons,
     playPauseIconSize: Dp = 36.dp,
     iconSize: Dp = 32.dp,
+    isLiquidGlass: Boolean = false,
+    backdrop: Backdrop? = null,
 ) {
     val isPlaying = isPlayingProvider()
     var lastClicked by remember { mutableStateOf<PlaybackButtonType?>(null) }
@@ -98,18 +111,18 @@ fun AnimatedPlaybackControls(
 
     val prevPress = remember { Animatable(0f) }
     val prevJiggle = remember { Animatable(0f) }
-    val prevScaleX = 1f + (prevPress.value * 0.08f) + (prevJiggle.value * 0.12f)
-    val prevScaleY = 1f - (prevPress.value * 0.08f) - (prevJiggle.value * 0.10f)
+    val prevScaleX = 1f + (prevPress.value * 0.10f) + (prevJiggle.value * 0.16f)
+    val prevScaleY = 1f - (prevPress.value * 0.08f) - (prevJiggle.value * 0.14f)
 
     val playPausePress = remember { Animatable(0f) }
     val playPauseJiggle = remember { Animatable(0f) }
-    val playPauseScaleX = 1f + (playPausePress.value * 0.08f) + (playPauseJiggle.value * 0.12f)
-    val playPauseScaleY = 1f - (playPausePress.value * 0.08f) - (playPauseJiggle.value * 0.10f)
+    val playPauseScaleX = 1f + (playPausePress.value * 0.10f) + (playPauseJiggle.value * 0.16f)
+    val playPauseScaleY = 1f - (playPausePress.value * 0.08f) - (playPauseJiggle.value * 0.14f)
 
     val nextPress = remember { Animatable(0f) }
     val nextJiggle = remember { Animatable(0f) }
-    val nextScaleX = 1f + (nextPress.value * 0.08f) + (nextJiggle.value * 0.12f)
-    val nextScaleY = 1f - (nextPress.value * 0.08f) - (nextJiggle.value * 0.10f)
+    val nextScaleX = 1f + (nextPress.value * 0.10f) + (nextJiggle.value * 0.16f)
+    val nextScaleY = 1f - (nextPress.value * 0.08f) - (nextJiggle.value * 0.14f)
 
     LaunchedEffect(lastClicked) {
         if (lastClicked != null) {
@@ -158,6 +171,22 @@ fun AnimatedPlaybackControls(
                 else -> compressionWeight
             }
 
+            val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+            val isGlassActive = isLiquidGlass && backdrop != null
+
+            val prevShape = CircleShape
+            val prevBorderBrush = remember(isDark) {
+                Brush.verticalGradient(
+                    colors = if (isDark) listOf(
+                        Color.White.copy(alpha = 0.70f),
+                        Color.White.copy(alpha = 0.20f)
+                    ) else listOf(
+                        Color.White.copy(alpha = 0.90f),
+                        Color.White.copy(alpha = 0.35f)
+                    )
+                )
+            }
+
             val prevWeight by animateFloatAsState(
                 targetValue = weightFor(PlaybackButtonType.PREVIOUS),
                 animationSpec = pressAnimationSpec,
@@ -171,50 +200,93 @@ fun AnimatedPlaybackControls(
                         scaleX = prevScaleX
                         scaleY = prevScaleY
                     }
-                    .clip(CircleShape)
-                    .background(colorPreviousButton)
-                    .border(
-                        border = BorderStroke(
-                            1.dp,
-                            Brush.verticalGradient(
-                                colors = listOf(
-                                    Color.White.copy(alpha = 0.50f),
-                                    Color.White.copy(alpha = 0.15f)
+                    .then(
+                        if (isGlassActive) {
+                            Modifier
+                                .shadow(elevation = 10.dp, shape = prevShape)
+                                .drawBackdrop(
+                                    backdrop = backdrop,
+                                    shape = { prevShape },
+                                    effects = {
+                                        vibrancy()
+                                        blur(12.dp.toPx())
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                            lens(
+                                                refractionHeight = 14.dp.toPx(),
+                                                refractionAmount = 30.dp.toPx()
+                                            )
+                                        }
+                                    },
+                                    onDrawSurface = {
+                                        drawRect(if (isDark) Color(0x351E1E22) else Color(0x40FFFFFF))
+                                    }
                                 )
-                            )
-                        ),
-                        shape = CircleShape
-                    )
-                    .pointerInput(Unit) {
-                        val pressSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
-                        val jiggleSpec = spring<Float>(dampingRatio = 0.35f, stiffness = 320f)
-                        awaitEachGesture {
-                            awaitFirstDown()
-                            coroutineScope.launch { prevPress.animateTo(1f, pressSpec) }
-                            val up = waitForUpOrCancellation()
-                            coroutineScope.launch {
-                                prevPress.animateTo(0f, pressSpec)
-                                if (up != null) {
-                                    prevJiggle.snapTo(1f)
-                                    prevJiggle.animateTo(0f, jiggleSpec)
-                                }
-                            }
+                                .border(BorderStroke(1.2.dp, prevBorderBrush), prevShape)
+                                .clip(prevShape)
+                        } else {
+                            Modifier
+                                .clip(prevShape)
+                                .background(colorPreviousButton)
+                                .border(
+                                    border = BorderStroke(
+                                        1.dp,
+                                        Brush.verticalGradient(
+                                            colors = listOf(
+                                                Color.White.copy(alpha = 0.50f),
+                                                Color.White.copy(alpha = 0.15f)
+                                            )
+                                        )
+                                    ),
+                                    shape = prevShape
+                                )
                         }
-                    }
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null
-                    ) {
-                        lastClicked = PlaybackButtonType.PREVIOUS
-                        hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        onPrevious()
+                    )
+                    .pointerInput(onPrevious) {
+                        detectTapGestures(
+                            onPress = {
+                                val pressSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
+                                val jiggleSpec = spring<Float>(dampingRatio = 0.32f, stiffness = 280f)
+                                val job = launch { prevPress.animateTo(1f, pressSpec) }
+                                val released = tryAwaitRelease()
+                                job.cancel()
+                                launch {
+                                    prevPress.animateTo(0f, pressSpec)
+                                    if (released) {
+                                        prevJiggle.snapTo(1f)
+                                        prevJiggle.animateTo(0f, jiggleSpec)
+                                    }
+                                }
+                            },
+                            onTap = {
+                                lastClicked = PlaybackButtonType.PREVIOUS
+                                hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                onPrevious()
+                            }
+                        )
                     },
                 contentAlignment = Alignment.Center
             ) {
+                if (isGlassActive) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .fillMaxHeight(0.5f)
+                            .align(Alignment.TopCenter)
+                            .background(
+                                brush = Brush.verticalGradient(
+                                    colors = listOf(
+                                        Color.White.copy(alpha = if (isDark) 0.18f else 0.32f),
+                                        Color.Transparent
+                                    )
+                                ),
+                                shape = prevShape
+                            )
+                    )
+                }
                 Icon(
                     imageVector = Icons.Rounded.SkipPrevious,
                     contentDescription = "Anterior",
-                    tint = tintPreviousIcon,
+                    tint = if (isGlassActive) (if (isDark) Color.White else Color(0xFF1C1C1E)) else tintPreviousIcon,
                     modifier = Modifier.size(iconSize)
                 )
             }
@@ -245,6 +317,18 @@ fun AnimatedPlaybackControls(
                 cornerRadiusBR = playCorner,
                 smoothnessAsPercentBR = 60
             )
+            val playBorderBrush = remember(isDark) {
+                Brush.verticalGradient(
+                    colors = if (isDark) listOf(
+                        Color.White.copy(alpha = 0.90f),
+                        Color.White.copy(alpha = 0.30f)
+                    ) else listOf(
+                        Color.White.copy(alpha = 0.95f),
+                        Color.White.copy(alpha = 0.40f)
+                    )
+                )
+            }
+
             Box(
                 modifier = Modifier
                     .weight(playWeight)
@@ -253,46 +337,90 @@ fun AnimatedPlaybackControls(
                         scaleX = playPauseScaleX
                         scaleY = playPauseScaleY
                     }
-                    .clip(playShape)
-                    .background(colorPlayPause)
-                    .border(
-                        border = BorderStroke(
-                            1.5.dp,
-                            Brush.verticalGradient(
-                                colors = listOf(
-                                    Color.White.copy(alpha = 0.70f),
-                                    Color.White.copy(alpha = 0.20f)
+                    .then(
+                        if (isGlassActive) {
+                            Modifier
+                                .shadow(elevation = 12.dp, shape = playShape)
+                                .drawBackdrop(
+                                    backdrop = backdrop,
+                                    shape = { playShape },
+                                    effects = {
+                                        vibrancy()
+                                        blur(12.dp.toPx())
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                            lens(
+                                                refractionHeight = 14.dp.toPx(),
+                                                refractionAmount = 30.dp.toPx()
+                                            )
+                                        }
+                                    },
+                                    onDrawSurface = {
+                                        drawRect(colorPlayPause, blendMode = BlendMode.Hue)
+                                        drawRect(colorPlayPause.copy(alpha = 0.50f))
+                                    }
                                 )
-                            )
-                        ),
-                        shape = playShape
-                    )
-                    .pointerInput(Unit) {
-                        val pressSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
-                        val jiggleSpec = spring<Float>(dampingRatio = 0.35f, stiffness = 320f)
-                        awaitEachGesture {
-                            awaitFirstDown()
-                            coroutineScope.launch { playPausePress.animateTo(1f, pressSpec) }
-                            val up = waitForUpOrCancellation()
-                            coroutineScope.launch {
-                                playPausePress.animateTo(0f, pressSpec)
-                                if (up != null) {
-                                    playPauseJiggle.snapTo(1f)
-                                    playPauseJiggle.animateTo(0f, jiggleSpec)
-                                }
-                            }
+                                .border(BorderStroke(1.5.dp, playBorderBrush), playShape)
+                                .clip(playShape)
+                        } else {
+                            Modifier
+                                .clip(playShape)
+                                .background(colorPlayPause)
+                                .border(
+                                    border = BorderStroke(
+                                        1.5.dp,
+                                        Brush.verticalGradient(
+                                            colors = listOf(
+                                                Color.White.copy(alpha = 0.70f),
+                                                Color.White.copy(alpha = 0.20f)
+                                            )
+                                        )
+                                    ),
+                                    shape = playShape
+                                )
                         }
-                    }
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null
-                    ) {
-                        lastClicked = PlaybackButtonType.PLAY_PAUSE
-                        hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        onPlayPause()
+                    )
+                    .pointerInput(onPlayPause) {
+                        detectTapGestures(
+                            onPress = {
+                                val pressSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
+                                val jiggleSpec = spring<Float>(dampingRatio = 0.32f, stiffness = 280f)
+                                val job = launch { playPausePress.animateTo(1f, pressSpec) }
+                                val released = tryAwaitRelease()
+                                job.cancel()
+                                launch {
+                                    playPausePress.animateTo(0f, pressSpec)
+                                    if (released) {
+                                        playPauseJiggle.snapTo(1f)
+                                        playPauseJiggle.animateTo(0f, jiggleSpec)
+                                    }
+                                }
+                            },
+                            onTap = {
+                                lastClicked = PlaybackButtonType.PLAY_PAUSE
+                                hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                onPlayPause()
+                            }
+                        )
                     },
                 contentAlignment = Alignment.Center
             ) {
+                if (isGlassActive) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .fillMaxHeight(0.5f)
+                            .align(Alignment.TopCenter)
+                            .background(
+                                brush = Brush.verticalGradient(
+                                    colors = listOf(
+                                        Color.White.copy(alpha = 0.25f),
+                                        Color.Transparent
+                                    )
+                                ),
+                                shape = playShape
+                            )
+                    )
+                }
                 MorphingPlayPauseIcon(
                     isPlaying = playPauseVisualState,
                     tint = tintPlayPauseIcon,
@@ -305,6 +433,7 @@ fun AnimatedPlaybackControls(
                 animationSpec = pressAnimationSpec,
                 label = "nextWeight"
             )
+            val nextShape = CircleShape
             Box(
                 modifier = Modifier
                     .weight(nextWeight)
@@ -313,50 +442,93 @@ fun AnimatedPlaybackControls(
                         scaleX = nextScaleX
                         scaleY = nextScaleY
                     }
-                    .clip(CircleShape)
-                    .background(colorNextButton)
-                    .border(
-                        border = BorderStroke(
-                            1.dp,
-                            Brush.verticalGradient(
-                                colors = listOf(
-                                    Color.White.copy(alpha = 0.50f),
-                                    Color.White.copy(alpha = 0.15f)
+                    .then(
+                        if (isGlassActive) {
+                            Modifier
+                                .shadow(elevation = 10.dp, shape = nextShape)
+                                .drawBackdrop(
+                                    backdrop = backdrop,
+                                    shape = { nextShape },
+                                    effects = {
+                                        vibrancy()
+                                        blur(12.dp.toPx())
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                            lens(
+                                                refractionHeight = 14.dp.toPx(),
+                                                refractionAmount = 30.dp.toPx()
+                                            )
+                                        }
+                                    },
+                                    onDrawSurface = {
+                                        drawRect(if (isDark) Color(0x351E1E22) else Color(0x40FFFFFF))
+                                    }
                                 )
-                            )
-                        ),
-                        shape = CircleShape
-                    )
-                    .pointerInput(Unit) {
-                        val pressSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
-                        val jiggleSpec = spring<Float>(dampingRatio = 0.35f, stiffness = 320f)
-                        awaitEachGesture {
-                            awaitFirstDown()
-                            coroutineScope.launch { nextPress.animateTo(1f, pressSpec) }
-                            val up = waitForUpOrCancellation()
-                            coroutineScope.launch {
-                                nextPress.animateTo(0f, pressSpec)
-                                if (up != null) {
-                                    nextJiggle.snapTo(1f)
-                                    nextJiggle.animateTo(0f, jiggleSpec)
-                                }
-                            }
+                                .border(BorderStroke(1.2.dp, prevBorderBrush), nextShape)
+                                .clip(nextShape)
+                        } else {
+                            Modifier
+                                .clip(nextShape)
+                                .background(colorNextButton)
+                                .border(
+                                    border = BorderStroke(
+                                        1.dp,
+                                        Brush.verticalGradient(
+                                            colors = listOf(
+                                                Color.White.copy(alpha = 0.50f),
+                                                Color.White.copy(alpha = 0.15f)
+                                            )
+                                        )
+                                    ),
+                                    shape = nextShape
+                                )
                         }
-                    }
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null
-                    ) {
-                        lastClicked = PlaybackButtonType.NEXT
-                        hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        onNext()
+                    )
+                    .pointerInput(onNext) {
+                        detectTapGestures(
+                            onPress = {
+                                val pressSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
+                                val jiggleSpec = spring<Float>(dampingRatio = 0.32f, stiffness = 280f)
+                                val job = launch { nextPress.animateTo(1f, pressSpec) }
+                                val released = tryAwaitRelease()
+                                job.cancel()
+                                launch {
+                                    nextPress.animateTo(0f, pressSpec)
+                                    if (released) {
+                                        nextJiggle.snapTo(1f)
+                                        nextJiggle.animateTo(0f, jiggleSpec)
+                                    }
+                                }
+                            },
+                            onTap = {
+                                lastClicked = PlaybackButtonType.NEXT
+                                hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                onNext()
+                            }
+                        )
                     },
                 contentAlignment = Alignment.Center
             ) {
+                if (isGlassActive) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .fillMaxHeight(0.5f)
+                            .align(Alignment.TopCenter)
+                            .background(
+                                brush = Brush.verticalGradient(
+                                    colors = listOf(
+                                        Color.White.copy(alpha = if (isDark) 0.18f else 0.32f),
+                                        Color.Transparent
+                                    )
+                                ),
+                                shape = nextShape
+                            )
+                    )
+                }
                 Icon(
                     imageVector = Icons.Rounded.SkipNext,
                     contentDescription = "Siguiente",
-                    tint = tintNextIcon,
+                    tint = if (isGlassActive) (if (isDark) Color.White else Color(0xFF1C1C1E)) else tintNextIcon,
                     modifier = Modifier.size(iconSize)
                 )
             }

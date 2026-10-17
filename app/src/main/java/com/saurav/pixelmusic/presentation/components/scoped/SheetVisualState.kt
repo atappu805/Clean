@@ -95,15 +95,7 @@ internal fun rememberSheetVisualState(
         isNavBarHidden
     ) {
         {
-            val collapsedCornerTarget = if (isNavBarHidden) {
-                32.dp
-            } else if (navBarStyle == NavBarStyle.DEFAULT) {
-                navBarCornerRadiusDp
-            } else if (navBarStyle == NavBarStyle.FULL_WIDTH) {
-                32.dp
-            } else {
-                navBarCornerRadiusDp
-            }
+            val collapsedCornerTarget = 32.dp
 
             if (showPlayerContentArea) {
                 val effectiveFraction = playerContentExpansionFraction.value * (1f - predictiveBackCollapseProgress)
@@ -136,45 +128,17 @@ internal fun rememberSheetVisualState(
         navBarCornerRadiusDp
     ) {
         {
-            val collapsedRadius = if (isNavBarHidden) {
-                32.dp
-            } else if (navBarStyle == NavBarStyle.DEFAULT) {
-                10.dp
-            } else if (navBarStyle == NavBarStyle.FULL_WIDTH) {
-                32.dp
-            } else {
-                navBarCornerRadiusDp
-            }
-
+            val collapsedRadius = 32.dp
             val effectiveFraction = playerContentExpansionFraction.value * (1f - predictiveBackCollapseProgress)
             val calculatedNormally =
                 if (showPlayerContentArea) {
                     val expandedTarget = 0.dp
                     lerp(collapsedRadius, expandedTarget, effectiveFraction)
                 } else {
-                    if (!isPlayingState.value || !hasCurrentSongState.value) {
-                        if (isNavBarHidden) 32.dp else navBarCornerRadiusDp
-                    } else {
-                        collapsedRadius
-                    }
+                    collapsedRadius
                 }
 
-            if (isNavBarHidden) {
-                calculatedNormally
-            } else if (currentSheetContentState == PlayerSheetState.COLLAPSED &&
-                swipeDismissProgress > 0f &&
-                showPlayerContentArea &&
-                playerContentExpansionFraction.value < 0.01f
-            ) {
-                if (navBarStyle == NavBarStyle.DEFAULT) {
-                    lerp(10.dp, navBarCornerRadiusDp, swipeDismissProgress)
-                } else {
-                    val baseCollapsedRadius = if (isNavBarHidden) 32.dp else navBarCornerRadiusDp
-                    lerp(baseCollapsedRadius, navBarCornerRadiusDp, swipeDismissProgress)
-                }
-            } else {
-                calculatedNormally
-            }
+            calculatedNormally
         }
     }
 
@@ -195,8 +159,7 @@ internal fun rememberSheetVisualState(
         {
             if (showPlayerContentArea) {
                 val effectiveFraction = playerContentExpansionFraction.value * (1f - predictiveBackCollapseProgress)
-                val widthFraction = (effectiveFraction * 1.8f).coerceIn(0f, 1f)
-                androidx.compose.ui.util.lerp(collapsedStateHorizontalPaddingPx, 0f, widthFraction)
+                androidx.compose.ui.util.lerp(collapsedStateHorizontalPaddingPx, 0f, effectiveFraction)
             } else {
                 collapsedStateHorizontalPaddingPx
             }
@@ -212,8 +175,7 @@ internal fun rememberSheetVisualState(
         {
             if (showPlayerContentArea) {
                 val effectiveFraction = playerContentExpansionFraction.value * (1f - predictiveBackCollapseProgress)
-                val widthFraction = (effectiveFraction * 1.8f).coerceIn(0f, 1f)
-                androidx.compose.ui.util.lerp(collapsedStateHorizontalPaddingPx, 0f, widthFraction)
+                androidx.compose.ui.util.lerp(collapsedStateHorizontalPaddingPx, 0f, effectiveFraction)
             } else {
                 collapsedStateHorizontalPaddingPx
             }

@@ -42,6 +42,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
@@ -181,8 +182,8 @@ internal fun MiniPlayerContentInternal(
 
         val prevPress = remember { Animatable(0f) }
         val prevJiggle = remember { Animatable(0f) }
-        val prevScaleX = 1f + (prevPress.value * 0.08f) + (prevJiggle.value * 0.12f)
-        val prevScaleY = 1f - (prevPress.value * 0.08f) - (prevJiggle.value * 0.10f)
+        val prevScaleX = 1f + (prevPress.value * 0.10f) + (prevJiggle.value * 0.16f)
+        val prevScaleY = 1f - (prevPress.value * 0.08f) - (prevJiggle.value * 0.14f)
 
         Box(
             modifier = Modifier
@@ -208,29 +209,28 @@ internal fun MiniPlayerContentInternal(
                         )
                     } else Modifier
                 )
-                .pointerInput(Unit) {
-                    val pressSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
-                    val jiggleSpec = spring<Float>(dampingRatio = 0.35f, stiffness = 320f)
-                    awaitEachGesture {
-                        awaitFirstDown()
-                        coroutineScope.launch { prevPress.animateTo(1f, pressSpec) }
-                        val up = waitForUpOrCancellation()
-                        coroutineScope.launch {
-                            prevPress.animateTo(0f, pressSpec)
-                            if (up != null) {
-                                prevJiggle.snapTo(1f)
-                                prevJiggle.animateTo(0f, jiggleSpec)
+                .pointerInput(controlsEnabled, onPrevious) {
+                    if (!controlsEnabled) return@pointerInput
+                    detectTapGestures(
+                        onPress = {
+                            val pressSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
+                            val jiggleSpec = spring<Float>(dampingRatio = 0.32f, stiffness = 280f)
+                            val job = launch { prevPress.animateTo(1f, pressSpec) }
+                            val released = tryAwaitRelease()
+                            job.cancel()
+                            launch {
+                                prevPress.animateTo(0f, pressSpec)
+                                if (released) {
+                                    prevJiggle.snapTo(1f)
+                                    prevJiggle.animateTo(0f, jiggleSpec)
+                                }
                             }
+                        },
+                        onTap = {
+                            hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            onPrevious()
                         }
-                    }
-                }
-                .clickable(
-                    interactionSource = previousInteraction,
-                    indication = if (isLiquidGlass) null else miniPlayerIndication,
-                    enabled = controlsEnabled
-                ) {
-                    hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                    onPrevious()
+                    )
                 },
             contentAlignment = Alignment.Center
         ) {
@@ -246,8 +246,8 @@ internal fun MiniPlayerContentInternal(
 
         val playPausePress = remember { Animatable(0f) }
         val playPauseJiggle = remember { Animatable(0f) }
-        val playPauseScaleX = 1f + (playPausePress.value * 0.08f) + (playPauseJiggle.value * 0.12f)
-        val playPauseScaleY = 1f - (playPausePress.value * 0.08f) - (playPauseJiggle.value * 0.10f)
+        val playPauseScaleX = 1f + (playPausePress.value * 0.10f) + (playPauseJiggle.value * 0.16f)
+        val playPauseScaleY = 1f - (playPausePress.value * 0.08f) - (playPauseJiggle.value * 0.14f)
 
         Box(
             modifier = Modifier
@@ -278,29 +278,28 @@ internal fun MiniPlayerContentInternal(
                         )
                     } else Modifier
                 )
-                .pointerInput(Unit) {
-                    val pressSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
-                    val jiggleSpec = spring<Float>(dampingRatio = 0.35f, stiffness = 320f)
-                    awaitEachGesture {
-                        awaitFirstDown()
-                        coroutineScope.launch { playPausePress.animateTo(1f, pressSpec) }
-                        val up = waitForUpOrCancellation()
-                        coroutineScope.launch {
-                            playPausePress.animateTo(0f, pressSpec)
-                            if (up != null) {
-                                playPauseJiggle.snapTo(1f)
-                                playPauseJiggle.animateTo(0f, jiggleSpec)
+                .pointerInput(controlsEnabled, onPlayPause) {
+                    if (!controlsEnabled) return@pointerInput
+                    detectTapGestures(
+                        onPress = {
+                            val pressSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
+                            val jiggleSpec = spring<Float>(dampingRatio = 0.32f, stiffness = 280f)
+                            val job = launch { playPausePress.animateTo(1f, pressSpec) }
+                            val released = tryAwaitRelease()
+                            job.cancel()
+                            launch {
+                                playPausePress.animateTo(0f, pressSpec)
+                                if (released) {
+                                    playPauseJiggle.snapTo(1f)
+                                    playPauseJiggle.animateTo(0f, jiggleSpec)
+                                }
                             }
+                        },
+                        onTap = {
+                            hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            onPlayPause()
                         }
-                    }
-                }
-                .clickable(
-                    interactionSource = playPauseInteraction,
-                    indication = if (isLiquidGlass) null else miniPlayerIndication,
-                    enabled = controlsEnabled
-                ) {
-                    hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                    onPlayPause()
+                    )
                 },
             contentAlignment = Alignment.Center
         ) {
@@ -323,8 +322,8 @@ internal fun MiniPlayerContentInternal(
 
         val nextPress = remember { Animatable(0f) }
         val nextJiggle = remember { Animatable(0f) }
-        val nextScaleX = 1f + (nextPress.value * 0.08f) + (nextJiggle.value * 0.12f)
-        val nextScaleY = 1f - (nextPress.value * 0.08f) - (nextJiggle.value * 0.10f)
+        val nextScaleX = 1f + (nextPress.value * 0.10f) + (nextJiggle.value * 0.16f)
+        val nextScaleY = 1f - (nextPress.value * 0.08f) - (nextJiggle.value * 0.14f)
 
         Box(
             modifier = Modifier
@@ -350,27 +349,29 @@ internal fun MiniPlayerContentInternal(
                         )
                     } else Modifier
                 )
-                .pointerInput(Unit) {
-                    val pressSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
-                    val jiggleSpec = spring<Float>(dampingRatio = 0.35f, stiffness = 320f)
-                    awaitEachGesture {
-                        awaitFirstDown()
-                        coroutineScope.launch { nextPress.animateTo(1f, pressSpec) }
-                        val up = waitForUpOrCancellation()
-                        coroutineScope.launch {
-                            nextPress.animateTo(0f, pressSpec)
-                            if (up != null) {
-                                nextJiggle.snapTo(1f)
-                                nextJiggle.animateTo(0f, jiggleSpec)
+                .pointerInput(controlsEnabled, onNext) {
+                    if (!controlsEnabled) return@pointerInput
+                    detectTapGestures(
+                        onPress = {
+                            val pressSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
+                            val jiggleSpec = spring<Float>(dampingRatio = 0.32f, stiffness = 280f)
+                            val job = launch { nextPress.animateTo(1f, pressSpec) }
+                            val released = tryAwaitRelease()
+                            job.cancel()
+                            launch {
+                                nextPress.animateTo(0f, pressSpec)
+                                if (released) {
+                                    nextJiggle.snapTo(1f)
+                                    nextJiggle.animateTo(0f, jiggleSpec)
+                                }
                             }
+                        },
+                        onTap = {
+                            hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            onNext()
                         }
-                    }
-                }
-                .clickable(
-                    interactionSource = nextInteraction,
-                    indication = if (isLiquidGlass) null else miniPlayerIndication,
-                    enabled = controlsEnabled
-                ) { onNext() },
+                    )
+                },
             contentAlignment = Alignment.Center
         ) {
             Icon(
