@@ -52,6 +52,7 @@ import com.saurav.pixelmusic.R
 import com.saurav.pixelmusic.presentation.navigation.Screen
 import com.saurav.pixelmusic.presentation.navigation.navigateToTopLevelSafely
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.toImmutableList
 import androidx.compose.ui.graphics.Color
 import androidx.compose.animation.core.animateFloatAsState
 
@@ -123,8 +124,10 @@ fun PlayerInternalNavigationBar(
     val fontScale = LocalDensity.current.fontScale
     val screenWidth = configuration.screenWidthDp
 
-    // We no longer filter out Search! It stays dynamically inside the main list.
-    val mainItems = navItems
+    // Main pill contains Home, Explore, and Library; Search is separated into the detached button.
+    val mainItems = remember(navItems) {
+        navItems.filter { it.screen.route != Screen.Search.route }.toImmutableList()
+    }
 
     val isLargeFont = fontScale > 1.25f
     val isCompactScreen = screenWidth < 400
@@ -256,26 +259,28 @@ Row(
             }
         )
 
-        // Detached Settings Button
-        val isSettingsSelected = latestCurrentRoute == Screen.Settings.route
+        // Detached Search Button
+        val isSearchSelected = latestCurrentRoute == Screen.Search.route
         Surface(
             onClick = {
                 if (!latestNavigationEnabled) return@Surface
                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                if (!isSettingsSelected) {
-                    navController.navigateToTopLevelSafely(Screen.Settings.route)
+                if (!isSearchSelected) {
+                    navController.navigateToTopLevelSafely(Screen.Search.route)
+                } else {
+                    onSearchIconDoubleTap()
                 }
             },
             modifier = Modifier.size(settingsButtonSize),
             shape = CircleShape,
-            color = if (isSettingsSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer,
-            contentColor = if (isSettingsSelected) MaterialTheme.colorScheme.background else MaterialTheme.colorScheme.onPrimaryContainer,
+            color = if (isSearchSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer,
+            contentColor = if (isSearchSelected) MaterialTheme.colorScheme.background else MaterialTheme.colorScheme.onPrimaryContainer,
             shadowElevation = 8.dp
         ) {
             Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
                 Icon(
-                    painter = painterResource(id = R.drawable.rounded_settings_24),
-                    contentDescription = "Settings",
+                    painter = painterResource(id = R.drawable.rounded_search_24),
+                    contentDescription = "Search",
                     modifier = Modifier.size(itemIconSize)
                 )
             }

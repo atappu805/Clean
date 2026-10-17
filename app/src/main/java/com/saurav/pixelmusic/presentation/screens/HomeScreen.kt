@@ -41,6 +41,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -527,7 +528,7 @@ fun HomeScreen(
                     contentPadding = PaddingValues(
                         top = innerPadding.calculateTopPadding()
                                 + statusBarHeight
-                                + 58.dp,
+                                + 64.dp,
                         bottom = paddingValuesParent.calculateBottomPadding()
                                 + 38.dp + bottomPadding
                     ),
@@ -727,29 +728,64 @@ fun HomeScreen(
                 )
         )
 
-        // "PixelMusic" title + icon — fades out immediately upon scrolling
+        // Top bar with PixelMusic pill on the left and Settings button on the right
+        // Both vanish when scrolling (homeTitleAlpha fades out)
         Row(
             modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(start = 24.dp, top = statusBarHeight + 14.dp)
+                .fillMaxWidth()
+                .padding(start = 20.dp, end = 20.dp, top = statusBarHeight + 14.dp)
                 .graphicsLayer { alpha = homeTitleAlpha },
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Icon(
-                painter = painterResource(R.drawable.pixelmusic_base_monochrome),
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(32.dp)
-            )
-            Text(
-                text = "PixelMusic",
-                fontFamily = GoogleSansRounded,
-                fontWeight = FontWeight.ExtraBold,
-                color = MaterialTheme.colorScheme.primary,
-                fontSize = 32.sp,
-                letterSpacing = 0.5.sp
-            )
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.85f),
+                shadowElevation = 0.dp
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.pixelmusic_base_monochrome),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Text(
+                        text = "PixelMusic",
+                        fontFamily = GoogleSansRounded,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontSize = 20.sp,
+                        letterSpacing = 0.5.sp
+                    )
+                }
+            }
+
+            Surface(
+                onClick = {
+                    if (homeTitleAlpha > 0.05f) {
+                        navController.navigateSafely(Screen.Settings.route)
+                    }
+                },
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.85f),
+                contentColor = MaterialTheme.colorScheme.primary,
+                shadowElevation = 0.dp,
+                modifier = Modifier.size(44.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.rounded_settings_24),
+                        contentDescription = "Settings",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+            }
         }
 
     }
