@@ -477,6 +477,7 @@ fun HomeShuffleFab(
                                 .clip(CircleShape)
                                 .pointerInput(Unit) {
                                     val pressSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
+                                    val releaseSpec = spring<Float>(dampingRatio = 0.45f, stiffness = 350f)
                                     val jiggleSpec = spring<Float>(dampingRatio = 0.35f, stiffness = 320f)
                                     awaitEachGesture {
                                         awaitFirstDown()
@@ -529,6 +530,7 @@ fun HomeShuffleFab(
                                     .clip(CircleShape)
                                     .pointerInput(Unit) {
                                         val pressSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
+                                        val releaseSpec = spring<Float>(dampingRatio = 0.45f, stiffness = 350f)
                                         val jiggleSpec = spring<Float>(dampingRatio = 0.35f, stiffness = 320f)
                                         awaitEachGesture {
                                             awaitFirstDown()

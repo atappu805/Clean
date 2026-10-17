@@ -1,6 +1,8 @@
 package com.saurav.pixelmusic.presentation.components.player
 
 import android.annotation.SuppressLint
+import androidx.compose.foundation.border
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.animation.animateColorAsState
 import android.content.Context

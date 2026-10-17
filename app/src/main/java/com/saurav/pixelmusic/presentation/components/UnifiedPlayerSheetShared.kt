@@ -209,7 +209,7 @@ internal fun MiniPlayerContentInternal(
                     } else Modifier
                 )
                 .pointerInput(Unit) {
-                    val spec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
+                    val pressSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
                     val jiggleSpec = spring<Float>(dampingRatio = 0.35f, stiffness = 320f)
                     awaitEachGesture {
                         awaitFirstDown()
@@ -279,7 +279,7 @@ internal fun MiniPlayerContentInternal(
                     } else Modifier
                 )
                 .pointerInput(Unit) {
-                    val spec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
+                    val pressSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
                     val jiggleSpec = spring<Float>(dampingRatio = 0.35f, stiffness = 320f)
                     awaitEachGesture {
                         awaitFirstDown()
@@ -351,7 +351,7 @@ internal fun MiniPlayerContentInternal(
                     } else Modifier
                 )
                 .pointerInput(Unit) {
-                    val spec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
+                    val pressSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
                     val jiggleSpec = spring<Float>(dampingRatio = 0.35f, stiffness = 320f)
                     awaitEachGesture {
                         awaitFirstDown()
