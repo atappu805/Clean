@@ -77,6 +77,27 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.saurav.pixelmusic.R
 import com.saurav.pixelmusic.ui.theme.GoogleSansRounded
+import com.kyant.backdrop.Backdrop
+import com.kyant.backdrop.drawBackdrop
+import com.kyant.backdrop.effects.blur
+import com.kyant.backdrop.effects.lens
+import com.kyant.backdrop.effects.vibrancy
+import android.os.Build
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.animation.core.Animatable
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
@@ -96,6 +117,8 @@ fun HomeShuffleFab(
     onLongClick: (() -> Unit)? = null,
     onSwipeUp: (() -> Unit)? = null,
     onListenTogetherClick: (() -> Unit)? = null,
+    isLiquidGlass: Boolean = true,
+    backdrop: Backdrop? = null
 ) {
     val systemNavBarInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
@@ -320,9 +343,69 @@ fun HomeShuffleFab(
             }
         }
 
-        // ── Single FAB with wave when pulling up / Dual FAB when resting ─────────────
-        Box(
-            modifier = Modifier
+        val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+        val glassBorderBrush = remember(isDark) {
+            Brush.verticalGradient(
+                colors = if (isDark) listOf(
+                    Color.White.copy(alpha = 0.65f),
+                    Color.White.copy(alpha = 0.20f)
+                ) else listOf(
+                    Color.White.copy(alpha = 0.90f),
+                    Color.White.copy(alpha = 0.35f)
+                )
+            )
+        }
+
+        val coroutineScope = rememberCoroutineScope()
+        val shufflePress = remember { Animatable(0f) }
+        val ltPress = remember { Animatable(0f) }
+        val shuffleWaterDropScaleX = 1f + (shufflePress.value * 0.12f)
+        val shuffleWaterDropScaleY = 1f - (shufflePress.value * 0.08f)
+        val ltWaterDropScaleX = 1f + (ltPress.value * 0.12f)
+        val ltWaterDropScaleY = 1f - (ltPress.value * 0.08f)
+
+        val fabShape = CircleShape
+        val fabContentColor = if (isLiquidGlass) (if (isDark) Color.White else Color(0xFF1C1C1E)) else animatedContentColor
+
+        val dualFabModifier = if (isLiquidGlass) {
+            Modifier
+                .offset { IntOffset(0, animatedOffsetY.roundToInt()) }
+                .height(64.dp)
+                .shadow(elevation = 12.dp, shape = fabShape)
+                .then(
+                    if (backdrop != null) {
+                        Modifier.drawBackdrop(
+                            backdrop = backdrop,
+                            shape = { fabShape },
+                            effects = {
+                                vibrancy()
+                                blur(10.dp.toPx())
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                    lens(
+                                        refractionHeight = 12.dp.toPx(),
+                                        refractionAmount = 28.dp.toPx()
+                                    )
+                                }
+                            },
+                            onDrawSurface = {
+                                drawRect(if (isDark) Color(0x351E1E22) else Color(0x40FFFFFF))
+                            }
+                        )
+                    } else {
+                        Modifier.background(if (isDark) Color(0x351E1E22) else Color(0x40FFFFFF), fabShape)
+                    }
+                )
+                .border(BorderStroke(1.2.dp, glassBorderBrush), fabShape)
+                .clip(fabShape)
+                .then(fabDragModifier)
+                .animateContentSize(
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioNoBouncy,
+                        stiffness = Spring.StiffnessMediumLow
+                    )
+                )
+        } else {
+            Modifier
                 .offset { IntOffset(0, animatedOffsetY.roundToInt()) }
                 .height(64.dp)
                 .clip(CircleShape)
@@ -333,9 +416,32 @@ fun HomeShuffleFab(
                         dampingRatio = Spring.DampingRatioNoBouncy,
                         stiffness = Spring.StiffnessMediumLow
                     )
-                ),
+                )
+        }
+
+        // ── Single FAB with wave when pulling up / Dual FAB when resting ─────────────
+        Box(
+            modifier = dualFabModifier,
             contentAlignment = Alignment.Center
         ) {
+            if (isLiquidGlass) {
+                // Top gloss reflection across the top half of the pill
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .fillMaxHeight(0.5f)
+                        .align(Alignment.TopCenter)
+                        .background(
+                            brush = Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.White.copy(alpha = if (isDark) 0.15f else 0.30f),
+                                    Color.Transparent
+                                )
+                            )
+                        )
+                )
+            }
+
             Crossfade(
                 targetState = isDragging,
                 animationSpec = tween(180),
@@ -349,7 +455,7 @@ fun HomeShuffleFab(
                         contentAlignment = Alignment.Center
                     ) {
                         FabRecognitionWave(
-                            color = animatedContentColor,
+                            color = fabContentColor,
                             isThresholdReached = isThresholdReached,
                             modifier = Modifier.size(36.dp)
                         )
@@ -360,8 +466,24 @@ fun HomeShuffleFab(
                         Box(
                             modifier = Modifier
                                 .size(64.dp)
+                                .graphicsLayer {
+                                    scaleX = shuffleWaterDropScaleX
+                                    scaleY = shuffleWaterDropScaleY
+                                }
                                 .clip(CircleShape)
+                                .pointerInput(Unit) {
+                                    val pressSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
+                                    val releaseSpec = spring<Float>(dampingRatio = 0.45f, stiffness = 350f)
+                                    awaitEachGesture {
+                                        awaitFirstDown()
+                                        coroutineScope.launch { shufflePress.animateTo(1f, pressSpec) }
+                                        waitForUpOrCancellation()
+                                        coroutineScope.launch { shufflePress.animateTo(0f, releaseSpec) }
+                                    }
+                                }
                                 .combinedClickable(
+                                    indication = null,
+                                    interactionSource = remember { MutableInteractionSource() },
                                     onClick = onClick,
                                     onLongClick = onLongClick?.let { longClick ->
                                         {
@@ -376,7 +498,7 @@ fun HomeShuffleFab(
                             ShuffleFabIcon(
                                 isThresholdReached = false,
                                 isExploreMode = isExploreMode,
-                                tint = animatedContentColor
+                                tint = fabContentColor
                             )
                         }
 
@@ -385,13 +507,29 @@ fun HomeShuffleFab(
                             VerticalDivider(
                                 modifier = Modifier.height(32.dp),
                                 thickness = 1.dp,
-                                color = animatedContentColor.copy(alpha = 0.35f)
+                                color = if (isLiquidGlass) (if (isDark) Color.White else Color.Black).copy(alpha = 0.20f) else animatedContentColor.copy(alpha = 0.35f)
                             )
                             Box(
                                 modifier = Modifier
                                     .size(64.dp)
+                                    .graphicsLayer {
+                                        scaleX = ltWaterDropScaleX
+                                        scaleY = ltWaterDropScaleY
+                                    }
                                     .clip(CircleShape)
+                                    .pointerInput(Unit) {
+                                        val pressSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
+                                        val releaseSpec = spring<Float>(dampingRatio = 0.45f, stiffness = 350f)
+                                        awaitEachGesture {
+                                            awaitFirstDown()
+                                            coroutineScope.launch { ltPress.animateTo(1f, pressSpec) }
+                                            waitForUpOrCancellation()
+                                            coroutineScope.launch { ltPress.animateTo(0f, releaseSpec) }
+                                        }
+                                    }
                                     .clickable(
+                                        indication = null,
+                                        interactionSource = remember { MutableInteractionSource() },
                                         role = Role.Button,
                                         onClick = {
                                             hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -402,14 +540,14 @@ fun HomeShuffleFab(
                             ) {
                                 if (isSessionActive) {
                                     FabEqualizerBars(
-                                        color = animatedContentColor,
+                                        color = fabContentColor,
                                         modifier = Modifier.size(28.dp)
                                     )
                                 } else {
                                     Icon(
                                         imageVector = Icons.Rounded.Group,
                                         contentDescription = stringResource(R.string.listen_together),
-                                        tint = animatedContentColor,
+                                        tint = fabContentColor,
                                         modifier = Modifier.size(32.dp)
                                     )
                                 }

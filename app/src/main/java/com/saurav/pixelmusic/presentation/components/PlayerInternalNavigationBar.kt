@@ -457,7 +457,27 @@ fun PlayerInternalNavigationBar(
                         )
 
                         val tabPress = remember { Animatable(0f) }
-                        val tabScale = lerp(1f, 0.90f, tabPress.value)
+                        // Water drop tap stretching (liquid horizontal squish and vertical bounce)
+                        val tabWaterDropScaleX = 1f + (tabPress.value * 0.12f)
+                        val tabWaterDropScaleY = 1f - (tabPress.value * 0.08f)
+
+                        // Animated icon lift when tab is selected (icon springs upward)
+                        val iconLiftY by animateDpAsState(
+                            targetValue = if (isSelected) (-3.5).dp else 0.dp,
+                            animationSpec = spring(
+                                dampingRatio = 0.50f,
+                                stiffness = 380f
+                            ),
+                            label = "icon_lift_$index"
+                        )
+                        val iconScale by animateFloatAsState(
+                            targetValue = if (isSelected) 1.10f else 1.0f,
+                            animationSpec = spring(
+                                dampingRatio = 0.50f,
+                                stiffness = 380f
+                            ),
+                            label = "icon_scale_$index"
+                        )
 
                         Box(
                             modifier = Modifier
@@ -465,16 +485,17 @@ fun PlayerInternalNavigationBar(
                                 .fillMaxHeight()
                                 .clip(CircleShape)
                                 .graphicsLayer {
-                                    scaleX = tabScale
-                                    scaleY = tabScale
+                                    scaleX = tabWaterDropScaleX
+                                    scaleY = tabWaterDropScaleY
                                 }
                                 .pointerInput(Unit) {
-                                    val spec = spring<Float>(dampingRatio = 0.6f, stiffness = 400f)
+                                    val pressSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
+                                    val releaseSpec = spring<Float>(dampingRatio = 0.45f, stiffness = 350f)
                                     awaitEachGesture {
                                         awaitFirstDown()
-                                        coroutineScope.launch { tabPress.animateTo(1f, spec) }
+                                        coroutineScope.launch { tabPress.animateTo(1f, pressSpec) }
                                         waitForUpOrCancellation()
-                                        coroutineScope.launch { tabPress.animateTo(0f, spec) }
+                                        coroutineScope.launch { tabPress.animateTo(0f, releaseSpec) }
                                     }
                                 }
                                 .clickable(
@@ -507,7 +528,13 @@ fun PlayerInternalNavigationBar(
                                     painter = painterResource(id = iconRes),
                                     contentDescription = item.label,
                                     tint = (if (isDark) Color.White else Color.Black).copy(alpha = itemAlpha),
-                                    modifier = Modifier.size(if (compactMode) 22.dp else 24.dp)
+                                    modifier = Modifier
+                                        .size(if (compactMode) 22.dp else 24.dp)
+                                        .offset(y = iconLiftY)
+                                        .graphicsLayer {
+                                            scaleX = iconScale
+                                            scaleY = iconScale
+                                        }
                                 )
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
@@ -640,13 +667,14 @@ fun PlayerInternalNavigationBar(
         if (isLiquidGlass) {
             val searchShape = CircleShape
             val searchPress = remember { Animatable(0f) }
+            val searchWaterDropScaleX = 1f + (searchPress.value * 0.14f)
+            val searchWaterDropScaleY = 1f - (searchPress.value * 0.10f)
 
             val searchButtonModifier = Modifier
                 .size(settingsButtonSize)
                 .graphicsLayer {
-                    val s = lerp(1f, 0.90f, searchPress.value)
-                    scaleX = s
-                    scaleY = s
+                    scaleX = searchWaterDropScaleX
+                    scaleY = searchWaterDropScaleY
                 }
                 .shadow(elevation = 12.dp, shape = searchShape)
                 .then(
@@ -698,12 +726,13 @@ fun PlayerInternalNavigationBar(
                 )
                 .clip(searchShape)
                 .pointerInput(Unit) {
-                    val spec = spring<Float>(dampingRatio = 0.6f, stiffness = 400f)
+                    val pressSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
+                    val releaseSpec = spring<Float>(dampingRatio = 0.45f, stiffness = 350f)
                     awaitEachGesture {
                         awaitFirstDown()
-                        coroutineScope.launch { searchPress.animateTo(1f, spec) }
+                        coroutineScope.launch { searchPress.animateTo(1f, pressSpec) }
                         waitForUpOrCancellation()
-                        coroutineScope.launch { searchPress.animateTo(0f, spec) }
+                        coroutineScope.launch { searchPress.animateTo(0f, releaseSpec) }
                     }
                 }
                 .clickable(

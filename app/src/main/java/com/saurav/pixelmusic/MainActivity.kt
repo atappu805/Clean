@@ -1379,7 +1379,9 @@ class MainActivity : ComponentActivity() {
                                 },
                                 onLongClick = { showRecognitionDialog = true },
                                 onSwipeUp = { showRecognitionDialog = true },
-                                onListenTogetherClick = { playerViewModel.openListenTogetherSheet() }
+                                onListenTogetherClick = { playerViewModel.openListenTogetherSheet() },
+                                isLiquidGlass = isLiquidGlassOnNavBar,
+                                backdrop = navBackdrop
                             )
                         }
                             
