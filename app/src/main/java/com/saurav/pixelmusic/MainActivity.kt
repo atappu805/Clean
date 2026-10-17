@@ -1230,9 +1230,7 @@ class MainActivity : ComponentActivity() {
                 }
                 ) { innerPadding ->
                     BoxWithConstraints(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .layerBackdrop(navBackdrop)
+                        modifier = Modifier.fillMaxSize()
                     ) {
                         val density = LocalDensity.current
                         val containerHeight = this.maxHeight
@@ -1240,6 +1238,15 @@ class MainActivity : ComponentActivity() {
                             with(density) { containerHeight.toPx() }
                         }
 
+                        // ==========================================
+                        // BASE CONTENT LAYER (SAMPLED FOR GLASS BACKDROP)
+                        // Contains Scrims & AppNavigation ONLY (no floating glass surfaces)
+                        // ==========================================
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .layerBackdrop(navBackdrop)
+                        ) {
                         // ==========================================
                         // GLOBAL PERSISTENT SCRIMS (BACKGROUND LAYER)
                         // Placed before AppNavigation so they sit BEHIND the headers and lists
@@ -1335,8 +1342,9 @@ class MainActivity : ComponentActivity() {
                                 paddingValues = innerPadding,
                                 userPreferencesRepository = userPreferencesRepository,
                                 onSearchBarActiveChange = { isSearchBarActive = it },
-                            onOpenSidebar = { scope.launch { drawerState.open() } }
-                        )
+                                onOpenSidebar = { scope.launch { drawerState.open() } }
+                            )
+                        }
 
                         val isHomeOrExploreRoute = currentRoute == Screen.Home.route || currentRoute == Screen.Explore.route
                         val isFabVisible by remember(currentRoute, isSearchBarActive) {

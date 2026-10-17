@@ -331,31 +331,9 @@ fun PlayerInternalNavigationBar(
                                 scaleX = dropletScaleX
                             }
                             .shadow(elevation = 6.dp, shape = dropletShape)
-                            .then(
-                                if (backdrop != null) {
-                                    Modifier.drawBackdrop(
-                                        backdrop = backdrop,
-                                        shape = { dropletShape },
-                                        effects = {
-                                            vibrancy()
-                                            blur(6.dp.toPx())
-                                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                                lens(
-                                                    refractionHeight = 8.dp.toPx(),
-                                                    refractionAmount = 18.dp.toPx()
-                                                )
-                                            }
-                                        },
-                                        onDrawSurface = {
-                                            drawRect(if (isDark) Color.White.copy(alpha = 0.22f) else primaryColor.copy(alpha = 0.20f))
-                                        }
-                                    )
-                                } else {
-                                    Modifier.background(
-                                        color = if (isDark) Color.White.copy(alpha = 0.22f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.20f),
-                                        shape = dropletShape
-                                    )
-                                }
+                            .background(
+                                color = if (isDark) Color.White.copy(alpha = 0.22f) else primaryColor.copy(alpha = 0.20f),
+                                shape = dropletShape
                             )
                             .border(
                                 border = BorderStroke(
