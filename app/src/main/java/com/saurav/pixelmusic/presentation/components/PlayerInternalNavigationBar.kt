@@ -58,6 +58,18 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.offset
+import androidx.compose.animation.core.Animatable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.text.PlatformTextStyle
+import kotlinx.coroutines.launch
 import androidx.navigation.NavHostController
 import com.saurav.pixelmusic.BottomNavItem
 import com.saurav.pixelmusic.R
@@ -231,7 +243,23 @@ fun PlayerInternalNavigationBar(
                 .border(BorderStroke(1.2.dp, glassBorderBrush), shape = CircleShape)
                 .clip(CircleShape)
 
-            // iOS 26 Liquid Glass Navigation Capsule with icon-over-label and sliding droplet
+            val coroutineScope = rememberCoroutineScope()
+            val density = LocalDensity.current
+            var isDragging by remember { mutableStateOf(false) }
+            val dropletOffsetAnimatable = remember { Animatable(0f) }
+            var currentHoveredIndex by remember { mutableIntStateOf(selectedIndex) }
+
+            // Dynamic liquid stretch scale while dragging
+            val dropletScaleX by animateFloatAsState(
+                targetValue = if (isDragging) 1.08f else 1.0f,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessLow
+                ),
+                label = "droplet_stretch"
+            )
+
+            // iOS 26 Liquid Glass Navigation Capsule with swipe-to-navigate and optical centering
             BoxWithConstraints(
                 modifier = glassCapsuleModifier,
                 contentAlignment = Alignment.CenterStart
@@ -239,6 +267,23 @@ fun PlayerInternalNavigationBar(
                 val totalWidth = maxWidth
                 val tabCount = mainItems.size
                 val tabWidth = if (tabCount > 0) totalWidth / tabCount else 0.dp
+                val tabWidthPx = remember(tabWidth, density) {
+                    with(density) { tabWidth.toPx() }
+                }
+
+                // Keep droplet offset in sync when not dragging
+                LaunchedEffect(selectedIndex, tabWidthPx) {
+                    if (!isDragging && selectedIndex in 0 until tabCount && tabWidthPx > 0f) {
+                        currentHoveredIndex = selectedIndex
+                        dropletOffsetAnimatable.animateTo(
+                            targetValue = selectedIndex * tabWidthPx,
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                stiffness = Spring.StiffnessLow
+                            )
+                        )
+                    }
+                }
 
                 // Specular gloss reflection across the top half of the capsule
                 Box(
@@ -256,24 +301,19 @@ fun PlayerInternalNavigationBar(
                         )
                 )
 
-                // Fluid sliding glass droplet indicator behind active tab
-                if (selectedIndex in 0 until tabCount) {
-                    val animatedDropletOffset by animateDpAsState(
-                        targetValue = tabWidth * selectedIndex,
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioMediumBouncy,
-                            stiffness = Spring.StiffnessLow
-                        ),
-                        label = "droplet_offset"
-                    )
-
+                // Fluid sliding & draggable glass droplet indicator behind active tab
+                if ((selectedIndex in 0 until tabCount) || isDragging) {
+                    val dropletOffsetDp = with(density) { dropletOffsetAnimatable.value.toDp() }
                     val dropletPadding = if (compactMode) 3.dp else 4.dp
                     Box(
                         modifier = Modifier
-                            .offset(x = animatedDropletOffset)
+                            .offset(x = dropletOffsetDp)
                             .width(tabWidth)
                             .fillMaxHeight()
                             .padding(dropletPadding)
+                            .graphicsLayer {
+                                scaleX = dropletScaleX
+                            }
                             .shadow(elevation = 4.dp, shape = CircleShape)
                             .then(
                                 if (backdrop != null) {
@@ -306,16 +346,83 @@ fun PlayerInternalNavigationBar(
                     )
                 }
 
-                // Row of icon-over-label tabs exactly matching iOS 26 tab bar
+                // Interactive Row supporting tap and swipe-to-navigate gesture
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .fillMaxHeight(),
+                        .fillMaxHeight()
+                        .pointerInput(tabWidthPx, tabCount, selectedIndex) {
+                            if (tabCount <= 0 || tabWidthPx <= 0f) return@pointerInput
+                            detectHorizontalDragGestures(
+                                onDragStart = { offset ->
+                                    val currentDropletX = if (selectedIndex in 0 until tabCount) selectedIndex * tabWidthPx else 0f
+                                    val isTouchOnDroplet = offset.x in (currentDropletX - 35f)..(currentDropletX + tabWidthPx + 35f)
+                                    if (isTouchOnDroplet) {
+                                        isDragging = true
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        coroutineScope.launch {
+                                            dropletOffsetAnimatable.snapTo(currentDropletX)
+                                        }
+                                    }
+                                },
+                                onHorizontalDrag = { change, dragAmount ->
+                                    if (isDragging) {
+                                        change.consume()
+                                        coroutineScope.launch {
+                                            val newX = (dropletOffsetAnimatable.value + dragAmount)
+                                                .coerceIn(0f, (tabCount - 1) * tabWidthPx)
+                                            dropletOffsetAnimatable.snapTo(newX)
+
+                                            val newHovered = ((newX + tabWidthPx / 2f) / tabWidthPx)
+                                                .toInt().coerceIn(0, tabCount - 1)
+                                            if (newHovered != currentHoveredIndex) {
+                                                currentHoveredIndex = newHovered
+                                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                            }
+                                        }
+                                    }
+                                },
+                                onDragEnd = {
+                                    if (isDragging) {
+                                        isDragging = false
+                                        val targetIndex = ((dropletOffsetAnimatable.value + tabWidthPx / 2f) / tabWidthPx)
+                                            .toInt().coerceIn(0, tabCount - 1)
+                                        coroutineScope.launch {
+                                            dropletOffsetAnimatable.animateTo(
+                                                targetValue = targetIndex * tabWidthPx,
+                                                animationSpec = spring(
+                                                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                                                    stiffness = Spring.StiffnessLow
+                                                )
+                                            )
+                                        }
+                                        if (latestNavigationEnabled && targetIndex != selectedIndex && targetIndex in 0 until tabCount) {
+                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                            navController.navigateToTopLevelSafely(mainItems[targetIndex].screen.route)
+                                        }
+                                    }
+                                },
+                                onDragCancel = {
+                                    if (isDragging) {
+                                        isDragging = false
+                                        coroutineScope.launch {
+                                            dropletOffsetAnimatable.animateTo(
+                                                targetValue = selectedIndex * tabWidthPx,
+                                                animationSpec = spring(
+                                                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                                                    stiffness = Spring.StiffnessLow
+                                                )
+                                            )
+                                        }
+                                    }
+                                }
+                            )
+                        },
                     horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     mainItems.forEachIndexed { index, item ->
-                        val isSelected = index == selectedIndex
+                        val isSelected = index == (if (isDragging) currentHoveredIndex else selectedIndex)
 
                         val itemAlpha by animateFloatAsState(
                             targetValue = if (isSelected) 1f else 0.65f,
@@ -329,9 +436,11 @@ fun PlayerInternalNavigationBar(
                                 .fillMaxHeight()
                                 .clip(CircleShape)
                                 .clickable {
-                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    if (latestNavigationEnabled && latestCurrentRoute != item.screen.route) {
-                                        navController.navigateToTopLevelSafely(item.screen.route)
+                                    if (!isDragging) {
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        if (latestNavigationEnabled && latestCurrentRoute != item.screen.route) {
+                                            navController.navigateToTopLevelSafely(item.screen.route)
+                                        }
                                     }
                                 },
                             contentAlignment = Alignment.Center
@@ -339,7 +448,9 @@ fun PlayerInternalNavigationBar(
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.Center,
-                                modifier = Modifier.padding(horizontal = 4.dp)
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .offset(y = (-1.5).dp)
                             ) {
                                 val iconRes = if (isSelected && item.selectedIconResId != null && item.selectedIconResId != 0) {
                                     item.selectedIconResId
@@ -351,13 +462,17 @@ fun PlayerInternalNavigationBar(
                                     painter = painterResource(id = iconRes),
                                     contentDescription = item.label,
                                     tint = (if (isDark) Color.White else Color.Black).copy(alpha = itemAlpha),
-                                    modifier = Modifier.size(if (compactMode) 20.dp else 22.dp)
+                                    modifier = Modifier.size(if (compactMode) 22.dp else 24.dp)
                                 )
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
                                     text = item.label,
                                     fontFamily = GoogleSansRounded,
-                                    fontSize = if (compactMode) 11.sp else 12.sp,
+                                    style = MaterialTheme.typography.labelMedium.copy(
+                                        fontSize = if (compactMode) 10.5.sp else 11.5.sp,
+                                        lineHeight = if (compactMode) 12.sp else 13.sp,
+                                        platformStyle = PlatformTextStyle(includeFontPadding = false)
+                                    ),
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                                     color = (if (isDark) Color.White else Color.Black).copy(alpha = itemAlpha),
                                     maxLines = 1,
