@@ -696,7 +696,7 @@ fun UnifiedPlayerSheetV2(
                                 transformOrigin = TransformOrigin(0.5f, 1f)
                             }
                             .then(
-                                if (isLiquidGlass && backdrop != null) {
+                                if (isLiquidGlass && backdrop != null && playerContentExpansionFraction.value < 0.05f) {
                                     Modifier.drawBackdrop(
                                         backdrop = backdrop,
                                         shape = { RoundedCornerShape(overallSheetTopCornerRadiusProvider()) },
@@ -719,7 +719,7 @@ fun UnifiedPlayerSheetV2(
                             )
                             .drawBehind {
                                 val fraction = playerContentExpansionFraction.value.coerceIn(0f, 1f)
-                                val solidAlpha = if (isLiquidGlass && backdrop != null) (fraction * 2.5f).coerceIn(0f, 1f) else 1f
+                                val solidAlpha = if (isLiquidGlass && backdrop != null && fraction < 0.05f) (fraction * 2.5f).coerceIn(0f, 1f) else 1f
                                 val outline = dynamicPlayerShape.createOutline(size, layoutDirection, this)
                                 if (outline is Outline.Rounded) {
                                     val path = Path().apply { addRoundRect(outline.roundRect) }

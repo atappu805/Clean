@@ -731,12 +731,12 @@ fun HomeScreen(
                 .background(
                     brush = Brush.verticalGradient(
                         colorStops = arrayOf(
-                            0.00f to (if (isCustomBackground) Color.Transparent else scrimTopColor.copy(alpha = 0.95f)),
-                            0.18f to (if (isCustomBackground) Color.Transparent else scrimTopColor.copy(alpha = 0.86f)),
-                            0.36f to (if (isCustomBackground) Color.Transparent else scrimTopColor.copy(alpha = 0.68f)),
-                            0.54f to (if (isCustomBackground) Color.Transparent else scrimTopColor.copy(alpha = 0.48f)),
-                            0.72f to (if (isCustomBackground) Color.Transparent else scrimTopColor.copy(alpha = 0.28f)),
-                            0.88f to (if (isCustomBackground) Color.Transparent else scrimTopColor.copy(alpha = 0.11f)),
+                            0.00f to (if (isCustomBackground || isLiquidGlassOnHeader) Color.Transparent else scrimTopColor.copy(alpha = 0.95f)),
+                            0.18f to (if (isCustomBackground || isLiquidGlassOnHeader) Color.Transparent else scrimTopColor.copy(alpha = 0.86f)),
+                            0.36f to (if (isCustomBackground || isLiquidGlassOnHeader) Color.Transparent else scrimTopColor.copy(alpha = 0.68f)),
+                            0.54f to (if (isCustomBackground || isLiquidGlassOnHeader) Color.Transparent else scrimTopColor.copy(alpha = 0.48f)),
+                            0.72f to (if (isCustomBackground || isLiquidGlassOnHeader) Color.Transparent else scrimTopColor.copy(alpha = 0.28f)),
+                            0.88f to (if (isCustomBackground || isLiquidGlassOnHeader) Color.Transparent else scrimTopColor.copy(alpha = 0.11f)),
                             1.00f to Color.Transparent
                         )
                     )

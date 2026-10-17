@@ -101,14 +101,15 @@ fun LiquidGlassHeaderBar(
         val pillShape = CircleShape
         val activeBackdrop = backdrop
         val isGlassActive = isLiquidGlass && activeBackdrop != null
+        val headerBarHeight = if (pillTextSize >= 24.sp) 52.dp else 48.dp
 
         val pillModifier = if (isGlassActive) {
             Modifier
+                .height(headerBarHeight)
                 .graphicsLayer {
                     scaleX = pillScaleX
                     scaleY = pillScaleY
                 }
-                .shadow(elevation = 10.dp, shape = pillShape)
                 .drawBackdrop(
                     backdrop = activeBackdrop,
                     shape = { pillShape },
@@ -131,11 +132,11 @@ fun LiquidGlassHeaderBar(
                 .clip(pillShape)
         } else {
             Modifier
+                .height(headerBarHeight)
                 .graphicsLayer {
                     scaleX = pillScaleX
                     scaleY = pillScaleY
                 }
-                .shadow(elevation = 0.dp, shape = pillShape)
                 .background(MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.85f), pillShape)
                 .clip(pillShape)
         }
@@ -177,7 +178,9 @@ fun LiquidGlassHeaderBar(
                 )
             }
             Row(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .padding(horizontal = 16.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(if (pillIcon != null) 10.dp else 0.dp)
             ) {
@@ -199,12 +202,11 @@ fun LiquidGlassHeaderBar(
         val settingsShape = CircleShape
         val settingsModifier = if (isGlassActive) {
             Modifier
-                .size(44.dp)
+                .size(headerBarHeight)
                 .graphicsLayer {
                     scaleX = settingsScaleX
                     scaleY = settingsScaleY
                 }
-                .shadow(elevation = 10.dp, shape = settingsShape)
                 .drawBackdrop(
                     backdrop = activeBackdrop,
                     shape = { settingsShape },
@@ -227,12 +229,11 @@ fun LiquidGlassHeaderBar(
                 .clip(settingsShape)
         } else {
             Modifier
-                .size(44.dp)
+                .size(headerBarHeight)
                 .graphicsLayer {
                     scaleX = settingsScaleX
                     scaleY = settingsScaleY
                 }
-                .shadow(elevation = 0.dp, shape = settingsShape)
                 .background(MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.85f), settingsShape)
                 .clip(settingsShape)
         }

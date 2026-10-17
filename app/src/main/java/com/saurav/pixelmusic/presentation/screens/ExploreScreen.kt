@@ -761,12 +761,12 @@ fun ExploreScreen(
                 .background(
                     brush = Brush.verticalGradient(
                         colorStops = arrayOf(
-                            0.00f to (if (isCustomBackground) Color.Transparent else scrimTopColor.copy(alpha = 0.95f)),
-                            0.18f to (if (isCustomBackground) Color.Transparent else scrimTopColor.copy(alpha = 0.86f)),
-                            0.36f to (if (isCustomBackground) Color.Transparent else scrimTopColor.copy(alpha = 0.68f)),
-                            0.54f to (if (isCustomBackground) Color.Transparent else scrimTopColor.copy(alpha = 0.48f)),
-                            0.72f to (if (isCustomBackground) Color.Transparent else scrimTopColor.copy(alpha = 0.28f)),
-                            0.88f to (if (isCustomBackground) Color.Transparent else scrimTopColor.copy(alpha = 0.11f)),
+                            0.00f to (if (isCustomBackground || isLiquidGlassOnHeader) Color.Transparent else scrimTopColor.copy(alpha = 0.95f)),
+                            0.18f to (if (isCustomBackground || isLiquidGlassOnHeader) Color.Transparent else scrimTopColor.copy(alpha = 0.86f)),
+                            0.36f to (if (isCustomBackground || isLiquidGlassOnHeader) Color.Transparent else scrimTopColor.copy(alpha = 0.68f)),
+                            0.54f to (if (isCustomBackground || isLiquidGlassOnHeader) Color.Transparent else scrimTopColor.copy(alpha = 0.48f)),
+                            0.72f to (if (isCustomBackground || isLiquidGlassOnHeader) Color.Transparent else scrimTopColor.copy(alpha = 0.28f)),
+                            0.88f to (if (isCustomBackground || isLiquidGlassOnHeader) Color.Transparent else scrimTopColor.copy(alpha = 0.11f)),
                             1.00f to Color.Transparent
                         )
                     )
@@ -807,31 +807,17 @@ fun ExploreScreen(
 private fun LiquidGlassFilterChip(
     text: String,
     isSelected: Boolean,
-    isNeighbor: Boolean,
-    neighborDirection: Int,
     isLiquidGlass: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
     val colorScheme = MaterialTheme.colorScheme
-    val coroutineScope = rememberCoroutineScope()
-    val pressAnim = remember { Animatable(0f) }
 
     val animatedHorizontalPadding by animateDpAsState(
-        targetValue = if (isSelected) 20.dp else if (isNeighbor) 13.dp else 15.dp,
-        animationSpec = spring(dampingRatio = 0.68f, stiffness = 380f),
+        targetValue = if (isSelected) 22.dp else 16.dp,
+        animationSpec = spring(dampingRatio = 0.70f, stiffness = 400f),
         label = "chip_pad_$text"
-    )
-    val animatedScale by animateFloatAsState(
-        targetValue = if (isSelected) 1.04f else 1.0f,
-        animationSpec = spring(dampingRatio = 0.68f, stiffness = 380f),
-        label = "chip_scale_$text"
-    )
-    val animatedOffsetX by animateDpAsState(
-        targetValue = if (isNeighbor) (neighborDirection * -3).dp else 0.dp,
-        animationSpec = spring(dampingRatio = 0.70f, stiffness = 350f),
-        label = "chip_offset_$text"
     )
 
     val chipShape = CircleShape
@@ -839,7 +825,7 @@ private fun LiquidGlassFilterChip(
     val containerColor by animateColorAsState(
         targetValue = when {
             isSelected -> colorScheme.primary
-            isLiquidGlass -> if (isDark) Color(0x22FFFFFF) else Color(0x55FFFFFF)
+            isLiquidGlass -> if (isDark) Color(0x20FFFFFF) else Color(0x50FFFFFF)
             else -> colorScheme.surfaceContainerHigh
         },
         animationSpec = spring(dampingRatio = 0.8f, stiffness = 400f),
@@ -865,54 +851,37 @@ private fun LiquidGlassFilterChip(
                 Brush.verticalGradient(
                     listOf(
                         Color.White.copy(alpha = if (isDark) 0.08f else 0.16f),
-                        Color.White.copy(alpha = if (isDark) 0.02f else 0.05f)
+                        Color.White.copy(alpha = if (isDark) 0.02f else 0.04f)
                     )
                 )
             )
         }
     }
 
-    Box(
-        modifier = modifier
-            .offset(x = animatedOffsetX)
-            .graphicsLayer {
-                val p = pressAnim.value
-                val flexScale = 1f - (p * 0.07f)
-                scaleX = animatedScale * flexScale
-                scaleY = animatedScale * flexScale
-            }
-            .shadow(
-                elevation = if (isLiquidGlass && isSelected) 4.dp else if (isLiquidGlass) 2.dp else 0.dp,
-                shape = chipShape
-            )
-            .background(containerColor, chipShape)
-            .then(
-                if (borderStroke != null) Modifier.border(borderStroke, chipShape) else Modifier
-            )
-            .clip(chipShape)
-            .pointerInput(Unit) {
-                val pressSpec = spring<Float>(dampingRatio = 0.55f, stiffness = 420f)
-                awaitEachGesture {
-                    awaitFirstDown(requireUnconsumed = false)
-                    coroutineScope.launch { pressAnim.animateTo(1f, pressSpec) }
-                    val up = waitForUpOrCancellation()
-                    coroutineScope.launch { pressAnim.animateTo(0f, pressSpec) }
-                    if (up != null) {
-                        onClick()
-                    }
-                }
-            }
-            .padding(horizontal = animatedHorizontalPadding, vertical = 9.dp),
-        contentAlignment = Alignment.Center
+    Surface(
+        onClick = onClick,
+        shape = chipShape,
+        color = containerColor,
+        border = borderStroke,
+        shadowElevation = 0.dp,
+        tonalElevation = 0.dp,
+        modifier = modifier.height(38.dp)
     ) {
-        Text(
-            text = text,
-            fontFamily = GoogleSansRounded,
-            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-            style = MaterialTheme.typography.labelLarge,
-            color = contentColor,
-            maxLines = 1
-        )
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .fillMaxHeight()
+                .padding(horizontal = animatedHorizontalPadding)
+        ) {
+            Text(
+                text = text,
+                fontFamily = GoogleSansRounded,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                style = MaterialTheme.typography.labelLarge,
+                color = contentColor,
+                maxLines = 1
+            )
+        }
     }
 }
 
@@ -926,14 +895,6 @@ private fun ExploreFilterAndMoodDock(
 ) {
     val categories = remember {
         listOf("All", "For You", "New Releases", "Charts", "Moods & Genres")
-    }
-
-    val selectedCategoryIndex = remember(selectedFilter, selectedMood) {
-        if (selectedMood == null) categories.indexOf(selectedFilter) else -1
-    }
-
-    val selectedMoodIndex = remember(selectedMood) {
-        if (selectedMood != null) MOOD_CHIPS.indexOf(selectedMood) else -1
     }
 
     Column(
@@ -950,15 +911,11 @@ private fun ExploreFilterAndMoodDock(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            categories.forEachIndexed { index, category ->
-                val isSelected = index == selectedCategoryIndex
-                val isNeighbor = selectedCategoryIndex != -1 && abs(index - selectedCategoryIndex) == 1
-                val neighborDirection = if (selectedCategoryIndex != -1) (index - selectedCategoryIndex) else 0
+            categories.forEach { category ->
+                val isSelected = selectedFilter == category && selectedMood == null
                 LiquidGlassFilterChip(
                     text = category,
                     isSelected = isSelected,
-                    isNeighbor = isNeighbor,
-                    neighborDirection = neighborDirection,
                     isLiquidGlass = isLiquidGlass,
                     onClick = { onFilterClick(category) }
                 )
@@ -973,15 +930,11 @@ private fun ExploreFilterAndMoodDock(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            MOOD_CHIPS.forEachIndexed { index, mood ->
-                val isSelected = index == selectedMoodIndex
-                val isNeighbor = selectedMoodIndex != -1 && abs(index - selectedMoodIndex) == 1
-                val neighborDirection = if (selectedMoodIndex != -1) (index - selectedMoodIndex) else 0
+            MOOD_CHIPS.forEach { mood ->
+                val isSelected = selectedMood == mood
                 LiquidGlassFilterChip(
                     text = mood,
                     isSelected = isSelected,
-                    isNeighbor = isNeighbor,
-                    neighborDirection = neighborDirection,
                     isLiquidGlass = isLiquidGlass,
                     onClick = { onMoodClick(mood) }
                 )

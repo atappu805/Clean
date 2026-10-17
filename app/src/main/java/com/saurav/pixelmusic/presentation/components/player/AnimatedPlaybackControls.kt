@@ -165,7 +165,6 @@ fun AnimatedPlaybackControls(
                     .then(
                         if (isGlassActive) {
                             Modifier
-                                .shadow(elevation = 10.dp, shape = prevShape)
                                 .drawBackdrop(
                                     backdrop = backdrop,
                                     shape = { prevShape },
@@ -173,12 +172,6 @@ fun AnimatedPlaybackControls(
                                         vibrancy()
                                         val blurRadius = (12.dp.toPx() * glassBlurIntensity).coerceAtLeast(1f)
                                         blur(blurRadius)
-                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && glassRefractionIntensity > 0.01f) {
-                                            lens(
-                                                refractionHeight = 18.dp.toPx() * glassRefractionIntensity,
-                                                refractionAmount = 42.dp.toPx() * glassRefractionIntensity
-                                            )
-                                        }
                                     },
                                     onDrawSurface = {
                                         drawRect(colorPreviousButton, blendMode = BlendMode.Hue)
@@ -235,7 +228,6 @@ fun AnimatedPlaybackControls(
                     .then(
                         if (isGlassActive) {
                             Modifier
-                                .shadow(elevation = 12.dp, shape = playGlassCornerShape)
                                 .drawBackdrop(
                                     backdrop = backdrop,
                                     shape = { playGlassCornerShape },
@@ -243,12 +235,6 @@ fun AnimatedPlaybackControls(
                                         vibrancy()
                                         val blurRadius = (12.dp.toPx() * glassBlurIntensity).coerceAtLeast(1f)
                                         blur(blurRadius)
-                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && glassRefractionIntensity > 0.01f) {
-                                            lens(
-                                                refractionHeight = 18.dp.toPx() * glassRefractionIntensity,
-                                                refractionAmount = 42.dp.toPx() * glassRefractionIntensity
-                                            )
-                                        }
                                     },
                                     onDrawSurface = {
                                         drawRect(colorPlayPause, blendMode = BlendMode.Hue)
@@ -289,7 +275,6 @@ fun AnimatedPlaybackControls(
                     .then(
                         if (isGlassActive) {
                             Modifier
-                                .shadow(elevation = 10.dp, shape = nextShape)
                                 .drawBackdrop(
                                     backdrop = backdrop,
                                     shape = { nextShape },
@@ -297,12 +282,6 @@ fun AnimatedPlaybackControls(
                                         vibrancy()
                                         val blurRadius = (12.dp.toPx() * glassBlurIntensity).coerceAtLeast(1f)
                                         blur(blurRadius)
-                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && glassRefractionIntensity > 0.01f) {
-                                            lens(
-                                                refractionHeight = 18.dp.toPx() * glassRefractionIntensity,
-                                                refractionAmount = 42.dp.toPx() * glassRefractionIntensity
-                                            )
-                                        }
                                     },
                                     onDrawSurface = {
                                         drawRect(colorNextButton, blendMode = BlendMode.Hue)
