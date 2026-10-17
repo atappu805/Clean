@@ -33,8 +33,23 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
 import androidx.compose.ui.util.lerp
+import android.os.Build
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.kyant.backdrop.Backdrop
+import com.kyant.backdrop.drawBackdrop
+import com.kyant.backdrop.effects.blur
+import com.kyant.backdrop.effects.lens
+import com.kyant.backdrop.effects.vibrancy
 import androidx.media3.common.util.UnstableApi
 import com.saurav.pixelmusic.data.model.Song
 import com.saurav.pixelmusic.data.preferences.FullPlayerLoadingTweaks
@@ -68,6 +83,8 @@ internal fun BoxScope.UnifiedPlayerMiniAndFullLayers(
     currentPositionProvider: () -> Long,
     isFavorite: Boolean,
     shouldRenderFullPlayer: Boolean = true,
+    isLiquidGlass: Boolean = false,
+    backdrop: Backdrop? = null,
     onShowQueueClicked: () -> Unit,
     onQueueDragStart: () -> Unit,
     onQueueDrag: (Float) -> Unit,
@@ -84,6 +101,9 @@ internal fun BoxScope.UnifiedPlayerMiniAndFullLayers(
                         if (playerContentExpansionFraction.value < 0.5f) 1f else 0f
                     }
                 }
+                val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+                val isLiquidGlassActive = isLiquidGlass && backdrop != null
+
                 Box(
                     modifier = Modifier
                         .align(Alignment.TopCenter)
@@ -95,6 +115,57 @@ internal fun BoxScope.UnifiedPlayerMiniAndFullLayers(
                         }
                         .zIndex(miniPlayerZIndex)
                 ) {
+                    if (isLiquidGlassActive) {
+                        val miniPillShape = CircleShape
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .shadow(elevation = 10.dp, shape = miniPillShape)
+                                .drawBackdrop(
+                                    backdrop = backdrop,
+                                    shape = { miniPillShape },
+                                    effects = {
+                                        vibrancy()
+                                        blur(10.dp.toPx())
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                            lens(12.dp.toPx(), 28.dp.toPx())
+                                        }
+                                    },
+                                    onDrawSurface = {
+                                        drawRect(if (isDark) Color(0x301C1C1E) else Color(0x25F5F5F7))
+                                    }
+                                )
+                                .border(
+                                    border = BorderStroke(
+                                        1.dp,
+                                        Brush.verticalGradient(
+                                            colors = listOf(
+                                                Color.White.copy(alpha = if (isDark) 0.70f else 0.90f),
+                                                Color.White.copy(alpha = if (isDark) 0.15f else 0.30f)
+                                            )
+                                        )
+                                    ),
+                                    shape = miniPillShape
+                                )
+                        ) {
+                            // Top gloss reflection
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .fillMaxHeight(0.5f)
+                                    .align(Alignment.TopCenter)
+                                    .background(
+                                        brush = Brush.verticalGradient(
+                                            colors = listOf(
+                                                Color.White.copy(alpha = if (isDark) 0.12f else 0.22f),
+                                                Color.Transparent
+                                            )
+                                        ),
+                                        shape = miniPillShape
+                                    )
+                            )
+                        }
+                    }
                     val miniAlbumCornerRadius by remember(overallSheetTopCornerRadiusProvider) {
                         derivedStateOf {
                             (overallSheetTopCornerRadiusProvider().value * 0.5f).dp
@@ -110,6 +181,7 @@ internal fun BoxScope.UnifiedPlayerMiniAndFullLayers(
                         onPlayPause = { playerViewModel.playPause() },
                         onPrevious = { playerViewModel.previousSong() },
                         onNext = { playerViewModel.nextSong() },
+                        isLiquidGlass = isLiquidGlassActive,
                         modifier = Modifier.fillMaxSize()
                     )
                 }

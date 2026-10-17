@@ -43,8 +43,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
+import kotlinx.coroutines.launch
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.size.Size
@@ -74,6 +87,7 @@ internal fun MiniPlayerContentInternal(
     onPrevious: () -> Unit,
     cornerRadiusAlb: Dp,
     onNext: () -> Unit,
+    isLiquidGlass: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val hapticFeedback = LocalHapticFeedback.current
@@ -116,22 +130,29 @@ internal fun MiniPlayerContentInternal(
             }
         }
         Spacer(modifier = Modifier.width(12.dp))
+        val coroutineScope = rememberCoroutineScope()
+        val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+
         Column(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.Center
         ) {
+            val titleColor = if (isLiquidGlass) (if (isDark) Color.White else Color(0xFF1C1C1E)) else LocalMaterialTheme.current.onPrimaryContainer
+            val artistColor = if (isLiquidGlass) (if (isDark) Color.White else Color(0xFF1C1C1E)).copy(alpha = 0.7f) else LocalMaterialTheme.current.onPrimaryContainer.copy(alpha = 0.7f)
+            val gradientEdge = if (isLiquidGlass) Color.Transparent else LocalMaterialTheme.current.primaryContainer
+
             val titleStyle = MaterialTheme.typography.titleSmall.copy(
                 fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold,
                 letterSpacing = (-0.2).sp,
                 fontFamily = GoogleSansRounded,
-                color = LocalMaterialTheme.current.onPrimaryContainer
+                color = titleColor
             )
             val artistStyle = MaterialTheme.typography.bodySmall.copy(
                 fontSize = 13.sp,
                 letterSpacing = 0.sp,
                 fontFamily = GoogleSansRounded,
-                color = LocalMaterialTheme.current.onPrimaryContainer.copy(alpha = 0.7f)
+                color = artistColor
             )
 
             Row(
@@ -146,26 +167,57 @@ internal fun MiniPlayerContentInternal(
                             else -> song.title
                         },
                         style = titleStyle,
-                        gradientEdgeColor = LocalMaterialTheme.current.primaryContainer
+                        gradientEdgeColor = gradientEdge
                     )
                 }
             }
             AutoScrollingText(
                 text = if (isPreparingPlayback) "Loading audio…" else song.displayArtist,
                 style = artistStyle,
-                gradientEdgeColor = LocalMaterialTheme.current.primaryContainer
+                gradientEdgeColor = gradientEdge
             )
         }
         Spacer(modifier = Modifier.width(8.dp))
 
+        val prevPress = remember { Animatable(0f) }
+        val prevScale = 1f - (prevPress.value * 0.09f)
+
         Box(
             modifier = Modifier
                 .size(36.dp)
+                .graphicsLayer {
+                    scaleX = prevScale
+                    scaleY = prevScale
+                }
                 .clip(CircleShape)
-                .background(LocalMaterialTheme.current.onPrimary)
+                .background(
+                    if (isLiquidGlass) {
+                        (if (isDark) Color.White else Color.Black).copy(alpha = 0.10f)
+                    } else {
+                        LocalMaterialTheme.current.onPrimary
+                    }
+                )
+                .then(
+                    if (isLiquidGlass) {
+                        Modifier.border(
+                            1.dp,
+                            Color.White.copy(alpha = if (isDark) 0.25f else 0.45f),
+                            CircleShape
+                        )
+                    } else Modifier
+                )
+                .pointerInput(Unit) {
+                    val spec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
+                    awaitEachGesture {
+                        awaitFirstDown()
+                        coroutineScope.launch { prevPress.animateTo(1f, spec) }
+                        waitForUpOrCancellation()
+                        coroutineScope.launch { prevPress.animateTo(0f, spec) }
+                    }
+                }
                 .clickable(
                     interactionSource = previousInteraction,
-                    indication = miniPlayerIndication,
+                    indication = if (isLiquidGlass) null else miniPlayerIndication,
                     enabled = controlsEnabled
                 ) {
                     hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -176,21 +228,57 @@ internal fun MiniPlayerContentInternal(
             Icon(
                 imageVector = Icons.Rounded.SkipPrevious,
                 contentDescription = "Anterior",
-                tint = LocalMaterialTheme.current.primary,
+                tint = if (isLiquidGlass) (if (isDark) Color.White else Color(0xFF1C1C1E)) else LocalMaterialTheme.current.primary,
                 modifier = Modifier.size(22.dp)
             )
         }
 
         Spacer(modifier = Modifier.width(8.dp))
 
+        val playPausePress = remember { Animatable(0f) }
+        val playPauseScale = 1f - (playPausePress.value * 0.09f)
+
         Box(
             modifier = Modifier
                 .size(36.dp)
+                .graphicsLayer {
+                    scaleX = playPauseScale
+                    scaleY = playPauseScale
+                }
                 .clip(CircleShape)
-                .background(LocalMaterialTheme.current.primary)
+                .background(
+                    if (isLiquidGlass) {
+                        LocalMaterialTheme.current.primary.copy(alpha = 0.88f)
+                    } else {
+                        LocalMaterialTheme.current.primary
+                    }
+                )
+                .then(
+                    if (isLiquidGlass) {
+                        Modifier.border(
+                            1.dp,
+                            Brush.verticalGradient(
+                                listOf(
+                                    Color.White.copy(alpha = 0.65f),
+                                    Color.White.copy(alpha = 0.20f)
+                                )
+                            ),
+                            CircleShape
+                        )
+                    } else Modifier
+                )
+                .pointerInput(Unit) {
+                    val spec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
+                    awaitEachGesture {
+                        awaitFirstDown()
+                        coroutineScope.launch { playPausePress.animateTo(1f, spec) }
+                        waitForUpOrCancellation()
+                        coroutineScope.launch { playPausePress.animateTo(0f, spec) }
+                    }
+                }
                 .clickable(
                     interactionSource = playPauseInteraction,
-                    indication = miniPlayerIndication,
+                    indication = if (isLiquidGlass) null else miniPlayerIndication,
                     enabled = controlsEnabled
                 ) {
                     hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -215,14 +303,45 @@ internal fun MiniPlayerContentInternal(
 
         Spacer(modifier = Modifier.width(8.dp))
 
+        val nextPress = remember { Animatable(0f) }
+        val nextScale = 1f - (nextPress.value * 0.09f)
+
         Box(
             modifier = Modifier
                 .size(36.dp)
+                .graphicsLayer {
+                    scaleX = nextScale
+                    scaleY = nextScale
+                }
                 .clip(CircleShape)
-                .background(LocalMaterialTheme.current.onPrimary)
+                .background(
+                    if (isLiquidGlass) {
+                        (if (isDark) Color.White else Color.Black).copy(alpha = 0.10f)
+                    } else {
+                        LocalMaterialTheme.current.onPrimary
+                    }
+                )
+                .then(
+                    if (isLiquidGlass) {
+                        Modifier.border(
+                            1.dp,
+                            Color.White.copy(alpha = if (isDark) 0.25f else 0.45f),
+                            CircleShape
+                        )
+                    } else Modifier
+                )
+                .pointerInput(Unit) {
+                    val spec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
+                    awaitEachGesture {
+                        awaitFirstDown()
+                        coroutineScope.launch { nextPress.animateTo(1f, spec) }
+                        waitForUpOrCancellation()
+                        coroutineScope.launch { nextPress.animateTo(0f, spec) }
+                    }
+                }
                 .clickable(
                     interactionSource = nextInteraction,
-                    indication = miniPlayerIndication,
+                    indication = if (isLiquidGlass) null else miniPlayerIndication,
                     enabled = controlsEnabled
                 ) { onNext() },
             contentAlignment = Alignment.Center
@@ -230,7 +349,7 @@ internal fun MiniPlayerContentInternal(
             Icon(
                 imageVector = Icons.Rounded.SkipNext,
                 contentDescription = "Siguiente",
-                tint = LocalMaterialTheme.current.primary,
+                tint = if (isLiquidGlass) (if (isDark) Color.White else Color(0xFF1C1C1E)) else LocalMaterialTheme.current.primary,
                 modifier = Modifier.size(22.dp)
             )
         }

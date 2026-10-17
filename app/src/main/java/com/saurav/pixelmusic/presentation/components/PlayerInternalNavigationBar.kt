@@ -330,7 +330,6 @@ fun PlayerInternalNavigationBar(
                             .graphicsLayer {
                                 scaleX = dropletScaleX
                             }
-                            .shadow(elevation = 6.dp, shape = dropletShape)
                             .background(
                                 color = if (isDark) Color.White.copy(alpha = 0.22f) else primaryColor.copy(alpha = 0.20f),
                                 shape = dropletShape
@@ -439,17 +438,24 @@ fun PlayerInternalNavigationBar(
                         val tabWaterDropScaleX = 1f + (tabPress.value * 0.12f)
                         val tabWaterDropScaleY = 1f - (tabPress.value * 0.08f)
 
-                        // Animated icon lift when tab is selected (icon springs upward)
-                        val iconLiftY by animateDpAsState(
-                            targetValue = if (isSelected) (-3.5).dp else 0.dp,
-                            animationSpec = spring(
-                                dampingRatio = 0.50f,
-                                stiffness = 380f
-                            ),
-                            label = "icon_lift_$index"
-                        )
+                        // Animated icon lift when tab is selected: brief liquid spring bounce that settles at center
+                        val iconBounceY = remember { Animatable(0f) }
+                        LaunchedEffect(isSelected) {
+                            if (isSelected) {
+                                iconBounceY.snapTo(-2.5f)
+                                iconBounceY.animateTo(
+                                    targetValue = 0f,
+                                    animationSpec = spring(
+                                        dampingRatio = 0.45f,
+                                        stiffness = 380f
+                                    )
+                                )
+                            }
+                        }
+                        val iconLiftY = iconBounceY.value.dp
+
                         val iconScale by animateFloatAsState(
-                            targetValue = if (isSelected) 1.10f else 1.0f,
+                            targetValue = if (isSelected) 1.06f else 1.0f,
                             animationSpec = spring(
                                 dampingRatio = 0.50f,
                                 stiffness = 380f
@@ -492,9 +498,7 @@ fun PlayerInternalNavigationBar(
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.Center,
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .offset(y = (-1).dp)
+                                modifier = Modifier.fillMaxSize()
                             ) {
                                 val iconRes = if (isSelected && item.selectedIconResId != null && item.selectedIconResId != 0) {
                                     item.selectedIconResId

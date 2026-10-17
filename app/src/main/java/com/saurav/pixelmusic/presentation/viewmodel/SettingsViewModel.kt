@@ -112,6 +112,8 @@ data class SettingsUiState(
     val uiMotionBlurIntensity: Float = 1f,
     val liquidGlassEnabled: Boolean = true,
     val liquidGlassNavBarEnabled: Boolean = true,
+    val liquidGlassMiniPlayerEnabled: Boolean = true,
+    val liquidGlassDismissPromptEnabled: Boolean = true,
     // Developer Options
     val albumArtQuality: AlbumArtQuality = AlbumArtQuality.HIGH,
     val albumArtCacheLimitMb: Int = 200,
@@ -800,6 +802,16 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             userPreferencesRepository.liquidGlassNavBarEnabledFlow.collect { enabled ->
                 _uiState.update { it.copy(liquidGlassNavBarEnabled = enabled) }
+            }
+        }
+        viewModelScope.launch {
+            userPreferencesRepository.liquidGlassMiniPlayerEnabledFlow.collect { enabled ->
+                _uiState.update { it.copy(liquidGlassMiniPlayerEnabled = enabled) }
+            }
+        }
+        viewModelScope.launch {
+            userPreferencesRepository.liquidGlassDismissPromptEnabledFlow.collect { enabled ->
+                _uiState.update { it.copy(liquidGlassDismissPromptEnabled = enabled) }
             }
         }
 
@@ -1876,6 +1888,18 @@ class SettingsViewModel @Inject constructor(
     fun setLiquidGlassNavBarEnabled(enabled: Boolean) {
         viewModelScope.launch {
             userPreferencesRepository.setLiquidGlassNavBarEnabled(enabled)
+        }
+    }
+
+    fun setLiquidGlassMiniPlayerEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            userPreferencesRepository.setLiquidGlassMiniPlayerEnabled(enabled)
+        }
+    }
+
+    fun setLiquidGlassDismissPromptEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            userPreferencesRepository.setLiquidGlassDismissPromptEnabled(enabled)
         }
     }
 

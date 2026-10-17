@@ -887,8 +887,12 @@ class MainActivity : ComponentActivity() {
         val navBarCompactMode by playerViewModel.navBarCompactMode.collectAsStateWithLifecycle()
         val liquidGlassEnabled by playerViewModel.userPreferencesRepository.liquidGlassEnabledFlow.collectAsStateWithLifecycle(initialValue = true)
         val liquidGlassNavBarEnabled by playerViewModel.userPreferencesRepository.liquidGlassNavBarEnabledFlow.collectAsStateWithLifecycle(initialValue = true)
+        val liquidGlassMiniPlayerEnabled by playerViewModel.userPreferencesRepository.liquidGlassMiniPlayerEnabledFlow.collectAsStateWithLifecycle(initialValue = true)
+        val liquidGlassDismissPromptEnabled by playerViewModel.userPreferencesRepository.liquidGlassDismissPromptEnabledFlow.collectAsStateWithLifecycle(initialValue = true)
         val isDarkTheme = MaterialTheme.colorScheme.surface.luminance() < 0.5f
         val isLiquidGlassOnNavBar = liquidGlassEnabled && liquidGlassNavBarEnabled
+        val isLiquidGlassOnMiniPlayer = liquidGlassEnabled && liquidGlassMiniPlayerEnabled
+        val isLiquidGlassOnDismissPrompt = liquidGlassEnabled && liquidGlassDismissPromptEnabled
         val navBackdrop = rememberLayerBackdrop {
             drawRect(if (isDarkTheme) Color.Black else Color.White)
             drawContent()
@@ -1423,7 +1427,9 @@ class MainActivity : ComponentActivity() {
                             hideMiniPlayer = shouldHideMiniPlayer,
                             containerHeight = containerHeight,
                             navController = navController,
-                            isNavBarHidden = isNavBarEffectivelyHidden
+                            isNavBarHidden = isNavBarEffectivelyHidden,
+                            isLiquidGlass = isLiquidGlassOnMiniPlayer,
+                            backdrop = navBackdrop
                         )
 
                         val dismissUndoBarSlice by remember {
@@ -1467,7 +1473,9 @@ class MainActivity : ComponentActivity() {
                                     .padding(horizontal = 14.dp),
                                 onUndo = onUndoDismissPlaylist,
                                 onClose = onCloseDismissUndoBar,
-                                durationMillis = dismissUndoBarSlice.durationMillis
+                                durationMillis = dismissUndoBarSlice.durationMillis,
+                                isLiquidGlass = isLiquidGlassOnDismissPrompt,
+                                backdrop = navBackdrop
                             )
                         }
 

@@ -50,6 +50,10 @@
     <string name="settings_liquid_glass_global_desc">Enable iOS-style liquid glass refraction across supported components</string>
     <string name="settings_liquid_glass_nav_bar_title">Navigation Bar</string>
     <string name="settings_liquid_glass_nav_bar_desc">Apply liquid glass refraction to the bottom navigation bar and search button</string>
+    <string name="settings_liquid_glass_mini_player_title">Mini Player</string>
+    <string name="settings_liquid_glass_mini_player_desc">Apply liquid glass refraction to the floating mini player</string>
+    <string name="settings_liquid_glass_dismiss_prompt_title">Dismiss / Undo Prompt</string>
+    <string name="settings_liquid_glass_dismiss_prompt_desc">Apply liquid glass refraction to the playlist dismiss undo bar</string>
 
     <!-- Common toggles / labels used in ThemeSelectorItem maps -->
     <string name="label_on">On</string>

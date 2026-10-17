@@ -2037,6 +2037,24 @@ fun SettingsCategoryScreen(
                                                     Icon(painterResource(R.drawable.rounded_touch_app_24), null, tint = MaterialTheme.colorScheme.secondary)
                                                 }
                                             )
+                                            SwitchSettingItem(
+                                                title = stringResource(R.string.settings_liquid_glass_mini_player_title),
+                                                subtitle = stringResource(R.string.settings_liquid_glass_mini_player_desc),
+                                                checked = uiState.liquidGlassMiniPlayerEnabled,
+                                                onCheckedChange = { settingsViewModel.setLiquidGlassMiniPlayerEnabled(it) },
+                                                leadingIcon = {
+                                                    Icon(Icons.Outlined.PlayCircle, null, tint = MaterialTheme.colorScheme.secondary)
+                                                }
+                                            )
+                                            SwitchSettingItem(
+                                                title = stringResource(R.string.settings_liquid_glass_dismiss_prompt_title),
+                                                subtitle = stringResource(R.string.settings_liquid_glass_dismiss_prompt_desc),
+                                                checked = uiState.liquidGlassDismissPromptEnabled,
+                                                onCheckedChange = { settingsViewModel.setLiquidGlassDismissPromptEnabled(it) },
+                                                leadingIcon = {
+                                                    Icon(Icons.Rounded.Restore, null, tint = MaterialTheme.colorScheme.secondary)
+                                                }
+                                            )
                                         }
                                     }
                                 }

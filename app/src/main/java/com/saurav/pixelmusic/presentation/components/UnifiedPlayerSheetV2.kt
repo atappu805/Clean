@@ -57,6 +57,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
+import com.kyant.backdrop.Backdrop
 import com.saurav.pixelmusic.data.model.Song
 import com.saurav.pixelmusic.data.preferences.sanitizeNavBarCornerRadius
 import com.saurav.pixelmusic.presentation.components.scoped.PlayerAlbumNavigationEffect
@@ -113,7 +114,9 @@ fun UnifiedPlayerSheetV2(
     collapsedStateHorizontalPadding: Dp = 24.dp,
     navController: NavHostController,
     hideMiniPlayer: Boolean = false,
-    isNavBarHidden: Boolean = false
+    isNavBarHidden: Boolean = false,
+    isLiquidGlass: Boolean = false,
+    backdrop: Backdrop? = null
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -671,17 +674,24 @@ fun UnifiedPlayerSheetV2(
                                 handler = miniDismissGestureHandler
                             )
                             .graphicsLayer {
+                                val dismissStretchX = if (isLiquidGlass && backdrop != null) 1f + (swipeDismissProgress * 0.06f) else 1f
+                                val dismissStretchY = if (isLiquidGlass && backdrop != null) 1f - (swipeDismissProgress * 0.03f) else 1f
                                 translationX = offsetAnimatable.value
-                                scaleX = miniAppearScale
-                                scaleY = visualOvershootScaleY.value * miniAppearScale
+                                scaleX = miniAppearScale * dismissStretchX
+                                scaleY = visualOvershootScaleY.value * miniAppearScale * dismissStretchY
                                 alpha = miniReadyAlpha
                                 transformOrigin = TransformOrigin(0.5f, 1f)
                             }
-.background(
-    color = playerAreaBackground,
-    shape = dynamicPlayerShape
-)
-.clip(dynamicPlayerShape)
+                            .background(
+                                color = if (isLiquidGlass && backdrop != null) {
+                                    val solidAlpha = (playerContentExpansionFraction.value * 3f).coerceIn(0f, 1f)
+                                    playerAreaBackground.copy(alpha = solidAlpha)
+                                } else {
+                                    playerAreaBackground
+                                },
+                                shape = dynamicPlayerShape
+                            )
+                            .clip(dynamicPlayerShape)
                             .semantics {
                                 contentDescription = playerSheetSemanticsDescription
                             }
@@ -718,6 +728,8 @@ fun UnifiedPlayerSheetV2(
                             currentPositionProvider = positionToDisplayProvider,
                             isFavorite = isFavorite,
                             shouldRenderFullPlayer = shouldRenderFullPlayer,
+                            isLiquidGlass = isLiquidGlass,
+                            backdrop = backdrop,
                             onShowQueueClicked = sheetActionHandlers.openQueueSheet,
                             onQueueDragStart = sheetActionHandlers.beginQueueDrag,
                             onQueueDrag = sheetActionHandlers.dragQueueBy,

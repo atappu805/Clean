@@ -330,6 +330,8 @@ constructor(
         val ANIMATED_LYRICS_BLUR_STRENGTH = androidx.datastore.preferences.core.floatPreferencesKey("animated_lyrics_blur_strength")
         val LIQUID_GLASS_ENABLED = booleanPreferencesKey("liquid_glass_enabled")
         val LIQUID_GLASS_NAV_BAR_ENABLED = booleanPreferencesKey("liquid_glass_nav_bar_enabled")
+        val LIQUID_GLASS_MINI_PLAYER_ENABLED = booleanPreferencesKey("liquid_glass_mini_player_enabled")
+        val LIQUID_GLASS_DISMISS_PROMPT_ENABLED = booleanPreferencesKey("liquid_glass_dismiss_prompt_enabled")
 
         // Genre View Preference
         val IS_GENRE_GRID_VIEW = booleanPreferencesKey("is_genre_grid_view")
@@ -2034,6 +2036,28 @@ constructor(
     suspend fun setLiquidGlassNavBarEnabled(enabled: Boolean) {
         dataStore.edit { preferences ->
             preferences[PreferencesKeys.LIQUID_GLASS_NAV_BAR_ENABLED] = enabled
+        }
+    }
+
+    val liquidGlassMiniPlayerEnabledFlow: Flow<Boolean> = dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.LIQUID_GLASS_MINI_PLAYER_ENABLED] ?: true
+        }
+
+    suspend fun setLiquidGlassMiniPlayerEnabled(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.LIQUID_GLASS_MINI_PLAYER_ENABLED] = enabled
+        }
+    }
+
+    val liquidGlassDismissPromptEnabledFlow: Flow<Boolean> = dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.LIQUID_GLASS_DISMISS_PROMPT_ENABLED] ?: true
+        }
+
+    suspend fun setLiquidGlassDismissPromptEnabled(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.LIQUID_GLASS_DISMISS_PROMPT_ENABLED] = enabled
         }
     }
 
