@@ -192,7 +192,18 @@ fun SmoothModalBottomSheet(
                 onDismissRequest()
             }
         },
-        modifier = modifier.then(if (glassBorder != null) Modifier.border(glassBorder, shape) else Modifier),
+        modifier = modifier
+            .then(if (glassBorder != null) Modifier.border(glassBorder, shape) else Modifier)
+            .then(
+                if (isLiquidGlass && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    Modifier.graphicsLayer {
+                        val cm = android.graphics.ColorMatrix().apply { setSaturation(1.3f) }
+                        renderEffect = android.graphics.RenderEffect.createColorFilterEffect(
+                            android.graphics.ColorMatrixColorFilter(cm)
+                        ).asComposeRenderEffect()
+                    }
+                } else Modifier
+            ),
         sheetState = sheetState,
         sheetMaxWidth = sheetMaxWidth,
         shape = shape,
@@ -212,22 +223,7 @@ fun SmoothModalBottomSheet(
             CompositionLocalProvider(
                 LocalSmoothDismiss provides { afterDismiss -> dismissSmoothly(afterDismiss) }
             ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .then(
-                            if (isLiquidGlass && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                                Modifier.graphicsLayer {
-                                    val cm = android.graphics.ColorMatrix().apply { setSaturation(1.3f) }
-                                    renderEffect = android.graphics.RenderEffect.createColorFilterEffect(
-                                        android.graphics.ColorMatrixColorFilter(cm)
-                                    ).asComposeRenderEffect()
-                                }
-                            } else Modifier
-                        )
-                ) {
-                    content()
-                }
+                content()
             }
         }
     )
