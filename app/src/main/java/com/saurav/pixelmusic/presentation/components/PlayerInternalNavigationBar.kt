@@ -197,6 +197,7 @@ fun PlayerInternalNavigationBar(
     val bottomPadding = 12.dp
 
     val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+    val primaryColor = MaterialTheme.colorScheme.primary
 
     // iOS Liquid Glass specular rim gradient and translucent fill colors
     val glassBorderBrush = remember(isDark) {
@@ -346,7 +347,7 @@ fun PlayerInternalNavigationBar(
                                             }
                                         },
                                         onDrawSurface = {
-                                            drawRect(if (isDark) Color.White.copy(alpha = 0.22f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.20f))
+                                            drawRect(if (isDark) Color.White.copy(alpha = 0.22f) else primaryColor.copy(alpha = 0.20f))
                                         }
                                     )
                                 } else {
@@ -471,9 +472,9 @@ fun PlayerInternalNavigationBar(
                                     val spec = spring<Float>(dampingRatio = 0.6f, stiffness = 400f)
                                     awaitEachGesture {
                                         awaitFirstDown()
-                                        launch { tabPress.animateTo(1f, spec) }
+                                        coroutineScope.launch { tabPress.animateTo(1f, spec) }
                                         waitForUpOrCancellation()
-                                        launch { tabPress.animateTo(0f, spec) }
+                                        coroutineScope.launch { tabPress.animateTo(0f, spec) }
                                     }
                                 }
                                 .clickable(
@@ -665,8 +666,8 @@ fun PlayerInternalNavigationBar(
                             },
                             onDrawSurface = {
                                 if (isSearchSelected) {
-                                    drawRect(MaterialTheme.colorScheme.primary, blendMode = BlendMode.Hue)
-                                    drawRect(MaterialTheme.colorScheme.primary.copy(alpha = 0.35f))
+                                    drawRect(primaryColor, blendMode = BlendMode.Hue)
+                                    drawRect(primaryColor.copy(alpha = 0.35f))
                                 } else {
                                     drawRect(if (isDark) Color(0x351E1E22) else Color(0x40FFFFFF))
                                 }
@@ -700,9 +701,9 @@ fun PlayerInternalNavigationBar(
                     val spec = spring<Float>(dampingRatio = 0.6f, stiffness = 400f)
                     awaitEachGesture {
                         awaitFirstDown()
-                        launch { searchPress.animateTo(1f, spec) }
+                        coroutineScope.launch { searchPress.animateTo(1f, spec) }
                         waitForUpOrCancellation()
-                        launch { searchPress.animateTo(0f, spec) }
+                        coroutineScope.launch { searchPress.animateTo(0f, spec) }
                     }
                 }
                 .clickable(
