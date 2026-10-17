@@ -434,14 +434,22 @@ fun PlayerInternalNavigationBar(
                         )
 
                         val tabPress = remember { Animatable(0f) }
-                        // Water drop tap stretching (liquid horizontal squish and vertical bounce)
-                        val tabWaterDropScaleX = 1f + (tabPress.value * 0.12f)
-                        val tabWaterDropScaleY = 1f - (tabPress.value * 0.08f)
+                        val tabJiggle = remember { Animatable(0f) }
+                        val tabWaterDropScaleX = 1f + (tabPress.value * 0.10f) + (tabJiggle.value * 0.12f)
+                        val tabWaterDropScaleY = 1f - (tabPress.value * 0.08f) - (tabJiggle.value * 0.10f)
 
-                        // Animated icon lift when tab is selected: brief liquid spring bounce that settles at center
+                        // Animated icon lift and jiggle when tab is selected
                         val iconBounceY = remember { Animatable(0f) }
                         LaunchedEffect(isSelected) {
                             if (isSelected) {
+                                tabJiggle.snapTo(1f)
+                                tabJiggle.animateTo(
+                                    targetValue = 0f,
+                                    animationSpec = spring(
+                                        dampingRatio = 0.35f,
+                                        stiffness = 320f
+                                    )
+                                )
                                 iconBounceY.snapTo(-2.5f)
                                 iconBounceY.animateTo(
                                     targetValue = 0f,
@@ -474,12 +482,18 @@ fun PlayerInternalNavigationBar(
                                 }
                                 .pointerInput(Unit) {
                                     val pressSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
-                                    val releaseSpec = spring<Float>(dampingRatio = 0.45f, stiffness = 350f)
+                                    val jiggleSpec = spring<Float>(dampingRatio = 0.35f, stiffness = 320f)
                                     awaitEachGesture {
                                         awaitFirstDown()
                                         coroutineScope.launch { tabPress.animateTo(1f, pressSpec) }
-                                        waitForUpOrCancellation()
-                                        coroutineScope.launch { tabPress.animateTo(0f, releaseSpec) }
+                                        val up = waitForUpOrCancellation()
+                                        coroutineScope.launch {
+                                            tabPress.animateTo(0f, pressSpec)
+                                            if (up != null) {
+                                                tabJiggle.snapTo(1f)
+                                                tabJiggle.animateTo(0f, jiggleSpec)
+                                            }
+                                        }
                                     }
                                 }
                                 .clickable(
@@ -649,8 +663,9 @@ fun PlayerInternalNavigationBar(
         if (isLiquidGlass) {
             val searchShape = CircleShape
             val searchPress = remember { Animatable(0f) }
-            val searchWaterDropScaleX = 1f + (searchPress.value * 0.14f)
-            val searchWaterDropScaleY = 1f - (searchPress.value * 0.10f)
+            val searchJiggle = remember { Animatable(0f) }
+            val searchWaterDropScaleX = 1f + (searchPress.value * 0.10f) + (searchJiggle.value * 0.12f)
+            val searchWaterDropScaleY = 1f - (searchPress.value * 0.08f) - (searchJiggle.value * 0.10f)
 
             val searchButtonModifier = Modifier
                 .size(settingsButtonSize)
@@ -709,12 +724,18 @@ fun PlayerInternalNavigationBar(
                 .clip(searchShape)
                 .pointerInput(Unit) {
                     val pressSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
-                    val releaseSpec = spring<Float>(dampingRatio = 0.45f, stiffness = 350f)
+                    val jiggleSpec = spring<Float>(dampingRatio = 0.35f, stiffness = 320f)
                     awaitEachGesture {
                         awaitFirstDown()
                         coroutineScope.launch { searchPress.animateTo(1f, pressSpec) }
-                        waitForUpOrCancellation()
-                        coroutineScope.launch { searchPress.animateTo(0f, releaseSpec) }
+                        val up = waitForUpOrCancellation()
+                        coroutineScope.launch {
+                            searchPress.animateTo(0f, releaseSpec)
+                            if (up != null) {
+                                searchJiggle.snapTo(1f)
+                                searchJiggle.animateTo(0f, jiggleSpec)
+                            }
+                        }
                     }
                 }
                 .clickable(

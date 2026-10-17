@@ -21,8 +21,19 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.animation.core.Animatable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalHapticFeedback
+import kotlinx.coroutines.launch
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -196,12 +207,48 @@ private fun ToggleSegmentButtonContainer(
         label = ""
     )
 
+    val jiggle = remember { Animatable(0f) }
+    val press = remember { Animatable(0f) }
+    val coroutineScope = rememberCoroutineScope()
+    val haptic = LocalHapticFeedback.current
+
+    val jiggleScaleX = 1f + (press.value * 0.08f) + (jiggle.value * 0.12f)
+    val jiggleScaleY = 1f - (press.value * 0.08f) - (jiggle.value * 0.10f)
+
     Box(
         modifier = modifier
             .fillMaxSize()
+            .graphicsLayer {
+                scaleX = jiggleScaleX
+                scaleY = jiggleScaleY
+            }
             .clip(RoundedCornerShape(cornerRadius))
             .background(bgColor)
-            .clickable(enabled = enabled, onClick = onClick),
+            .pointerInput(enabled) {
+                if (!enabled) return@pointerInput
+                val pressSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
+                val jiggleSpec = spring<Float>(dampingRatio = 0.35f, stiffness = 320f)
+                awaitEachGesture {
+                    awaitFirstDown()
+                    coroutineScope.launch { press.animateTo(1f, pressSpec) }
+                    val up = waitForUpOrCancellation()
+                    coroutineScope.launch {
+                        press.animateTo(0f, pressSpec)
+                        if (up != null) {
+                            jiggle.snapTo(1f)
+                            jiggle.animateTo(0f, jiggleSpec)
+                        }
+                    }
+                }
+            }
+            .clickable(
+                enabled = enabled,
+                indication = null,
+                interactionSource = remember { MutableInteractionSource() }
+            ) {
+                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                onClick()
+            },
         contentAlignment = Alignment.Center
     ) {
         Box(modifier = Modifier.graphicsLayer(alpha = if (enabled) 1f else 0.38f)) {

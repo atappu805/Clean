@@ -35,8 +35,11 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Outline
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -682,15 +685,17 @@ fun UnifiedPlayerSheetV2(
                                 alpha = miniReadyAlpha
                                 transformOrigin = TransformOrigin(0.5f, 1f)
                             }
-                            .background(
-                                color = if (isLiquidGlass && backdrop != null) {
-                                    val solidAlpha = (playerContentExpansionFraction.value * 3f).coerceIn(0f, 1f)
-                                    playerAreaBackground.copy(alpha = solidAlpha)
+                            .drawBehind {
+                                val fraction = playerContentExpansionFraction.value.coerceIn(0f, 1f)
+                                val solidAlpha = if (isLiquidGlass && backdrop != null) (fraction * 3f).coerceIn(0f, 1f) else 1f
+                                val outline = dynamicPlayerShape.createOutline(size, layoutDirection, this)
+                                if (outline is Outline.Rounded) {
+                                    val path = Path().apply { addRoundRect(outline.roundRect) }
+                                    drawPath(path, color = playerAreaBackground.copy(alpha = solidAlpha))
                                 } else {
-                                    playerAreaBackground
-                                },
-                                shape = dynamicPlayerShape
-                            )
+                                    drawRect(color = playerAreaBackground.copy(alpha = solidAlpha))
+                                }
+                            }
                             .clip(dynamicPlayerShape)
                             .semantics {
                                 contentDescription = playerSheetSemanticsDescription

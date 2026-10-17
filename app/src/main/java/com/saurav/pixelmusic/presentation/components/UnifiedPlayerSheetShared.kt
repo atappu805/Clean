@@ -138,8 +138,8 @@ internal fun MiniPlayerContentInternal(
             verticalArrangement = Arrangement.Center
         ) {
             val titleColor = if (isLiquidGlass) (if (isDark) Color.White else Color(0xFF1C1C1E)) else LocalMaterialTheme.current.onPrimaryContainer
-            val artistColor = if (isLiquidGlass) (if (isDark) Color.White else Color(0xFF1C1C1E)).copy(alpha = 0.7f) else LocalMaterialTheme.current.onPrimaryContainer.copy(alpha = 0.7f)
-            val gradientEdge = if (isLiquidGlass) Color.Transparent else LocalMaterialTheme.current.primaryContainer
+            val artistColor = if (isLiquidGlass) (if (isDark) Color.White else Color(0xFF1C1C1E)).copy(alpha = 0.75f) else LocalMaterialTheme.current.onPrimaryContainer.copy(alpha = 0.7f)
+            val gradientEdge = LocalMaterialTheme.current.primaryContainer
 
             val titleStyle = MaterialTheme.typography.titleSmall.copy(
                 fontSize = 15.sp,
@@ -180,14 +180,16 @@ internal fun MiniPlayerContentInternal(
         Spacer(modifier = Modifier.width(8.dp))
 
         val prevPress = remember { Animatable(0f) }
-        val prevScale = 1f - (prevPress.value * 0.09f)
+        val prevJiggle = remember { Animatable(0f) }
+        val prevScaleX = 1f + (prevPress.value * 0.08f) + (prevJiggle.value * 0.12f)
+        val prevScaleY = 1f - (prevPress.value * 0.08f) - (prevJiggle.value * 0.10f)
 
         Box(
             modifier = Modifier
                 .size(36.dp)
                 .graphicsLayer {
-                    scaleX = prevScale
-                    scaleY = prevScale
+                    scaleX = prevScaleX
+                    scaleY = prevScaleY
                 }
                 .clip(CircleShape)
                 .background(
@@ -208,11 +210,18 @@ internal fun MiniPlayerContentInternal(
                 )
                 .pointerInput(Unit) {
                     val spec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
+                    val jiggleSpec = spring<Float>(dampingRatio = 0.35f, stiffness = 320f)
                     awaitEachGesture {
                         awaitFirstDown()
-                        coroutineScope.launch { prevPress.animateTo(1f, spec) }
-                        waitForUpOrCancellation()
-                        coroutineScope.launch { prevPress.animateTo(0f, spec) }
+                        coroutineScope.launch { prevPress.animateTo(1f, pressSpec) }
+                        val up = waitForUpOrCancellation()
+                        coroutineScope.launch {
+                            prevPress.animateTo(0f, pressSpec)
+                            if (up != null) {
+                                prevJiggle.snapTo(1f)
+                                prevJiggle.animateTo(0f, jiggleSpec)
+                            }
+                        }
                     }
                 }
                 .clickable(
@@ -236,14 +245,16 @@ internal fun MiniPlayerContentInternal(
         Spacer(modifier = Modifier.width(8.dp))
 
         val playPausePress = remember { Animatable(0f) }
-        val playPauseScale = 1f - (playPausePress.value * 0.09f)
+        val playPauseJiggle = remember { Animatable(0f) }
+        val playPauseScaleX = 1f + (playPausePress.value * 0.08f) + (playPauseJiggle.value * 0.12f)
+        val playPauseScaleY = 1f - (playPausePress.value * 0.08f) - (playPauseJiggle.value * 0.10f)
 
         Box(
             modifier = Modifier
                 .size(36.dp)
                 .graphicsLayer {
-                    scaleX = playPauseScale
-                    scaleY = playPauseScale
+                    scaleX = playPauseScaleX
+                    scaleY = playPauseScaleY
                 }
                 .clip(CircleShape)
                 .background(
@@ -269,11 +280,18 @@ internal fun MiniPlayerContentInternal(
                 )
                 .pointerInput(Unit) {
                     val spec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
+                    val jiggleSpec = spring<Float>(dampingRatio = 0.35f, stiffness = 320f)
                     awaitEachGesture {
                         awaitFirstDown()
-                        coroutineScope.launch { playPausePress.animateTo(1f, spec) }
-                        waitForUpOrCancellation()
-                        coroutineScope.launch { playPausePress.animateTo(0f, spec) }
+                        coroutineScope.launch { playPausePress.animateTo(1f, pressSpec) }
+                        val up = waitForUpOrCancellation()
+                        coroutineScope.launch {
+                            playPausePress.animateTo(0f, pressSpec)
+                            if (up != null) {
+                                playPauseJiggle.snapTo(1f)
+                                playPauseJiggle.animateTo(0f, jiggleSpec)
+                            }
+                        }
                     }
                 }
                 .clickable(
@@ -304,14 +322,16 @@ internal fun MiniPlayerContentInternal(
         Spacer(modifier = Modifier.width(8.dp))
 
         val nextPress = remember { Animatable(0f) }
-        val nextScale = 1f - (nextPress.value * 0.09f)
+        val nextJiggle = remember { Animatable(0f) }
+        val nextScaleX = 1f + (nextPress.value * 0.08f) + (nextJiggle.value * 0.12f)
+        val nextScaleY = 1f - (nextPress.value * 0.08f) - (nextJiggle.value * 0.10f)
 
         Box(
             modifier = Modifier
                 .size(36.dp)
                 .graphicsLayer {
-                    scaleX = nextScale
-                    scaleY = nextScale
+                    scaleX = nextScaleX
+                    scaleY = nextScaleY
                 }
                 .clip(CircleShape)
                 .background(
@@ -332,11 +352,18 @@ internal fun MiniPlayerContentInternal(
                 )
                 .pointerInput(Unit) {
                     val spec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
+                    val jiggleSpec = spring<Float>(dampingRatio = 0.35f, stiffness = 320f)
                     awaitEachGesture {
                         awaitFirstDown()
-                        coroutineScope.launch { nextPress.animateTo(1f, spec) }
-                        waitForUpOrCancellation()
-                        coroutineScope.launch { nextPress.animateTo(0f, spec) }
+                        coroutineScope.launch { nextPress.animateTo(1f, pressSpec) }
+                        val up = waitForUpOrCancellation()
+                        coroutineScope.launch {
+                            nextPress.animateTo(0f, pressSpec)
+                            if (up != null) {
+                                nextJiggle.snapTo(1f)
+                                nextJiggle.animateTo(0f, jiggleSpec)
+                            }
+                        }
                     }
                 }
                 .clickable(

@@ -195,7 +195,8 @@ internal fun rememberSheetVisualState(
         {
             if (showPlayerContentArea) {
                 val effectiveFraction = playerContentExpansionFraction.value * (1f - predictiveBackCollapseProgress)
-                androidx.compose.ui.util.lerp(collapsedStateHorizontalPaddingPx, 0f, effectiveFraction)
+                val widthFraction = (effectiveFraction * 1.8f).coerceIn(0f, 1f)
+                androidx.compose.ui.util.lerp(collapsedStateHorizontalPaddingPx, 0f, widthFraction)
             } else {
                 collapsedStateHorizontalPaddingPx
             }
@@ -211,7 +212,8 @@ internal fun rememberSheetVisualState(
         {
             if (showPlayerContentArea) {
                 val effectiveFraction = playerContentExpansionFraction.value * (1f - predictiveBackCollapseProgress)
-                androidx.compose.ui.util.lerp(collapsedStateHorizontalPaddingPx, 0f, effectiveFraction)
+                val widthFraction = (effectiveFraction * 1.8f).coerceIn(0f, 1f)
+                androidx.compose.ui.util.lerp(collapsedStateHorizontalPaddingPx, 0f, widthFraction)
             } else {
                 collapsedStateHorizontalPaddingPx
             }

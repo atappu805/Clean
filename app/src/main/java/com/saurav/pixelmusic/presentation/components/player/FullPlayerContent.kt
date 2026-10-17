@@ -3415,19 +3415,41 @@ private fun BottomToggleRow(
     val activeContent3 = LocalMaterialTheme.current.onTertiary
 
     Box(
-        modifier = modifier.background(
-            color = containerBg,
-            shape = AbsoluteSmoothCornerShape(
-                cornerRadiusBL = rowCorners,
-                smoothnessAsPercentTR = 60,
-                cornerRadiusBR = rowCorners,
-                smoothnessAsPercentBL = 60,
-                cornerRadiusTL = rowCorners,
-                smoothnessAsPercentBR = 60,
-                cornerRadiusTR = rowCorners,
-                smoothnessAsPercentTL = 60
+        modifier = modifier
+            .border(
+                border = BorderStroke(
+                    1.dp,
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = if (isDark) 0.55f else 0.75f),
+                            Color.White.copy(alpha = if (isDark) 0.12f else 0.25f)
+                        )
+                    )
+                ),
+                shape = AbsoluteSmoothCornerShape(
+                    cornerRadiusBL = rowCorners,
+                    smoothnessAsPercentTR = 60,
+                    cornerRadiusBR = rowCorners,
+                    smoothnessAsPercentBL = 60,
+                    cornerRadiusTL = rowCorners,
+                    smoothnessAsPercentBR = 60,
+                    cornerRadiusTR = rowCorners,
+                    smoothnessAsPercentTL = 60
+                )
             )
-        )
+            .background(
+                color = containerBg,
+                shape = AbsoluteSmoothCornerShape(
+                    cornerRadiusBL = rowCorners,
+                    smoothnessAsPercentTR = 60,
+                    cornerRadiusBR = rowCorners,
+                    smoothnessAsPercentBL = 60,
+                    cornerRadiusTL = rowCorners,
+                    smoothnessAsPercentBR = 60,
+                    cornerRadiusTR = rowCorners,
+                    smoothnessAsPercentTL = 60
+                )
+            )
     ) {
         Row(
             modifier = Modifier

@@ -358,11 +358,15 @@ fun HomeShuffleFab(
 
         val coroutineScope = rememberCoroutineScope()
         val shufflePress = remember { Animatable(0f) }
+        val shuffleJiggle = remember { Animatable(0f) }
         val ltPress = remember { Animatable(0f) }
-        val shuffleWaterDropScaleX = 1f + (shufflePress.value * 0.12f)
-        val shuffleWaterDropScaleY = 1f - (shufflePress.value * 0.08f)
-        val ltWaterDropScaleX = 1f + (ltPress.value * 0.12f)
-        val ltWaterDropScaleY = 1f - (ltPress.value * 0.08f)
+        val ltJiggle = remember { Animatable(0f) }
+
+        // Water drop tap flex and jiggling effect
+        val shuffleWaterDropScaleX = 1f + (shufflePress.value * 0.10f) + (shuffleJiggle.value * 0.12f)
+        val shuffleWaterDropScaleY = 1f - (shufflePress.value * 0.08f) - (shuffleJiggle.value * 0.10f)
+        val ltWaterDropScaleX = 1f + (ltPress.value * 0.10f) + (ltJiggle.value * 0.12f)
+        val ltWaterDropScaleY = 1f - (ltPress.value * 0.08f) - (ltJiggle.value * 0.10f)
 
         val fabShape = CircleShape
         val fabContentColor = if (isLiquidGlass) (if (isDark) Color.White else Color(0xFF1C1C1E)) else animatedContentColor
@@ -473,12 +477,18 @@ fun HomeShuffleFab(
                                 .clip(CircleShape)
                                 .pointerInput(Unit) {
                                     val pressSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
-                                    val releaseSpec = spring<Float>(dampingRatio = 0.45f, stiffness = 350f)
+                                    val jiggleSpec = spring<Float>(dampingRatio = 0.35f, stiffness = 320f)
                                     awaitEachGesture {
                                         awaitFirstDown()
                                         coroutineScope.launch { shufflePress.animateTo(1f, pressSpec) }
-                                        waitForUpOrCancellation()
-                                        coroutineScope.launch { shufflePress.animateTo(0f, releaseSpec) }
+                                        val up = waitForUpOrCancellation()
+                                        coroutineScope.launch {
+                                            shufflePress.animateTo(0f, releaseSpec)
+                                            if (up != null) {
+                                                shuffleJiggle.snapTo(1f)
+                                                shuffleJiggle.animateTo(0f, jiggleSpec)
+                                            }
+                                        }
                                     }
                                 }
                                 .combinedClickable(
@@ -519,12 +529,18 @@ fun HomeShuffleFab(
                                     .clip(CircleShape)
                                     .pointerInput(Unit) {
                                         val pressSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
-                                        val releaseSpec = spring<Float>(dampingRatio = 0.45f, stiffness = 350f)
+                                        val jiggleSpec = spring<Float>(dampingRatio = 0.35f, stiffness = 320f)
                                         awaitEachGesture {
                                             awaitFirstDown()
                                             coroutineScope.launch { ltPress.animateTo(1f, pressSpec) }
-                                            waitForUpOrCancellation()
-                                            coroutineScope.launch { ltPress.animateTo(0f, releaseSpec) }
+                                            val up = waitForUpOrCancellation()
+                                            coroutineScope.launch {
+                                                ltPress.animateTo(0f, releaseSpec)
+                                                if (up != null) {
+                                                    ltJiggle.snapTo(1f)
+                                                    ltJiggle.animateTo(0f, jiggleSpec)
+                                                }
+                                            }
                                         }
                                     }
                                     .clickable(

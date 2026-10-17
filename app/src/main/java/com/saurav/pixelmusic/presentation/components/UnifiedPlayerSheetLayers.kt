@@ -108,10 +108,12 @@ internal fun BoxScope.UnifiedPlayerMiniAndFullLayers(
                 Box(
                     modifier = Modifier
                         .align(Alignment.TopCenter)
+                        .fillMaxWidth()
+                        .height(MiniPlayerHeight)
                         .graphicsLayer {
                             // Compute miniAlpha in the draw phase from the Animatable,
                             // avoiding per-frame recomposition during gestures.
-                            alpha = (1f - playerContentExpansionFraction.value * 2f)
+                            alpha = (1f - playerContentExpansionFraction.value * 2.5f)
                                 .coerceIn(0f, 1f)
                         }
                         .zIndex(miniPlayerZIndex)
