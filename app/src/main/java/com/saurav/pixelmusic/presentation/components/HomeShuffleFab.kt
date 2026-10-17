@@ -428,7 +428,7 @@ fun HomeShuffleFab(
                 // Top gloss reflection across the top half of the pill
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth()
+                        .matchParentSize()
                         .fillMaxHeight(0.5f)
                         .align(Alignment.TopCenter)
                         .background(
