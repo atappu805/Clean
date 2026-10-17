@@ -131,6 +131,7 @@ internal fun MiniPlayerContentInternal(
             }
         }
         Spacer(modifier = Modifier.width(12.dp))
+        val coroutineScope = rememberCoroutineScope()
         val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
 
         Column(
@@ -179,9 +180,18 @@ internal fun MiniPlayerContentInternal(
         }
         Spacer(modifier = Modifier.width(8.dp))
 
+        val prevPress = remember { Animatable(0f) }
+        val prevJiggle = remember { Animatable(0f) }
+        val prevScaleX = 1f + (prevPress.value * 0.10f) + (prevJiggle.value * 0.16f)
+        val prevScaleY = 1f - (prevPress.value * 0.08f) - (prevJiggle.value * 0.14f)
+
         Box(
             modifier = Modifier
                 .size(36.dp)
+                .graphicsLayer {
+                    scaleX = prevScaleX
+                    scaleY = prevScaleY
+                }
                 .clip(CircleShape)
                 .background(
                     if (isLiquidGlass) {
@@ -199,9 +209,24 @@ internal fun MiniPlayerContentInternal(
                         )
                     } else Modifier
                 )
+                .pointerInput(controlsEnabled) {
+                    if (!controlsEnabled) return@pointerInput
+                    val pressSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
+                    val jiggleSpec = spring<Float>(dampingRatio = 0.32f, stiffness = 280f)
+                    awaitEachGesture {
+                        awaitFirstDown(requireUnconsumed = false)
+                        coroutineScope.launch {
+                            prevJiggle.snapTo(1f)
+                            prevJiggle.animateTo(0f, jiggleSpec)
+                        }
+                        coroutineScope.launch { prevPress.animateTo(1f, pressSpec) }
+                        waitForUpOrCancellation()
+                        coroutineScope.launch { prevPress.animateTo(0f, pressSpec) }
+                    }
+                }
                 .clickable(
                     interactionSource = previousInteraction,
-                    indication = if (isLiquidGlass) null else miniPlayerIndication,
+                    indication = null,
                     enabled = controlsEnabled
                 ) {
                     hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -219,9 +244,18 @@ internal fun MiniPlayerContentInternal(
 
         Spacer(modifier = Modifier.width(8.dp))
 
+        val playPausePress = remember { Animatable(0f) }
+        val playPauseJiggle = remember { Animatable(0f) }
+        val playPauseScaleX = 1f + (playPausePress.value * 0.10f) + (playPauseJiggle.value * 0.16f)
+        val playPauseScaleY = 1f - (playPausePress.value * 0.08f) - (playPauseJiggle.value * 0.14f)
+
         Box(
             modifier = Modifier
                 .size(36.dp)
+                .graphicsLayer {
+                    scaleX = playPauseScaleX
+                    scaleY = playPauseScaleY
+                }
                 .clip(CircleShape)
                 .background(
                     if (isLiquidGlass) {
@@ -244,9 +278,24 @@ internal fun MiniPlayerContentInternal(
                         )
                     } else Modifier
                 )
+                .pointerInput(controlsEnabled) {
+                    if (!controlsEnabled) return@pointerInput
+                    val pressSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
+                    val jiggleSpec = spring<Float>(dampingRatio = 0.32f, stiffness = 280f)
+                    awaitEachGesture {
+                        awaitFirstDown(requireUnconsumed = false)
+                        coroutineScope.launch {
+                            playPauseJiggle.snapTo(1f)
+                            playPauseJiggle.animateTo(0f, jiggleSpec)
+                        }
+                        coroutineScope.launch { playPausePress.animateTo(1f, pressSpec) }
+                        waitForUpOrCancellation()
+                        coroutineScope.launch { playPausePress.animateTo(0f, pressSpec) }
+                    }
+                }
                 .clickable(
                     interactionSource = playPauseInteraction,
-                    indication = if (isLiquidGlass) null else miniPlayerIndication,
+                    indication = null,
                     enabled = controlsEnabled
                 ) {
                     hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -271,9 +320,18 @@ internal fun MiniPlayerContentInternal(
 
         Spacer(modifier = Modifier.width(8.dp))
 
+        val nextPress = remember { Animatable(0f) }
+        val nextJiggle = remember { Animatable(0f) }
+        val nextScaleX = 1f + (nextPress.value * 0.10f) + (nextJiggle.value * 0.16f)
+        val nextScaleY = 1f - (nextPress.value * 0.08f) - (nextJiggle.value * 0.14f)
+
         Box(
             modifier = Modifier
                 .size(36.dp)
+                .graphicsLayer {
+                    scaleX = nextScaleX
+                    scaleY = nextScaleY
+                }
                 .clip(CircleShape)
                 .background(
                     if (isLiquidGlass) {
@@ -291,9 +349,24 @@ internal fun MiniPlayerContentInternal(
                         )
                     } else Modifier
                 )
+                .pointerInput(controlsEnabled) {
+                    if (!controlsEnabled) return@pointerInput
+                    val pressSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
+                    val jiggleSpec = spring<Float>(dampingRatio = 0.32f, stiffness = 280f)
+                    awaitEachGesture {
+                        awaitFirstDown(requireUnconsumed = false)
+                        coroutineScope.launch {
+                            nextJiggle.snapTo(1f)
+                            nextJiggle.animateTo(0f, jiggleSpec)
+                        }
+                        coroutineScope.launch { nextPress.animateTo(1f, pressSpec) }
+                        waitForUpOrCancellation()
+                        coroutineScope.launch { nextPress.animateTo(0f, pressSpec) }
+                    }
+                }
                 .clickable(
                     interactionSource = nextInteraction,
-                    indication = if (isLiquidGlass) null else miniPlayerIndication,
+                    indication = null,
                     enabled = controlsEnabled
                 ) {
                     hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
