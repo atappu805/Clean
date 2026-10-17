@@ -114,6 +114,7 @@ data class SettingsUiState(
     val liquidGlassNavBarEnabled: Boolean = true,
     val liquidGlassMiniPlayerEnabled: Boolean = true,
     val liquidGlassDismissPromptEnabled: Boolean = true,
+    val liquidGlassHeaderEnabled: Boolean = true,
     // Developer Options
     val albumArtQuality: AlbumArtQuality = AlbumArtQuality.HIGH,
     val albumArtCacheLimitMb: Int = 200,
@@ -812,6 +813,11 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             userPreferencesRepository.liquidGlassDismissPromptEnabledFlow.collect { enabled ->
                 _uiState.update { it.copy(liquidGlassDismissPromptEnabled = enabled) }
+            }
+        }
+        viewModelScope.launch {
+            userPreferencesRepository.liquidGlassHeaderEnabledFlow.collect { enabled ->
+                _uiState.update { it.copy(liquidGlassHeaderEnabled = enabled) }
             }
         }
 
@@ -1900,6 +1906,12 @@ class SettingsViewModel @Inject constructor(
     fun setLiquidGlassDismissPromptEnabled(enabled: Boolean) {
         viewModelScope.launch {
             userPreferencesRepository.setLiquidGlassDismissPromptEnabled(enabled)
+        }
+    }
+
+    fun setLiquidGlassHeaderEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            userPreferencesRepository.setLiquidGlassHeaderEnabled(enabled)
         }
     }
 

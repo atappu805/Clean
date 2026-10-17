@@ -2055,6 +2055,15 @@ fun SettingsCategoryScreen(
                                                     Icon(Icons.Rounded.Restore, null, tint = MaterialTheme.colorScheme.secondary)
                                                 }
                                             )
+                                            SwitchSettingItem(
+                                                title = stringResource(R.string.settings_liquid_glass_header_title),
+                                                subtitle = stringResource(R.string.settings_liquid_glass_header_desc),
+                                                checked = uiState.liquidGlassHeaderEnabled,
+                                                onCheckedChange = { settingsViewModel.setLiquidGlassHeaderEnabled(it) },
+                                                leadingIcon = {
+                                                    Icon(painterResource(R.drawable.rounded_home_24), null, tint = MaterialTheme.colorScheme.secondary)
+                                                }
+                                            )
                                         }
                                     }
                                 }

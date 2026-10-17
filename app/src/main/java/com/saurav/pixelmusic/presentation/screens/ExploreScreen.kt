@@ -117,6 +117,10 @@ import com.saurav.pixelmusic.data.remote.youtube.upgradeThumbnailUrlToHighQualit
 import com.saurav.pixelmusic.presentation.components.PlaylistCover
 import com.saurav.pixelmusic.presentation.components.QuickPicksSection
 import com.saurav.pixelmusic.presentation.components.SmartImage
+import androidx.compose.ui.graphics.compositeOver
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import com.saurav.pixelmusic.presentation.components.LiquidGlassHeaderBar
 import com.saurav.pixelmusic.presentation.components.subcomps.PlayingEqIcon
 import com.saurav.pixelmusic.presentation.navigation.Screen
 import com.saurav.pixelmusic.presentation.navigation.navigateSafely
@@ -235,12 +239,17 @@ fun ExploreScreen(
     val pullRefreshState = rememberPullToRefreshState()
     val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
 
+    val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
     val isScrolled by remember {
         derivedStateOf {
             listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0
         }
     }
+
+    val liquidGlassEnabled by playerViewModel.userPreferencesRepository.liquidGlassEnabledFlow.collectAsStateWithLifecycle(initialValue = true)
+    val liquidGlassHeaderEnabled by playerViewModel.userPreferencesRepository.liquidGlassHeaderEnabledFlow.collectAsStateWithLifecycle(initialValue = true)
+    val isLiquidGlassOnHeader = liquidGlassEnabled && liquidGlassHeaderEnabled
 
     val exploreTitleAlpha by animateFloatAsState(
         targetValue = if (isScrolled) 0f else 1f,
@@ -309,9 +318,16 @@ fun ExploreScreen(
         }
     }
 
+    val headerBackdrop = rememberLayerBackdrop {
+        drawRect(if (isCustomBackground) Color.Transparent else if (!isLightTheme) Color.Black else Color.White)
+        drawContent()
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .then(if (isLiquidGlassOnHeader) Modifier.layerBackdrop(headerBackdrop) else Modifier),
             containerColor = if (isCustomBackground) Color.Transparent else colorScheme.background
         ) { innerPadding ->
             PullToRefreshBox(
@@ -716,18 +732,61 @@ fun ExploreScreen(
             }
         }
 
-        // Clean "Explore" text on the left that fades out when scrolling (no sticky top bar)
-        Text(
-            text = "Explore",
-            fontFamily = GoogleSansRounded,
-            fontWeight = FontWeight.ExtraBold,
-            color = MaterialTheme.colorScheme.primary,
-            fontSize = 40.sp,
-            letterSpacing = 1.sp,
+        val scrimTopColor = if (isLightTheme) {
+            colorScheme.primary.copy(alpha = 0.15f).compositeOver(colorScheme.background)
+        } else {
+            colorScheme.background
+        }
+
+        // Top status bar protection scrim matching Home screen
+        Box(
             modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(start = 24.dp, top = statusBarHeight + 12.dp)
-                .graphicsLayer { alpha = exploreTitleAlpha }
+                .fillMaxWidth()
+                .align(Alignment.TopCenter)
+                .height(statusBarHeight + 64.dp)
+                .background(
+                    brush = Brush.verticalGradient(
+                        colorStops = arrayOf(
+                            0.00f to (if (isCustomBackground) Color.Transparent else scrimTopColor.copy(alpha = 0.95f)),
+                            0.18f to (if (isCustomBackground) Color.Transparent else scrimTopColor.copy(alpha = 0.86f)),
+                            0.36f to (if (isCustomBackground) Color.Transparent else scrimTopColor.copy(alpha = 0.68f)),
+                            0.54f to (if (isCustomBackground) Color.Transparent else scrimTopColor.copy(alpha = 0.48f)),
+                            0.72f to (if (isCustomBackground) Color.Transparent else scrimTopColor.copy(alpha = 0.28f)),
+                            0.88f to (if (isCustomBackground) Color.Transparent else scrimTopColor.copy(alpha = 0.11f)),
+                            1.00f to Color.Transparent
+                        )
+                    )
+                )
+        )
+
+        // Top bar with Explore text pill on the left and Settings button on the right
+        // Both vanish when scrolling (exploreTitleAlpha fades out)
+        LiquidGlassHeaderBar(
+            pillText = "Explore",
+            pillIcon = {
+                Icon(
+                    painter = painterResource(R.drawable.rounded_album_24),
+                    contentDescription = null,
+                    tint = colorScheme.primary,
+                    modifier = Modifier.size(24.dp)
+                )
+            },
+            isLiquidGlass = isLiquidGlassOnHeader,
+            backdrop = headerBackdrop,
+            alpha = exploreTitleAlpha,
+            onPillClick = {
+                scope.launch {
+                    listState.animateScrollToItem(0)
+                }
+            },
+            onSettingsClick = {
+                if (exploreTitleAlpha > 0.05f) {
+                    navController.navigateSafely(Screen.Settings.route)
+                }
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 20.dp, end = 20.dp, top = statusBarHeight + 14.dp)
         )
     }
 }

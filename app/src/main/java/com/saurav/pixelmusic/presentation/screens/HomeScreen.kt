@@ -60,6 +60,9 @@ import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import com.saurav.pixelmusic.presentation.components.SmoothModalBottomSheet
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.saurav.pixelmusic.presentation.components.LiquidGlassHeaderBar
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -484,13 +487,25 @@ fun HomeScreen(
         label = "homeTitleAlpha"
     )
 
+    val liquidGlassEnabled by playerViewModel.userPreferencesRepository.liquidGlassEnabledFlow.collectAsStateWithLifecycle(initialValue = true)
+    val liquidGlassHeaderEnabled by playerViewModel.userPreferencesRepository.liquidGlassHeaderEnabledFlow.collectAsStateWithLifecycle(initialValue = true)
+    val isLiquidGlassOnHeader = liquidGlassEnabled && liquidGlassHeaderEnabled
+
+    val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+    val headerBackdrop = rememberLayerBackdrop {
+        drawRect(if (isCustomBackground) Color.Transparent else if (isDark) Color.Black else Color.White)
+        drawContent()
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .then(sweepModifier)
     ) {
         Scaffold(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .then(if (isLiquidGlassOnHeader) Modifier.layerBackdrop(headerBackdrop) else Modifier),
             containerColor = if (isCustomBackground) Color.Transparent else MaterialTheme.colorScheme.background
         ) { innerPadding ->
             val pullRefreshState = rememberPullToRefreshState()
@@ -730,63 +745,33 @@ fun HomeScreen(
 
         // Top bar with PixelMusic pill on the left and Settings button on the right
         // Both vanish when scrolling (homeTitleAlpha fades out)
-        Row(
+        LiquidGlassHeaderBar(
+            pillText = "PixelMusic",
+            pillIcon = {
+                Icon(
+                    painter = painterResource(R.drawable.pixelmusic_base_monochrome),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp)
+                )
+            },
+            isLiquidGlass = isLiquidGlassOnHeader,
+            backdrop = headerBackdrop,
+            alpha = homeTitleAlpha,
+            onPillClick = {
+                scope.launch {
+                    listState.animateScrollToItem(0)
+                }
+            },
+            onSettingsClick = {
+                if (homeTitleAlpha > 0.05f) {
+                    navController.navigateSafely(Screen.Settings.route)
+                }
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(start = 20.dp, end = 20.dp, top = statusBarHeight + 14.dp)
-                .graphicsLayer { alpha = homeTitleAlpha },
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Surface(
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.85f),
-                shadowElevation = 0.dp
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.pixelmusic_base_monochrome),
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Text(
-                        text = "PixelMusic",
-                        fontFamily = GoogleSansRounded,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontSize = 20.sp,
-                        letterSpacing = 0.5.sp
-                    )
-                }
-            }
-
-            Surface(
-                onClick = {
-                    if (homeTitleAlpha > 0.05f) {
-                        navController.navigateSafely(Screen.Settings.route)
-                    }
-                },
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.85f),
-                contentColor = MaterialTheme.colorScheme.primary,
-                shadowElevation = 0.dp,
-                modifier = Modifier.size(44.dp)
-            ) {
-                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.rounded_settings_24),
-                        contentDescription = "Settings",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
-            }
-        }
+        )
 
     }
 

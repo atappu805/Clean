@@ -332,6 +332,7 @@ constructor(
         val LIQUID_GLASS_NAV_BAR_ENABLED = booleanPreferencesKey("liquid_glass_nav_bar_enabled")
         val LIQUID_GLASS_MINI_PLAYER_ENABLED = booleanPreferencesKey("liquid_glass_mini_player_enabled")
         val LIQUID_GLASS_DISMISS_PROMPT_ENABLED = booleanPreferencesKey("liquid_glass_dismiss_prompt_enabled")
+        val LIQUID_GLASS_HEADER_ENABLED = booleanPreferencesKey("liquid_glass_header_enabled")
 
         // Genre View Preference
         val IS_GENRE_GRID_VIEW = booleanPreferencesKey("is_genre_grid_view")
@@ -2058,6 +2059,17 @@ constructor(
     suspend fun setLiquidGlassDismissPromptEnabled(enabled: Boolean) {
         dataStore.edit { preferences ->
             preferences[PreferencesKeys.LIQUID_GLASS_DISMISS_PROMPT_ENABLED] = enabled
+        }
+    }
+
+    val liquidGlassHeaderEnabledFlow: Flow<Boolean> = dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.LIQUID_GLASS_HEADER_ENABLED] ?: true
+        }
+
+    suspend fun setLiquidGlassHeaderEnabled(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.LIQUID_GLASS_HEADER_ENABLED] = enabled
         }
     }
 

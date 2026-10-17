@@ -54,6 +54,8 @@
     <string name="settings_liquid_glass_mini_player_desc">Apply liquid glass refraction to the floating mini player</string>
     <string name="settings_liquid_glass_dismiss_prompt_title">Dismiss / Undo Prompt</string>
     <string name="settings_liquid_glass_dismiss_prompt_desc">Apply liquid glass refraction to the playlist dismiss undo bar</string>
+    <string name="settings_liquid_glass_header_title">Headers &amp; Top Bars</string>
+    <string name="settings_liquid_glass_header_desc">Apply liquid glass refraction to the Home and Explore header pills and settings icon</string>
 
     <!-- Common toggles / labels used in ThemeSelectorItem maps -->
     <string name="label_on">On</string>
