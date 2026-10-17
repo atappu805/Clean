@@ -208,7 +208,7 @@ fun PlayerInternalNavigationBar(
                         shape = { CircleShape },
                         effects = {
                             blur(20.dp.toPx())
-                            lens(16.dp.toPx())
+                            lens(16.dp.toPx(), 32.dp.toPx())
                         }
                     )
             } else {
@@ -453,7 +453,7 @@ fun PlayerInternalNavigationBar(
                     shape = { CircleShape },
                     effects = {
                         blur(20.dp.toPx())
-                        lens(16.dp.toPx())
+                        lens(16.dp.toPx(), 32.dp.toPx())
                     }
                 )
         } else {
