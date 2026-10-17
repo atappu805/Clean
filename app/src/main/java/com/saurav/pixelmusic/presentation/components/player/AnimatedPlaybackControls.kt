@@ -246,10 +246,10 @@ fun AnimatedPlaybackControls(
                             onPress = {
                                 val pressSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
                                 val jiggleSpec = spring<Float>(dampingRatio = 0.32f, stiffness = 280f)
-                                val job = launch { prevPress.animateTo(1f, pressSpec) }
+                                val job = coroutineScope.launch { prevPress.animateTo(1f, pressSpec) }
                                 val released = tryAwaitRelease()
                                 job.cancel()
-                                launch {
+                                coroutineScope.launch {
                                     prevPress.animateTo(0f, pressSpec)
                                     if (released) {
                                         prevJiggle.snapTo(1f)
@@ -384,10 +384,10 @@ fun AnimatedPlaybackControls(
                             onPress = {
                                 val pressSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
                                 val jiggleSpec = spring<Float>(dampingRatio = 0.32f, stiffness = 280f)
-                                val job = launch { playPausePress.animateTo(1f, pressSpec) }
+                                val job = coroutineScope.launch { playPausePress.animateTo(1f, pressSpec) }
                                 val released = tryAwaitRelease()
                                 job.cancel()
-                                launch {
+                                coroutineScope.launch {
                                     playPausePress.animateTo(0f, pressSpec)
                                     if (released) {
                                         playPauseJiggle.snapTo(1f)
@@ -488,10 +488,10 @@ fun AnimatedPlaybackControls(
                             onPress = {
                                 val pressSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
                                 val jiggleSpec = spring<Float>(dampingRatio = 0.32f, stiffness = 280f)
-                                val job = launch { nextPress.animateTo(1f, pressSpec) }
+                                val job = coroutineScope.launch { nextPress.animateTo(1f, pressSpec) }
                                 val released = tryAwaitRelease()
                                 job.cancel()
-                                launch {
+                                coroutineScope.launch {
                                     nextPress.animateTo(0f, pressSpec)
                                     if (released) {
                                         nextJiggle.snapTo(1f)

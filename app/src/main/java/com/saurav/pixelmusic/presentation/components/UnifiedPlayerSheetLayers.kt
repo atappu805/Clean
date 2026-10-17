@@ -39,6 +39,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
@@ -92,6 +93,8 @@ internal fun BoxScope.UnifiedPlayerMiniAndFullLayers(
     onQueueRelease: (Float, Float) -> Unit,
     onShowCastClicked: () -> Unit
 ) {
+    val isLiquidGlassActive = isLiquidGlass && backdrop != null
+
     currentSong?.let { currentSongNonNull ->
         miniPlayerScheme?.let { readyScheme ->
             CompositionLocalProvider(

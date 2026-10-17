@@ -649,6 +649,8 @@ fun FullPlayerContent(
     val controlsSection: @Composable () -> Unit = {
         FullPlayerControlsSection(
             loadingTweaks = loadingTweaks,
+            isLiquidGlass = isLiquidGlass,
+            backdrop = backdrop,
             isSheetDragGestureActive = isSheetDragGestureActive,
             expansionFractionProvider = expansionFractionProvider,
             currentSheetState = currentSheetState,
@@ -1894,6 +1896,8 @@ private fun FullPlayerAlbumCoverSection(
 @Composable
 private fun FullPlayerControlsSection(
     loadingTweaks: FullPlayerLoadingTweaks,
+    isLiquidGlass: Boolean = false,
+    backdrop: com.kyant.backdrop.Backdrop? = null,
     isSheetDragGestureActive: Boolean,
     expansionFractionProvider: () -> Float,
     currentSheetState: PlayerSheetState,

@@ -464,10 +464,10 @@ fun PlayerInternalNavigationBar(
                                         onPress = {
                                             val pressSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
                                             val jiggleSpec = spring<Float>(dampingRatio = 0.32f, stiffness = 280f)
-                                            val job = launch { tabPress.animateTo(1f, pressSpec) }
+                                            val job = coroutineScope.launch { tabPress.animateTo(1f, pressSpec) }
                                             val released = tryAwaitRelease()
                                             job.cancel()
-                                            launch {
+                                            coroutineScope.launch {
                                                 tabPress.animateTo(0f, pressSpec)
                                                 if (released) {
                                                     tabJiggle.snapTo(1f)
@@ -705,10 +705,10 @@ fun PlayerInternalNavigationBar(
                         onPress = {
                             val pressSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
                             val jiggleSpec = spring<Float>(dampingRatio = 0.32f, stiffness = 280f)
-                            val job = launch { searchPress.animateTo(1f, pressSpec) }
+                            val job = coroutineScope.launch { searchPress.animateTo(1f, pressSpec) }
                             val released = tryAwaitRelease()
                             job.cancel()
-                            launch {
+                            coroutineScope.launch {
                                 searchPress.animateTo(0f, pressSpec)
                                 if (released) {
                                     searchJiggle.snapTo(1f)
