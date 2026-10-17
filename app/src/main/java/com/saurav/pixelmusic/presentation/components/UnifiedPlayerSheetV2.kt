@@ -687,9 +687,7 @@ fun UnifiedPlayerSheetV2(
                             }
                             .drawBehind {
                                 val fraction = playerContentExpansionFraction.value.coerceIn(0f, 1f)
-                                val solidAlpha = if (isLiquidGlass && backdrop != null) {
-                                    ((fraction - 0.20f) / 0.80f).coerceIn(0f, 1f)
-                                } else 1f
+                                val solidAlpha = if (isLiquidGlass && backdrop != null) (fraction * 3f).coerceIn(0f, 1f) else 1f
                                 val outline = dynamicPlayerShape.createOutline(size, layoutDirection, this)
                                 if (outline is Outline.Rounded) {
                                     val path = Path().apply { addRoundRect(outline.roundRect) }
@@ -698,15 +696,6 @@ fun UnifiedPlayerSheetV2(
                                     drawRect(color = playerAreaBackground.copy(alpha = solidAlpha))
                                 }
                             }
-                            .then(
-                                if (!isLiquidGlass || backdrop == null) {
-                                    val fraction = playerContentExpansionFraction.value.coerceIn(0f, 1f)
-                                    val shadowElevation = (10.dp * (1f - fraction)).coerceAtLeast(0.dp)
-                                    if (shadowElevation > 0.dp) {
-                                        Modifier.shadow(elevation = shadowElevation, shape = dynamicPlayerShape)
-                                    } else Modifier
-                                } else Modifier
-                            )
                             .clip(dynamicPlayerShape)
                             .semantics {
                                 contentDescription = playerSheetSemanticsDescription
