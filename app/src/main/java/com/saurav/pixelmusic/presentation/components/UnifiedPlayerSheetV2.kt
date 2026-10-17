@@ -51,6 +51,12 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
+import com.kyant.backdrop.drawBackdrop
+import com.kyant.backdrop.effects.blur
+import com.kyant.backdrop.effects.lens
+import com.kyant.backdrop.effects.vibrancy
+import android.os.Build
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.media3.common.util.UnstableApi
@@ -685,9 +691,30 @@ fun UnifiedPlayerSheetV2(
                                 alpha = miniReadyAlpha
                                 transformOrigin = TransformOrigin(0.5f, 1f)
                             }
+                            .then(
+                                if (isLiquidGlass && backdrop != null) {
+                                    Modifier.drawBackdrop(
+                                        backdrop = backdrop,
+                                        shape = { RoundedCornerShape(overallSheetTopCornerRadiusProvider()) },
+                                        effects = {
+                                            vibrancy()
+                                            blur(10.dp.toPx())
+                                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                                lens(
+                                                    refractionHeight = 18.dp.toPx(),
+                                                    refractionAmount = 42.dp.toPx()
+                                                )
+                                            }
+                                        },
+                                        onDrawSurface = {
+                                            drawRect(if (isDarkTheme) Color(0x301C1C1E) else Color(0x25F5F5F7))
+                                        }
+                                    )
+                                } else Modifier
+                            )
                             .drawBehind {
                                 val fraction = playerContentExpansionFraction.value.coerceIn(0f, 1f)
-                                val solidAlpha = if (isLiquidGlass && backdrop != null) (fraction * 3f).coerceIn(0f, 1f) else 1f
+                                val solidAlpha = if (isLiquidGlass && backdrop != null) (fraction * 2.5f).coerceIn(0f, 1f) else 1f
                                 val outline = dynamicPlayerShape.createOutline(size, layoutDirection, this)
                                 if (outline is Outline.Rounded) {
                                     val path = Path().apply { addRoundRect(outline.roundRect) }

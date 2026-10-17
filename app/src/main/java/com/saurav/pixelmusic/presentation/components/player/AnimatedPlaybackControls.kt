@@ -1,12 +1,15 @@
 package com.saurav.pixelmusic.presentation.components.player
 
+import android.os.Build
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,6 +20,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
@@ -24,6 +28,7 @@ import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -34,13 +39,21 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.saurav.pixelmusic.presentation.components.LocalMaterialTheme
 import com.kyant.backdrop.Backdrop
+import com.kyant.backdrop.drawBackdrop
+import com.kyant.backdrop.effects.blur
+import com.kyant.backdrop.effects.lens
+import com.kyant.backdrop.effects.vibrancy
+import com.saurav.pixelmusic.presentation.components.LocalMaterialTheme
 import kotlinx.coroutines.delay
 import racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape
 
@@ -116,6 +129,9 @@ fun AnimatedPlaybackControls(
         }
     }
 
+    val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+    val isGlassActive = isLiquidGlass && backdrop != null
+
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -132,6 +148,7 @@ fun AnimatedPlaybackControls(
                 else -> compressionWeight
             }
 
+            val prevShape = CircleShape
             val prevWeight by animateFloatAsState(
                 targetValue = weightFor(PlaybackButtonType.PREVIOUS),
                 animationSpec = pressAnimationSpec,
@@ -141,8 +158,50 @@ fun AnimatedPlaybackControls(
                 modifier = Modifier
                     .weight(prevWeight)
                     .fillMaxHeight()
-                    .clip(CircleShape)
-                    .background(colorPreviousButton)
+                    .then(
+                        if (isGlassActive) {
+                            Modifier
+                                .shadow(elevation = 10.dp, shape = prevShape)
+                                .drawBackdrop(
+                                    backdrop = backdrop,
+                                    shape = { prevShape },
+                                    effects = {
+                                        vibrancy()
+                                        blur(12.dp.toPx())
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                            lens(
+                                                refractionHeight = 18.dp.toPx(),
+                                                refractionAmount = 42.dp.toPx()
+                                            )
+                                        }
+                                    },
+                                    onDrawSurface = {
+                                        drawRect(colorPreviousButton, blendMode = BlendMode.Hue)
+                                        drawRect(colorPreviousButton.copy(alpha = 0.88f))
+                                    }
+                                )
+                                .border(
+                                    BorderStroke(
+                                        1.2.dp,
+                                        Brush.verticalGradient(
+                                            colors = if (isDark) listOf(
+                                                Color.White.copy(alpha = 0.70f),
+                                                Color.White.copy(alpha = 0.20f)
+                                            ) else listOf(
+                                                Color.White.copy(alpha = 0.90f),
+                                                Color.White.copy(alpha = 0.35f)
+                                            )
+                                        )
+                                    ),
+                                    prevShape
+                                )
+                                .clip(prevShape)
+                        } else {
+                            Modifier
+                                .clip(prevShape)
+                                .background(colorPreviousButton)
+                        }
+                    )
                     .clickable {
                         lastClicked = PlaybackButtonType.PREVIOUS
                         hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -150,6 +209,23 @@ fun AnimatedPlaybackControls(
                     },
                 contentAlignment = Alignment.Center
             ) {
+                if (isGlassActive) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .fillMaxHeight(0.5f)
+                            .align(Alignment.TopCenter)
+                            .background(
+                                brush = Brush.verticalGradient(
+                                    colors = listOf(
+                                        Color.White.copy(alpha = if (isDark) 0.18f else 0.32f),
+                                        Color.Transparent
+                                    )
+                                ),
+                                shape = prevShape
+                            )
+                    )
+                }
                 Icon(
                     imageVector = Icons.Rounded.SkipPrevious,
                     contentDescription = "Anterior",
@@ -178,12 +254,55 @@ fun AnimatedPlaybackControls(
                 cornerRadiusBR = playCorner,
                 smoothnessAsPercentBR = 60
             )
+            val playGlassCornerShape = RoundedCornerShape(playCorner)
             Box(
                 modifier = Modifier
                     .weight(playWeight)
                     .fillMaxHeight()
-                    .clip(playShape)
-                    .background(colorPlayPause)
+                    .then(
+                        if (isGlassActive) {
+                            Modifier
+                                .shadow(elevation = 12.dp, shape = playGlassCornerShape)
+                                .drawBackdrop(
+                                    backdrop = backdrop,
+                                    shape = { playGlassCornerShape },
+                                    effects = {
+                                        vibrancy()
+                                        blur(12.dp.toPx())
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                            lens(
+                                                refractionHeight = 18.dp.toPx(),
+                                                refractionAmount = 42.dp.toPx()
+                                            )
+                                        }
+                                    },
+                                    onDrawSurface = {
+                                        drawRect(colorPlayPause, blendMode = BlendMode.Hue)
+                                        drawRect(colorPlayPause.copy(alpha = 0.90f))
+                                    }
+                                )
+                                .border(
+                                    BorderStroke(
+                                        1.5.dp,
+                                        Brush.verticalGradient(
+                                            colors = if (isDark) listOf(
+                                                Color.White.copy(alpha = 0.90f),
+                                                Color.White.copy(alpha = 0.30f)
+                                            ) else listOf(
+                                                Color.White.copy(alpha = 0.95f),
+                                                Color.White.copy(alpha = 0.40f)
+                                            )
+                                        )
+                                    ),
+                                    playGlassCornerShape
+                                )
+                                .clip(playGlassCornerShape)
+                        } else {
+                            Modifier
+                                .clip(playShape)
+                                .background(colorPlayPause)
+                        }
+                    )
                     .clickable {
                         lastClicked = PlaybackButtonType.PLAY_PAUSE
                         hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -191,6 +310,23 @@ fun AnimatedPlaybackControls(
                     },
                 contentAlignment = Alignment.Center
             ) {
+                if (isGlassActive) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .fillMaxHeight(0.5f)
+                            .align(Alignment.TopCenter)
+                            .background(
+                                brush = Brush.verticalGradient(
+                                    colors = listOf(
+                                        Color.White.copy(alpha = 0.25f),
+                                        Color.Transparent
+                                    )
+                                ),
+                                shape = playGlassCornerShape
+                            )
+                    )
+                }
                 MorphingPlayPauseIcon(
                     isPlaying = playPauseVisualState,
                     tint = tintPlayPauseIcon,
@@ -198,6 +334,7 @@ fun AnimatedPlaybackControls(
                 )
             }
 
+            val nextShape = CircleShape
             val nextWeight by animateFloatAsState(
                 targetValue = weightFor(PlaybackButtonType.NEXT),
                 animationSpec = pressAnimationSpec,
@@ -207,8 +344,50 @@ fun AnimatedPlaybackControls(
                 modifier = Modifier
                     .weight(nextWeight)
                     .fillMaxHeight()
-                    .clip(CircleShape)
-                    .background(colorNextButton)
+                    .then(
+                        if (isGlassActive) {
+                            Modifier
+                                .shadow(elevation = 10.dp, shape = nextShape)
+                                .drawBackdrop(
+                                    backdrop = backdrop,
+                                    shape = { nextShape },
+                                    effects = {
+                                        vibrancy()
+                                        blur(12.dp.toPx())
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                            lens(
+                                                refractionHeight = 18.dp.toPx(),
+                                                refractionAmount = 42.dp.toPx()
+                                            )
+                                        }
+                                    },
+                                    onDrawSurface = {
+                                        drawRect(colorNextButton, blendMode = BlendMode.Hue)
+                                        drawRect(colorNextButton.copy(alpha = 0.88f))
+                                    }
+                                )
+                                .border(
+                                    BorderStroke(
+                                        1.2.dp,
+                                        Brush.verticalGradient(
+                                            colors = if (isDark) listOf(
+                                                Color.White.copy(alpha = 0.70f),
+                                                Color.White.copy(alpha = 0.20f)
+                                            ) else listOf(
+                                                Color.White.copy(alpha = 0.90f),
+                                                Color.White.copy(alpha = 0.35f)
+                                            )
+                                        )
+                                    ),
+                                    nextShape
+                                )
+                                .clip(nextShape)
+                        } else {
+                            Modifier
+                                .clip(nextShape)
+                                .background(colorNextButton)
+                        }
+                    )
                     .clickable {
                         lastClicked = PlaybackButtonType.NEXT
                         hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -216,6 +395,23 @@ fun AnimatedPlaybackControls(
                     },
                 contentAlignment = Alignment.Center
             ) {
+                if (isGlassActive) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .fillMaxHeight(0.5f)
+                            .align(Alignment.TopCenter)
+                            .background(
+                                brush = Brush.verticalGradient(
+                                    colors = listOf(
+                                        Color.White.copy(alpha = if (isDark) 0.18f else 0.32f),
+                                        Color.Transparent
+                                    )
+                                ),
+                                shape = nextShape
+                            )
+                    )
+                }
                 Icon(
                     imageVector = Icons.Rounded.SkipNext,
                     contentDescription = "Siguiente",

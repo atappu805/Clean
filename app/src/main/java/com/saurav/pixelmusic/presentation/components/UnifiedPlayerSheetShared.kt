@@ -1,8 +1,8 @@
-@file:kotlin.OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
-
 package com.saurav.pixelmusic.presentation.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -10,12 +10,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
@@ -26,57 +23,32 @@ import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.CircularWavyProgressIndicator
-import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ripple
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.spring
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.border
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.waitForUpOrCancellation
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
-import kotlinx.coroutines.launch
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.size.Size
 import com.saurav.pixelmusic.data.model.Song
+import com.saurav.pixelmusic.presentation.components.LocalMaterialTheme
+import com.saurav.pixelmusic.presentation.components.SmartImage
 import com.saurav.pixelmusic.ui.theme.GoogleSansRounded
 
-internal val LocalMaterialTheme = staticCompositionLocalOf<ColorScheme> { error("No ColorScheme provided") }
-
-val MiniPlayerHeight = 64.dp
-const val ANIMATION_DURATION_MS = 255
-val MiniPlayerBottomSpacer = 8.dp
-
-@Composable
-fun getNavigationBarHeight(): Dp {
-    val insets = WindowInsets.safeDrawing.asPaddingValues()
-    return sanitizeNavigationBarBottomInset(insets.calculateBottomPadding())
-}
-
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 internal fun MiniPlayerContentInternal(
     song: Song,
@@ -131,7 +103,6 @@ internal fun MiniPlayerContentInternal(
             }
         }
         Spacer(modifier = Modifier.width(12.dp))
-        val coroutineScope = rememberCoroutineScope()
         val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
 
         Column(
@@ -178,20 +149,12 @@ internal fun MiniPlayerContentInternal(
                 gradientEdgeColor = gradientEdge
             )
         }
-        Spacer(modifier = Modifier.width(8.dp))
 
-        val prevPress = remember { Animatable(0f) }
-        val prevJiggle = remember { Animatable(0f) }
-        val prevScaleX = 1f + (prevPress.value * 0.10f) + (prevJiggle.value * 0.16f)
-        val prevScaleY = 1f - (prevPress.value * 0.08f) - (prevJiggle.value * 0.14f)
+        Spacer(modifier = Modifier.width(8.dp))
 
         Box(
             modifier = Modifier
                 .size(36.dp)
-                .graphicsLayer {
-                    scaleX = prevScaleX
-                    scaleY = prevScaleY
-                }
                 .clip(CircleShape)
                 .background(
                     if (isLiquidGlass) {
@@ -209,26 +172,13 @@ internal fun MiniPlayerContentInternal(
                         )
                     } else Modifier
                 )
-                .pointerInput(controlsEnabled, onPrevious) {
-                    if (!controlsEnabled) return@pointerInput
-                    val pressSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
-                    val jiggleSpec = spring<Float>(dampingRatio = 0.32f, stiffness = 280f)
-                    awaitEachGesture {
-                        val down = awaitFirstDown(requireUnconsumed = false)
-                        down.consume()
-                        coroutineScope.launch {
-                            prevJiggle.snapTo(1f)
-                            prevJiggle.animateTo(0f, jiggleSpec)
-                        }
-                        coroutineScope.launch { prevPress.animateTo(1f, pressSpec) }
-                        val up = waitForUpOrCancellation()
-                        up?.consume()
-                        coroutineScope.launch { prevPress.animateTo(0f, pressSpec) }
-                        if (up != null) {
-                            hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            onPrevious()
-                        }
-                    }
+                .clickable(
+                    interactionSource = previousInteraction,
+                    indication = if (isLiquidGlass) null else miniPlayerIndication,
+                    enabled = controlsEnabled
+                ) {
+                    hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onPrevious()
                 },
             contentAlignment = Alignment.Center
         ) {
@@ -242,18 +192,9 @@ internal fun MiniPlayerContentInternal(
 
         Spacer(modifier = Modifier.width(8.dp))
 
-        val playPausePress = remember { Animatable(0f) }
-        val playPauseJiggle = remember { Animatable(0f) }
-        val playPauseScaleX = 1f + (playPausePress.value * 0.10f) + (playPauseJiggle.value * 0.16f)
-        val playPauseScaleY = 1f - (playPausePress.value * 0.08f) - (playPauseJiggle.value * 0.14f)
-
         Box(
             modifier = Modifier
                 .size(36.dp)
-                .graphicsLayer {
-                    scaleX = playPauseScaleX
-                    scaleY = playPauseScaleY
-                }
                 .clip(CircleShape)
                 .background(
                     if (isLiquidGlass) {
@@ -276,26 +217,13 @@ internal fun MiniPlayerContentInternal(
                         )
                     } else Modifier
                 )
-                .pointerInput(controlsEnabled, onPlayPause) {
-                    if (!controlsEnabled) return@pointerInput
-                    val pressSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
-                    val jiggleSpec = spring<Float>(dampingRatio = 0.32f, stiffness = 280f)
-                    awaitEachGesture {
-                        val down = awaitFirstDown(requireUnconsumed = false)
-                        down.consume()
-                        coroutineScope.launch {
-                            playPauseJiggle.snapTo(1f)
-                            playPauseJiggle.animateTo(0f, jiggleSpec)
-                        }
-                        coroutineScope.launch { playPausePress.animateTo(1f, pressSpec) }
-                        val up = waitForUpOrCancellation()
-                        up?.consume()
-                        coroutineScope.launch { playPausePress.animateTo(0f, pressSpec) }
-                        if (up != null) {
-                            hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            onPlayPause()
-                        }
-                    }
+                .clickable(
+                    interactionSource = playPauseInteraction,
+                    indication = if (isLiquidGlass) null else miniPlayerIndication,
+                    enabled = controlsEnabled
+                ) {
+                    hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onPlayPause()
                 },
             contentAlignment = Alignment.Center
         ) {
@@ -316,18 +244,9 @@ internal fun MiniPlayerContentInternal(
 
         Spacer(modifier = Modifier.width(8.dp))
 
-        val nextPress = remember { Animatable(0f) }
-        val nextJiggle = remember { Animatable(0f) }
-        val nextScaleX = 1f + (nextPress.value * 0.10f) + (nextJiggle.value * 0.16f)
-        val nextScaleY = 1f - (nextPress.value * 0.08f) - (nextJiggle.value * 0.14f)
-
         Box(
             modifier = Modifier
                 .size(36.dp)
-                .graphicsLayer {
-                    scaleX = nextScaleX
-                    scaleY = nextScaleY
-                }
                 .clip(CircleShape)
                 .background(
                     if (isLiquidGlass) {
@@ -345,26 +264,13 @@ internal fun MiniPlayerContentInternal(
                         )
                     } else Modifier
                 )
-                .pointerInput(controlsEnabled, onNext) {
-                    if (!controlsEnabled) return@pointerInput
-                    val pressSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 450f)
-                    val jiggleSpec = spring<Float>(dampingRatio = 0.32f, stiffness = 280f)
-                    awaitEachGesture {
-                        val down = awaitFirstDown(requireUnconsumed = false)
-                        down.consume()
-                        coroutineScope.launch {
-                            nextJiggle.snapTo(1f)
-                            nextJiggle.animateTo(0f, jiggleSpec)
-                        }
-                        coroutineScope.launch { nextPress.animateTo(1f, pressSpec) }
-                        val up = waitForUpOrCancellation()
-                        up?.consume()
-                        coroutineScope.launch { nextPress.animateTo(0f, pressSpec) }
-                        if (up != null) {
-                            hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            onNext()
-                        }
-                    }
+                .clickable(
+                    interactionSource = nextInteraction,
+                    indication = if (isLiquidGlass) null else miniPlayerIndication,
+                    enabled = controlsEnabled
+                ) {
+                    hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onNext()
                 },
             contentAlignment = Alignment.Center
         ) {
