@@ -353,11 +353,11 @@ fun HomeShuffleFab(
         val glassBorderBrush = remember(isDark) {
             Brush.verticalGradient(
                 colors = if (isDark) listOf(
-                    Color.White.copy(alpha = 0.22f),
-                    Color.White.copy(alpha = 0.06f)
+                    Color.White.copy(alpha = 0.07f),
+                    Color.White.copy(alpha = 0.02f)
                 ) else listOf(
-                    Color.White.copy(alpha = 0.40f),
-                    Color.White.copy(alpha = 0.12f)
+                    Color.White.copy(alpha = 0.14f),
+                    Color.White.copy(alpha = 0.04f)
                 )
             )
         }
@@ -406,7 +406,7 @@ fun HomeShuffleFab(
                         Modifier.background(if (isDark) Color(0x351E1E22) else Color(0x40FFFFFF), fabShape)
                     }
                 )
-                .border(BorderStroke(0.85.dp, glassBorderBrush), fabShape)
+                .border(BorderStroke(0.75.dp, glassBorderBrush), fabShape)
                 .clip(fabShape)
                 .then(fabDragModifier)
                 .animateContentSize(

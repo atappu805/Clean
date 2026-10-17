@@ -185,21 +185,6 @@ fun AnimatedPlaybackControls(
                                         drawRect(colorPreviousButton.copy(alpha = 0.88f))
                                     }
                                 )
-                                .border(
-                                    BorderStroke(
-                                        0.85.dp,
-                                        Brush.verticalGradient(
-                                            colors = if (isDark) listOf(
-                                                Color.White.copy(alpha = 0.25f),
-                                                Color.White.copy(alpha = 0.06f)
-                                            ) else listOf(
-                                                Color.White.copy(alpha = 0.42f),
-                                                Color.White.copy(alpha = 0.12f)
-                                            )
-                                        )
-                                    ),
-                                    prevShape
-                                )
                                 .clip(prevShape)
                         } else {
                             Modifier
@@ -214,23 +199,6 @@ fun AnimatedPlaybackControls(
                     },
                 contentAlignment = Alignment.Center
             ) {
-                if (isGlassActive) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .fillMaxHeight(0.5f)
-                            .align(Alignment.TopCenter)
-                            .background(
-                                brush = Brush.verticalGradient(
-                                    colors = listOf(
-                                        Color.White.copy(alpha = if (isDark) 0.18f else 0.32f),
-                                        Color.Transparent
-                                    )
-                                ),
-                                shape = prevShape
-                            )
-                    )
-                }
                 Icon(
                     imageVector = Icons.Rounded.SkipPrevious,
                     contentDescription = "Anterior",
@@ -287,21 +255,6 @@ fun AnimatedPlaybackControls(
                                         drawRect(colorPlayPause.copy(alpha = 0.90f))
                                     }
                                 )
-                                .border(
-                                    BorderStroke(
-                                        1.dp,
-                                        Brush.verticalGradient(
-                                            colors = if (isDark) listOf(
-                                                Color.White.copy(alpha = 0.30f),
-                                                Color.White.copy(alpha = 0.08f)
-                                            ) else listOf(
-                                                Color.White.copy(alpha = 0.48f),
-                                                Color.White.copy(alpha = 0.15f)
-                                            )
-                                        )
-                                    ),
-                                    playGlassCornerShape
-                                )
                                 .clip(playGlassCornerShape)
                         } else {
                             Modifier
@@ -316,23 +269,6 @@ fun AnimatedPlaybackControls(
                     },
                 contentAlignment = Alignment.Center
             ) {
-                if (isGlassActive) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .fillMaxHeight(0.5f)
-                            .align(Alignment.TopCenter)
-                            .background(
-                                brush = Brush.verticalGradient(
-                                    colors = listOf(
-                                        Color.White.copy(alpha = 0.25f),
-                                        Color.Transparent
-                                    )
-                                ),
-                                shape = playGlassCornerShape
-                            )
-                    )
-                }
                 MorphingPlayPauseIcon(
                     isPlaying = playPauseVisualState,
                     tint = tintPlayPauseIcon,
@@ -373,21 +309,6 @@ fun AnimatedPlaybackControls(
                                         drawRect(colorNextButton.copy(alpha = 0.88f))
                                     }
                                 )
-                                .border(
-                                    BorderStroke(
-                                        0.85.dp,
-                                        Brush.verticalGradient(
-                                            colors = if (isDark) listOf(
-                                                Color.White.copy(alpha = 0.25f),
-                                                Color.White.copy(alpha = 0.06f)
-                                            ) else listOf(
-                                                Color.White.copy(alpha = 0.42f),
-                                                Color.White.copy(alpha = 0.12f)
-                                            )
-                                        )
-                                    ),
-                                    nextShape
-                                )
                                 .clip(nextShape)
                         } else {
                             Modifier
@@ -402,23 +323,6 @@ fun AnimatedPlaybackControls(
                     },
                 contentAlignment = Alignment.Center
             ) {
-                if (isGlassActive) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .fillMaxHeight(0.5f)
-                            .align(Alignment.TopCenter)
-                            .background(
-                                brush = Brush.verticalGradient(
-                                    colors = listOf(
-                                        Color.White.copy(alpha = if (isDark) 0.18f else 0.32f),
-                                        Color.Transparent
-                                    )
-                                ),
-                                shape = nextShape
-                            )
-                    )
-                }
                 Icon(
                     imageVector = Icons.Rounded.SkipNext,
                     contentDescription = "Siguiente",

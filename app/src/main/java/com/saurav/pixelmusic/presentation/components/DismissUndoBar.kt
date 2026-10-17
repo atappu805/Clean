@@ -113,11 +113,11 @@ fun DismissUndoBar(
                 )
                 .border(
                     border = BorderStroke(
-                        0.85.dp,
+                        0.75.dp,
                         Brush.verticalGradient(
                             colors = listOf(
-                                Color.White.copy(alpha = if (isDark) 0.25f else 0.40f),
-                                Color.White.copy(alpha = if (isDark) 0.06f else 0.12f)
+                                Color.White.copy(alpha = if (isDark) 0.07f else 0.14f),
+                                Color.White.copy(alpha = if (isDark) 0.02f else 0.04f)
                             )
                         )
                     ),
@@ -133,7 +133,7 @@ fun DismissUndoBar(
                     .background(
                         brush = Brush.verticalGradient(
                             colors = listOf(
-                                Color.White.copy(alpha = if (isDark) 0.12f else 0.22f),
+                                Color.White.copy(alpha = if (isDark) 0.04f else 0.08f),
                                 Color.Transparent
                             )
                         ),

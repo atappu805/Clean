@@ -203,8 +203,8 @@ internal fun MiniPlayerContentInternal(
                 .then(
                     if (isLiquidGlass) {
                         Modifier.border(
-                            0.85.dp,
-                            Color.White.copy(alpha = if (isDark) 0.12f else 0.22f),
+                            0.75.dp,
+                            Color.White.copy(alpha = if (isDark) 0.06f else 0.12f),
                             CircleShape
                         )
                     } else Modifier
@@ -267,11 +267,11 @@ internal fun MiniPlayerContentInternal(
                 .then(
                     if (isLiquidGlass) {
                         Modifier.border(
-                            0.85.dp,
+                            0.75.dp,
                             Brush.verticalGradient(
                                 listOf(
-                                    Color.White.copy(alpha = 0.28f),
-                                    Color.White.copy(alpha = 0.08f)
+                                    Color.White.copy(alpha = 0.12f),
+                                    Color.White.copy(alpha = 0.04f)
                                 )
                             ),
                             CircleShape
@@ -343,8 +343,8 @@ internal fun MiniPlayerContentInternal(
                 .then(
                     if (isLiquidGlass) {
                         Modifier.border(
-                            0.85.dp,
-                            Color.White.copy(alpha = if (isDark) 0.12f else 0.22f),
+                            0.75.dp,
+                            Color.White.copy(alpha = if (isDark) 0.06f else 0.12f),
                             CircleShape
                         )
                     } else Modifier

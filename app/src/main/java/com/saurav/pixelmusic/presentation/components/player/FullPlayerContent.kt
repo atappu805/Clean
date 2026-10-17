@@ -1983,7 +1983,8 @@ private fun FullPlayerControlsSection(
                 onShuffleToggle = onShuffleToggle,
                 onRepeatToggle = onRepeatToggle,
                 onFavoriteToggle = onFavoriteToggle,
-                isFullScreenArt = isFullScreenArt
+                isFullScreenArt = isFullScreenArt,
+                isLiquidGlass = isLiquidGlass
             )
         }
     }
@@ -3402,7 +3403,8 @@ private fun BottomToggleRow(
     onShuffleToggle: () -> Unit,
     onRepeatToggle: () -> Unit,
     onFavoriteToggle: () -> Unit,
-    isFullScreenArt: Boolean = false
+    isFullScreenArt: Boolean = false,
+    isLiquidGlass: Boolean = false
 ) {
     val isFavorite = isFavoriteProvider()
     val rowCorners = 60.dp
@@ -3411,10 +3413,14 @@ private fun BottomToggleRow(
     val inactiveContentColor = LocalMaterialTheme.current.onSurface
     
     val isDark = LocalPixelMusicDarkTheme.current
-    val containerBg = if (isDark) {
-        LocalMaterialTheme.current.surfaceContainer.copy(alpha = 0.5f)
+    val containerBg = if (isLiquidGlass) {
+        if (isDark) {
+            LocalMaterialTheme.current.surfaceContainer.copy(alpha = 0.5f)
+        } else {
+            Color.White.copy(alpha = 0.85f)
+        }
     } else {
-        Color.White.copy(alpha = 0.9f)
+        LocalMaterialTheme.current.surfaceContainer
     }
 
     val activeColor1 = LocalMaterialTheme.current.primary
@@ -3426,27 +3432,6 @@ private fun BottomToggleRow(
 
     Box(
         modifier = modifier
-            .border(
-                border = BorderStroke(
-                    0.85.dp,
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            Color.White.copy(alpha = if (isDark) 0.22f else 0.38f),
-                            Color.White.copy(alpha = if (isDark) 0.05f else 0.12f)
-                        )
-                    )
-                ),
-                shape = AbsoluteSmoothCornerShape(
-                    cornerRadiusBL = rowCorners,
-                    smoothnessAsPercentTR = 60,
-                    cornerRadiusBR = rowCorners,
-                    smoothnessAsPercentBL = 60,
-                    cornerRadiusTL = rowCorners,
-                    smoothnessAsPercentBR = 60,
-                    cornerRadiusTR = rowCorners,
-                    smoothnessAsPercentTL = 60
-                )
-            )
             .background(
                 color = containerBg,
                 shape = AbsoluteSmoothCornerShape(

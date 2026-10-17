@@ -54,7 +54,8 @@ fun LiquidGlassHeaderBar(
     onPillClick: () -> Unit,
     onSettingsClick: () -> Unit,
     modifier: Modifier = Modifier,
-    pillIcon: @Composable () -> Unit,
+    pillIcon: (@Composable () -> Unit)? = null,
+    pillTextSize: androidx.compose.ui.unit.TextUnit = 20.sp,
     isLiquidGlass: Boolean = true,
     backdrop: Backdrop? = null,
     alpha: Float = 1f
@@ -69,11 +70,11 @@ fun LiquidGlassHeaderBar(
     val glassBorderBrush = remember(isDark) {
         Brush.verticalGradient(
             colors = if (isDark) listOf(
-                Color.White.copy(alpha = 0.20f),
-                Color.White.copy(alpha = 0.05f)
+                Color.White.copy(alpha = 0.07f),
+                Color.White.copy(alpha = 0.02f)
             ) else listOf(
-                Color.White.copy(alpha = 0.38f),
-                Color.White.copy(alpha = 0.12f)
+                Color.White.copy(alpha = 0.14f),
+                Color.White.copy(alpha = 0.04f)
             )
         )
     }
@@ -126,7 +127,7 @@ fun LiquidGlassHeaderBar(
                         drawRect(if (isDark) Color(0x351E1E22) else Color(0x40FFFFFF))
                     }
                 )
-                .border(BorderStroke(0.85.dp, glassBorderBrush), pillShape)
+                .border(BorderStroke(0.75.dp, glassBorderBrush), pillShape)
                 .clip(pillShape)
         } else {
             Modifier
@@ -168,7 +169,7 @@ fun LiquidGlassHeaderBar(
                         .background(
                             brush = Brush.verticalGradient(
                                 colors = listOf(
-                                    Color.White.copy(alpha = if (isDark) 0.18f else 0.35f),
+                                    Color.White.copy(alpha = if (isDark) 0.04f else 0.08f),
                                     Color.Transparent
                                 )
                             )
@@ -178,15 +179,17 @@ fun LiquidGlassHeaderBar(
             Row(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(if (pillIcon != null) 10.dp else 0.dp)
             ) {
-                pillIcon()
+                if (pillIcon != null) {
+                    pillIcon()
+                }
                 Text(
                     text = pillText,
                     fontFamily = GoogleSansRounded,
                     fontWeight = FontWeight.ExtraBold,
                     color = MaterialTheme.colorScheme.primary,
-                    fontSize = 20.sp,
+                    fontSize = pillTextSize,
                     letterSpacing = 0.5.sp
                 )
             }
@@ -220,7 +223,7 @@ fun LiquidGlassHeaderBar(
                         drawRect(if (isDark) Color(0x351E1E22) else Color(0x40FFFFFF))
                     }
                 )
-                .border(BorderStroke(0.85.dp, glassBorderBrush), settingsShape)
+                .border(BorderStroke(0.75.dp, glassBorderBrush), settingsShape)
                 .clip(settingsShape)
         } else {
             Modifier
@@ -264,7 +267,7 @@ fun LiquidGlassHeaderBar(
                         .background(
                             brush = Brush.verticalGradient(
                                 colors = listOf(
-                                    Color.White.copy(alpha = if (isDark) 0.18f else 0.35f),
+                                    Color.White.copy(alpha = if (isDark) 0.04f else 0.08f),
                                     Color.Transparent
                                 )
                             )

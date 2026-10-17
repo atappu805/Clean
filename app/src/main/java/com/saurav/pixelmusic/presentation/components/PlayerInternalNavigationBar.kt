@@ -209,11 +209,11 @@ fun PlayerInternalNavigationBar(
     val glassBorderBrush = remember(isDark) {
         Brush.verticalGradient(
             colors = if (isDark) listOf(
-                Color.White.copy(alpha = 0.20f),
-                Color.White.copy(alpha = 0.05f)
+                Color.White.copy(alpha = 0.07f),
+                Color.White.copy(alpha = 0.02f)
             ) else listOf(
-                Color.White.copy(alpha = 0.38f),
-                Color.White.copy(alpha = 0.12f)
+                Color.White.copy(alpha = 0.14f),
+                Color.White.copy(alpha = 0.04f)
             )
         )
     }
@@ -263,7 +263,7 @@ fun PlayerInternalNavigationBar(
                         Modifier.background(if (isDark) Color(0x351E1E22) else Color(0x40FFFFFF), capsuleShape)
                     }
                 )
-                .border(BorderStroke(0.85.dp, glassBorderBrush), capsuleShape)
+                .border(BorderStroke(0.75.dp, glassBorderBrush), capsuleShape)
 
             val density = LocalDensity.current
             var isDragging by remember { mutableStateOf(false) }
@@ -315,7 +315,7 @@ fun PlayerInternalNavigationBar(
                         .background(
                             brush = Brush.verticalGradient(
                                 colors = listOf(
-                                    Color.White.copy(alpha = if (isDark) 0.15f else 0.30f),
+                                    Color.White.copy(alpha = if (isDark) 0.04f else 0.08f),
                                     Color.Transparent
                                 )
                             )
@@ -337,16 +337,16 @@ fun PlayerInternalNavigationBar(
                                 scaleX = dropletScaleX
                             }
                             .background(
-                                color = if (isDark) Color.White.copy(alpha = 0.22f) else primaryColor.copy(alpha = 0.20f),
+                                color = primaryColor.copy(alpha = if (isDark) 0.38f else 0.25f),
                                 shape = dropletShape
                             )
                             .border(
                                 border = BorderStroke(
-                                    1.dp,
+                                    0.75.dp,
                                     Brush.verticalGradient(
                                         colors = listOf(
-                                            Color.White.copy(alpha = if (isDark) 0.85f else 0.95f),
-                                            Color.White.copy(alpha = if (isDark) 0.30f else 0.45f)
+                                            primaryColor.copy(alpha = if (isDark) 0.40f else 0.55f),
+                                            primaryColor.copy(alpha = if (isDark) 0.12f else 0.20f)
                                         )
                                     )
                                 ),
@@ -686,16 +686,16 @@ fun PlayerInternalNavigationBar(
                 .border(
                     if (isSearchSelected) {
                         BorderStroke(
-                            0.85.dp,
+                            0.75.dp,
                             Brush.verticalGradient(
                                 listOf(
-                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.50f),
-                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.20f)
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.40f),
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
                                 )
                             )
                         )
                     } else {
-                        BorderStroke(0.85.dp, glassBorderBrush)
+                        BorderStroke(0.75.dp, glassBorderBrush)
                     },
                     searchShape
                 )
