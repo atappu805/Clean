@@ -54,6 +54,10 @@ import com.saurav.pixelmusic.ui.theme.GoogleSansRounded
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.offset
 import androidx.navigation.NavHostController
 import com.saurav.pixelmusic.BottomNavItem
 import com.saurav.pixelmusic.R
@@ -224,14 +228,18 @@ fun PlayerInternalNavigationBar(
                     }
                 )
                 .background(color = glassContainerColor, shape = CircleShape)
-                .border(BorderStroke(1.dp, glassBorderBrush), shape = CircleShape)
+                .border(BorderStroke(1.2.dp, glassBorderBrush), shape = CircleShape)
                 .clip(CircleShape)
 
-            // iOS 26 Liquid Glass Navigation Capsule
-            Box(
+            // iOS 26 Liquid Glass Navigation Capsule with icon-over-label and sliding droplet
+            BoxWithConstraints(
                 modifier = glassCapsuleModifier,
-                contentAlignment = Alignment.Center
+                contentAlignment = Alignment.CenterStart
             ) {
+                val totalWidth = maxWidth
+                val tabCount = mainItems.size
+                val tabWidth = if (tabCount > 0) totalWidth / tabCount else 0.dp
+
                 // Specular gloss reflection across the top half of the capsule
                 Box(
                     modifier = Modifier
@@ -248,61 +256,78 @@ fun PlayerInternalNavigationBar(
                         )
                 )
 
+                // Fluid sliding glass droplet indicator behind active tab
+                if (selectedIndex in 0 until tabCount) {
+                    val animatedDropletOffset by animateDpAsState(
+                        targetValue = tabWidth * selectedIndex,
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessLow
+                        ),
+                        label = "droplet_offset"
+                    )
+
+                    val dropletPadding = if (compactMode) 3.dp else 4.dp
+                    Box(
+                        modifier = Modifier
+                            .offset(x = animatedDropletOffset)
+                            .width(tabWidth)
+                            .fillMaxHeight()
+                            .padding(dropletPadding)
+                            .shadow(elevation = 4.dp, shape = CircleShape)
+                            .then(
+                                if (backdrop != null) {
+                                    Modifier.drawBackdrop(
+                                        backdrop = backdrop,
+                                        shape = { CircleShape },
+                                        effects = {
+                                            blur(4.dp.toPx())
+                                            lens(10.dp.toPx(), 20.dp.toPx())
+                                        }
+                                    )
+                                } else Modifier
+                            )
+                            .background(
+                                color = if (isDark) Color.White.copy(alpha = 0.22f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
+                                shape = CircleShape
+                            )
+                            .border(
+                                border = BorderStroke(
+                                    1.dp,
+                                    Brush.verticalGradient(
+                                        colors = listOf(
+                                            Color.White.copy(alpha = if (isDark) 0.75f else 0.90f),
+                                            Color.White.copy(alpha = if (isDark) 0.25f else 0.40f)
+                                        )
+                                    )
+                                ),
+                                shape = CircleShape
+                            )
+                    )
+                }
+
+                // Row of icon-over-label tabs exactly matching iOS 26 tab bar
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(toolbarRowHeight)
-                        .padding(horizontal = 6.dp),
+                        .fillMaxHeight(),
                     horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     mainItems.forEachIndexed { index, item ->
                         val isSelected = index == selectedIndex
 
-                        val animatedWeight by animateFloatAsState(
-                            targetValue = if (isSelected) selectedItemWeight else 1f,
-                            animationSpec = spring(
-                                dampingRatio = Spring.DampingRatioMediumBouncy,
-                                stiffness = Spring.StiffnessLow
-                            ),
-                            label = "glass_weight_$index"
-                        )
-
-                        val dropletColor by animateColorAsState(
-                            targetValue = if (isSelected) {
-                                if (isDark) Color.White.copy(alpha = 0.22f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.20f)
-                            } else {
-                                Color.Transparent
-                            },
-                            animationSpec = tween(220),
-                            label = "droplet_color_$index"
-                        )
-
-                        val itemContentColor by animateColorAsState(
-                            targetValue = if (isSelected) {
-                                if (isDark) Color.White else MaterialTheme.colorScheme.primary
-                            } else {
-                                if (isDark) Color.White.copy(alpha = 0.70f) else Color.Black.copy(alpha = 0.60f)
-                            },
+                        val itemAlpha by animateFloatAsState(
+                            targetValue = if (isSelected) 1f else 0.65f,
                             animationSpec = tween(200),
-                            label = "glass_content_color_$index"
+                            label = "tab_alpha_$index"
                         )
 
                         Box(
                             modifier = Modifier
-                                .weight(animatedWeight)
-                                .height(toolbarRowHeight)
+                                .weight(1f)
+                                .fillMaxHeight()
                                 .clip(CircleShape)
-                                .background(dropletColor, CircleShape)
-                                .then(
-                                    if (isSelected) {
-                                        Modifier.border(
-                                            0.5.dp,
-                                            if (isDark) Color.White.copy(alpha = 0.35f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.35f),
-                                            CircleShape
-                                        )
-                                    } else Modifier
-                                )
                                 .clickable {
                                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                     if (latestNavigationEnabled && latestCurrentRoute != item.screen.route) {
@@ -311,10 +336,10 @@ fun PlayerInternalNavigationBar(
                                 },
                             contentAlignment = Alignment.Center
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center,
-                                modifier = Modifier.fillMaxSize()
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center,
+                                modifier = Modifier.padding(horizontal = 4.dp)
                             ) {
                                 val iconRes = if (isSelected && item.selectedIconResId != null && item.selectedIconResId != 0) {
                                     item.selectedIconResId
@@ -325,28 +350,19 @@ fun PlayerInternalNavigationBar(
                                 Icon(
                                     painter = painterResource(id = iconRes),
                                     contentDescription = item.label,
-                                    tint = itemContentColor,
-                                    modifier = Modifier.size(itemIconSize)
+                                    tint = (if (isDark) Color.White else Color.Black).copy(alpha = itemAlpha),
+                                    modifier = Modifier.size(if (compactMode) 20.dp else 22.dp)
                                 )
-
-                                AnimatedVisibility(
-                                    visible = isSelected && !shouldHideLabel,
-                                    enter = fadeIn(animationSpec = tween(200)) + expandHorizontally(expandFrom = Alignment.Start),
-                                    exit = fadeOut(animationSpec = tween(150)) + shrinkHorizontally(shrinkTowards = Alignment.Start)
-                                ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Text(
-                                            text = item.label,
-                                            fontFamily = GoogleSansRounded,
-                                            style = if (compactMode) MaterialTheme.typography.labelMedium else MaterialTheme.typography.labelLarge,
-                                            maxLines = 1,
-                                            fontWeight = FontWeight.Bold,
-                                            color = itemContentColor,
-                                            softWrap = false
-                                        )
-                                    }
-                                }
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = item.label,
+                                    fontFamily = GoogleSansRounded,
+                                    fontSize = if (compactMode) 11.sp else 12.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    color = (if (isDark) Color.White else Color.Black).copy(alpha = itemAlpha),
+                                    maxLines = 1,
+                                    softWrap = false
+                                )
                             }
                         }
                     }
