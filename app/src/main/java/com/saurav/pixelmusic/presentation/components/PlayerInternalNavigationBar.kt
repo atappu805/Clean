@@ -160,6 +160,7 @@ fun PlayerInternalNavigationBar(
 ) {
     val latestCurrentRoute by rememberUpdatedState(currentRoute)
     val latestNavigationEnabled by rememberUpdatedState(currentRoute != null)
+    val coroutineScope = rememberCoroutineScope()
 
     val haptic = LocalHapticFeedback.current
     val configuration = LocalConfiguration.current
@@ -258,7 +259,6 @@ fun PlayerInternalNavigationBar(
                 )
                 .border(BorderStroke(1.2.dp, glassBorderBrush), capsuleShape)
 
-            val coroutineScope = rememberCoroutineScope()
             val density = LocalDensity.current
             var isDragging by remember { mutableStateOf(false) }
             val dropletOffsetAnimatable = remember { Animatable(0f) }
