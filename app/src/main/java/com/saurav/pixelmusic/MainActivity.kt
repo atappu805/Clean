@@ -887,8 +887,12 @@ class MainActivity : ComponentActivity() {
         val navBarCompactMode by playerViewModel.navBarCompactMode.collectAsStateWithLifecycle()
         val liquidGlassEnabled by playerViewModel.userPreferencesRepository.liquidGlassEnabledFlow.collectAsStateWithLifecycle(initialValue = true)
         val liquidGlassNavBarEnabled by playerViewModel.userPreferencesRepository.liquidGlassNavBarEnabledFlow.collectAsStateWithLifecycle(initialValue = true)
+        val isDarkTheme = MaterialTheme.colorScheme.surface.luminance() < 0.5f
         val isLiquidGlassOnNavBar = liquidGlassEnabled && liquidGlassNavBarEnabled
-        val navBackdrop = rememberLayerBackdrop()
+        val navBackdrop = rememberLayerBackdrop {
+            drawRect(if (isDarkTheme) Color.Black else Color.White)
+            drawContent()
+        }
         val navBarCornerRadiusRaw by playerViewModel.navBarCornerRadius.collectAsStateWithLifecycle()
         val navBarCornerRadius = sanitizeNavBarCornerRadius(navBarCornerRadiusRaw)
         val isMiniPlayerDismissing by playerViewModel.isMiniPlayerDismissing.collectAsStateWithLifecycle()

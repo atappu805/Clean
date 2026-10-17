@@ -68,6 +68,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.graphics.graphicsLayer
+import android.os.Build
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.util.lerp
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.ui.text.PlatformTextStyle
 import kotlinx.coroutines.launch
 import androidx.navigation.NavHostController
@@ -220,28 +227,35 @@ fun PlayerInternalNavigationBar(
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (isLiquidGlass) {
+            val capsuleShape = CircleShape
             val glassCapsuleModifier = Modifier
                 .weight(1f)
                 .height(settingsButtonSize)
-                .shadow(elevation = 12.dp, shape = CircleShape)
+                .shadow(elevation = 12.dp, shape = capsuleShape)
                 .then(
                     if (backdrop != null) {
                         Modifier.drawBackdrop(
                             backdrop = backdrop,
-                            shape = { CircleShape },
+                            shape = { capsuleShape },
                             effects = {
                                 vibrancy()
-                                blur(8.dp.toPx())
-                                lens(16.dp.toPx(), 32.dp.toPx())
+                                blur(10.dp.toPx())
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                    lens(
+                                        refractionHeight = 12.dp.toPx(),
+                                        refractionAmount = 28.dp.toPx()
+                                    )
+                                }
+                            },
+                            onDrawSurface = {
+                                drawRect(if (isDark) Color(0x351E1E22) else Color(0x40FFFFFF))
                             }
                         )
                     } else {
-                        Modifier
+                        Modifier.background(if (isDark) Color(0x351E1E22) else Color(0x40FFFFFF), capsuleShape)
                     }
                 )
-                .background(color = glassContainerColor, shape = CircleShape)
-                .border(BorderStroke(1.2.dp, glassBorderBrush), shape = CircleShape)
-                .clip(CircleShape)
+                .border(BorderStroke(1.2.dp, glassBorderBrush), capsuleShape)
 
             val coroutineScope = rememberCoroutineScope()
             val density = LocalDensity.current
@@ -249,17 +263,17 @@ fun PlayerInternalNavigationBar(
             val dropletOffsetAnimatable = remember { Animatable(0f) }
             var currentHoveredIndex by remember { mutableIntStateOf(selectedIndex) }
 
-            // Dynamic liquid stretch scale while dragging
+            // Dynamic liquid stretch scale while dragging (iOS physics)
             val dropletScaleX by animateFloatAsState(
-                targetValue = if (isDragging) 1.08f else 1.0f,
+                targetValue = if (isDragging) 1.10f else 1.0f,
                 animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioMediumBouncy,
-                    stiffness = Spring.StiffnessLow
+                    dampingRatio = 0.6f,
+                    stiffness = 400f
                 ),
                 label = "droplet_stretch"
             )
 
-            // iOS 26 Liquid Glass Navigation Capsule with swipe-to-navigate and optical centering
+            // iOS 26 Liquid Glass Navigation Capsule with swipe-to-navigate, tactile spring press, and optical centering
             BoxWithConstraints(
                 modifier = glassCapsuleModifier,
                 contentAlignment = Alignment.CenterStart
@@ -278,8 +292,8 @@ fun PlayerInternalNavigationBar(
                         dropletOffsetAnimatable.animateTo(
                             targetValue = selectedIndex * tabWidthPx,
                             animationSpec = spring(
-                                dampingRatio = Spring.DampingRatioMediumBouncy,
-                                stiffness = Spring.StiffnessLow
+                                dampingRatio = 0.6f,
+                                stiffness = 400f
                             )
                         )
                     }
@@ -305,6 +319,7 @@ fun PlayerInternalNavigationBar(
                 if ((selectedIndex in 0 until tabCount) || isDragging) {
                     val dropletOffsetDp = with(density) { dropletOffsetAnimatable.value.toDp() }
                     val dropletPadding = if (compactMode) 3.dp else 4.dp
+                    val dropletShape = CircleShape
                     Box(
                         modifier = Modifier
                             .offset(x = dropletOffsetDp)
@@ -314,34 +329,44 @@ fun PlayerInternalNavigationBar(
                             .graphicsLayer {
                                 scaleX = dropletScaleX
                             }
-                            .shadow(elevation = 4.dp, shape = CircleShape)
+                            .shadow(elevation = 6.dp, shape = dropletShape)
                             .then(
                                 if (backdrop != null) {
                                     Modifier.drawBackdrop(
                                         backdrop = backdrop,
-                                        shape = { CircleShape },
+                                        shape = { dropletShape },
                                         effects = {
-                                            blur(4.dp.toPx())
-                                            lens(10.dp.toPx(), 20.dp.toPx())
+                                            vibrancy()
+                                            blur(6.dp.toPx())
+                                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                                lens(
+                                                    refractionHeight = 8.dp.toPx(),
+                                                    refractionAmount = 18.dp.toPx()
+                                                )
+                                            }
+                                        },
+                                        onDrawSurface = {
+                                            drawRect(if (isDark) Color.White.copy(alpha = 0.22f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.20f))
                                         }
                                     )
-                                } else Modifier
-                            )
-                            .background(
-                                color = if (isDark) Color.White.copy(alpha = 0.22f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
-                                shape = CircleShape
+                                } else {
+                                    Modifier.background(
+                                        color = if (isDark) Color.White.copy(alpha = 0.22f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.20f),
+                                        shape = dropletShape
+                                    )
+                                }
                             )
                             .border(
                                 border = BorderStroke(
                                     1.dp,
                                     Brush.verticalGradient(
                                         colors = listOf(
-                                            Color.White.copy(alpha = if (isDark) 0.75f else 0.90f),
-                                            Color.White.copy(alpha = if (isDark) 0.25f else 0.40f)
+                                            Color.White.copy(alpha = if (isDark) 0.85f else 0.95f),
+                                            Color.White.copy(alpha = if (isDark) 0.30f else 0.45f)
                                         )
                                     )
                                 ),
-                                shape = CircleShape
+                                shape = dropletShape
                             )
                     )
                 }
@@ -391,8 +416,8 @@ fun PlayerInternalNavigationBar(
                                             dropletOffsetAnimatable.animateTo(
                                                 targetValue = targetIndex * tabWidthPx,
                                                 animationSpec = spring(
-                                                    dampingRatio = Spring.DampingRatioMediumBouncy,
-                                                    stiffness = Spring.StiffnessLow
+                                                    dampingRatio = 0.6f,
+                                                    stiffness = 400f
                                                 )
                                             )
                                         }
@@ -409,8 +434,8 @@ fun PlayerInternalNavigationBar(
                                             dropletOffsetAnimatable.animateTo(
                                                 targetValue = selectedIndex * tabWidthPx,
                                                 animationSpec = spring(
-                                                    dampingRatio = Spring.DampingRatioMediumBouncy,
-                                                    stiffness = Spring.StiffnessLow
+                                                    dampingRatio = 0.6f,
+                                                    stiffness = 400f
                                                 )
                                             )
                                         }
@@ -430,12 +455,31 @@ fun PlayerInternalNavigationBar(
                             label = "tab_alpha_$index"
                         )
 
+                        val tabPress = remember { Animatable(0f) }
+                        val tabScale = lerp(1f, 0.90f, tabPress.value)
+
                         Box(
                             modifier = Modifier
                                 .weight(1f)
                                 .fillMaxHeight()
                                 .clip(CircleShape)
-                                .clickable {
+                                .graphicsLayer {
+                                    scaleX = tabScale
+                                    scaleY = tabScale
+                                }
+                                .pointerInput(Unit) {
+                                    val spec = spring<Float>(dampingRatio = 0.6f, stiffness = 400f)
+                                    awaitEachGesture {
+                                        awaitFirstDown()
+                                        launch { tabPress.animateTo(1f, spec) }
+                                        waitForUpOrCancellation()
+                                        launch { tabPress.animateTo(0f, spec) }
+                                    }
+                                }
+                                .clickable(
+                                    indication = null,
+                                    interactionSource = remember { MutableInteractionSource() }
+                                ) {
                                     if (!isDragging) {
                                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                         if (latestNavigationEnabled && latestCurrentRoute != item.screen.route) {
@@ -449,8 +493,8 @@ fun PlayerInternalNavigationBar(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.Center,
                                 modifier = Modifier
-                                    .fillMaxWidth()
-                                    .offset(y = (-1.5).dp)
+                                    .fillMaxSize()
+                                    .offset(y = (-1).dp)
                             ) {
                                 val iconRes = if (isSelected && item.selectedIconResId != null && item.selectedIconResId != 0) {
                                     item.selectedIconResId
@@ -593,45 +637,78 @@ fun PlayerInternalNavigationBar(
         )
 
         if (isLiquidGlass) {
-            val searchGlassBg = if (isSearchSelected) {
-                if (isDark) MaterialTheme.colorScheme.primary.copy(alpha = 0.40f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.30f)
-            } else {
-                glassContainerColor
-            }
-            val searchGlassBorder = if (isSearchSelected) {
-                BorderStroke(
-                    1.dp,
-                    Brush.verticalGradient(
-                        listOf(
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
-                        )
-                    )
-                )
-            } else {
-                BorderStroke(1.dp, glassBorderBrush)
-            }
+            val searchShape = CircleShape
+            val searchPress = remember { Animatable(0f) }
 
             val searchButtonModifier = Modifier
                 .size(settingsButtonSize)
-                .shadow(elevation = 12.dp, shape = CircleShape)
+                .graphicsLayer {
+                    val s = lerp(1f, 0.90f, searchPress.value)
+                    scaleX = s
+                    scaleY = s
+                }
+                .shadow(elevation = 12.dp, shape = searchShape)
                 .then(
                     if (backdrop != null) {
                         Modifier.drawBackdrop(
                             backdrop = backdrop,
-                            shape = { CircleShape },
+                            shape = { searchShape },
                             effects = {
                                 vibrancy()
-                                blur(8.dp.toPx())
-                                lens(16.dp.toPx(), 32.dp.toPx())
+                                blur(10.dp.toPx())
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                    lens(
+                                        refractionHeight = 12.dp.toPx(),
+                                        refractionAmount = 28.dp.toPx()
+                                    )
+                                }
+                            },
+                            onDrawSurface = {
+                                if (isSearchSelected) {
+                                    drawRect(MaterialTheme.colorScheme.primary, blendMode = BlendMode.Hue)
+                                    drawRect(MaterialTheme.colorScheme.primary.copy(alpha = 0.35f))
+                                } else {
+                                    drawRect(if (isDark) Color(0x351E1E22) else Color(0x40FFFFFF))
+                                }
                             }
                         )
-                    } else Modifier
+                    } else {
+                        Modifier.background(
+                            if (isSearchSelected) MaterialTheme.colorScheme.primary else (if (isDark) Color(0x351E1E22) else Color(0x40FFFFFF)),
+                            searchShape
+                        )
+                    }
                 )
-                .background(searchGlassBg, CircleShape)
-                .border(searchGlassBorder, CircleShape)
-                .clip(CircleShape)
-                .clickable {
+                .border(
+                    if (isSearchSelected) {
+                        BorderStroke(
+                            1.2.dp,
+                            Brush.verticalGradient(
+                                listOf(
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
+                                )
+                            )
+                        )
+                    } else {
+                        BorderStroke(1.2.dp, glassBorderBrush)
+                    },
+                    searchShape
+                )
+                .clip(searchShape)
+                .pointerInput(Unit) {
+                    val spec = spring<Float>(dampingRatio = 0.6f, stiffness = 400f)
+                    awaitEachGesture {
+                        awaitFirstDown()
+                        launch { searchPress.animateTo(1f, spec) }
+                        waitForUpOrCancellation()
+                        launch { searchPress.animateTo(0f, spec) }
+                    }
+                }
+                .clickable(
+                    indication = null,
+                    interactionSource = remember { MutableInteractionSource() }
+                ) {
                     if (!latestNavigationEnabled) return@clickable
                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                     if (!isSearchSelected) {
