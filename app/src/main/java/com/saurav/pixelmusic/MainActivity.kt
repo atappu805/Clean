@@ -67,6 +67,9 @@ import androidx.compose.material3.NavigationBarDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import com.kyant.backdrop.Backdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import com.kyant.backdrop.backdrops.layerBackdrop
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -885,6 +888,7 @@ class MainActivity : ComponentActivity() {
         val liquidGlassEnabled by playerViewModel.userPreferencesRepository.liquidGlassEnabledFlow.collectAsStateWithLifecycle(initialValue = true)
         val liquidGlassNavBarEnabled by playerViewModel.userPreferencesRepository.liquidGlassNavBarEnabledFlow.collectAsStateWithLifecycle(initialValue = true)
         val isLiquidGlassOnNavBar = liquidGlassEnabled && liquidGlassNavBarEnabled
+        val navBackdrop = rememberLayerBackdrop()
         val navBarCornerRadiusRaw by playerViewModel.navBarCornerRadius.collectAsStateWithLifecycle()
         val navBarCornerRadius = sanitizeNavBarCornerRadius(navBarCornerRadiusRaw)
         val isMiniPlayerDismissing by playerViewModel.isMiniPlayerDismissing.collectAsStateWithLifecycle()
@@ -1213,6 +1217,7 @@ class MainActivity : ComponentActivity() {
                                     bottomBarPadding = bottomBarPadding,
                                     onSearchIconDoubleTap = onSearchIconDoubleTap,
                                     isLiquidGlass = isLiquidGlassOnNavBar,
+                                    backdrop = navBackdrop,
                                     modifier = Modifier.fillMaxSize()
                                 )
                             }
@@ -1220,7 +1225,11 @@ class MainActivity : ComponentActivity() {
                     }
                 }
                 ) { innerPadding ->
-                    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                    BoxWithConstraints(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .layerBackdrop(navBackdrop)
+                    ) {
                         val density = LocalDensity.current
                         val containerHeight = this.maxHeight
                         val screenHeightPx = remember(containerHeight, density) {

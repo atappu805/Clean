@@ -59,6 +59,10 @@ import com.saurav.pixelmusic.BottomNavItem
 import com.saurav.pixelmusic.R
 import com.saurav.pixelmusic.presentation.navigation.Screen
 import com.saurav.pixelmusic.presentation.navigation.navigateToTopLevelSafely
+import com.kyant.backdrop.Backdrop
+import com.kyant.backdrop.drawBackdrop
+import com.kyant.backdrop.effects.blur
+import com.kyant.backdrop.effects.lens
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import androidx.compose.ui.graphics.Color
@@ -123,7 +127,8 @@ fun PlayerInternalNavigationBar(
     compactMode: Boolean,
     bottomBarPadding: Dp = 0.dp,
     onSearchIconDoubleTap: () -> Unit = {},
-    isLiquidGlass: Boolean = true
+    isLiquidGlass: Boolean = true,
+    backdrop: Backdrop? = null
 ) {
     val latestCurrentRoute by rememberUpdatedState(currentRoute)
     val latestNavigationEnabled by rememberUpdatedState(currentRoute != null)
@@ -194,11 +199,27 @@ fun PlayerInternalNavigationBar(
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (isLiquidGlass) {
+            val glassCapsuleModifier = if (backdrop != null) {
+                Modifier
+                    .weight(1f)
+                    .height(settingsButtonSize)
+                    .drawBackdrop(
+                        backdrop = backdrop,
+                        shape = { CircleShape },
+                        effects = {
+                            blur(20.dp.toPx())
+                            lens(16.dp.toPx())
+                        }
+                    )
+            } else {
+                Modifier
+                    .weight(1f)
+                    .height(settingsButtonSize)
+            }
+
             // iOS 26 Liquid Glass Navigation Capsule
             Surface(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(settingsButtonSize),
+                modifier = glassCapsuleModifier,
                 shape = CircleShape,
                 color = glassContainerColor,
                 border = BorderStroke(1.dp, glassBorderBrush),
@@ -424,6 +445,20 @@ fun PlayerInternalNavigationBar(
 
         // Detached Search Button
         val isSearchSelected = latestCurrentRoute == Screen.Search.route
+        val searchButtonModifier = if (isLiquidGlass && backdrop != null) {
+            Modifier
+                .size(settingsButtonSize)
+                .drawBackdrop(
+                    backdrop = backdrop,
+                    shape = { CircleShape },
+                    effects = {
+                        blur(20.dp.toPx())
+                        lens(16.dp.toPx())
+                    }
+                )
+        } else {
+            Modifier.size(settingsButtonSize)
+        }
         val searchGlassColor by animateColorAsState(
             targetValue = if (isSearchSelected) {
                 if (isDark) MaterialTheme.colorScheme.primary.copy(alpha = 0.40f).compositeOver(glassContainerColor)
@@ -454,7 +489,7 @@ fun PlayerInternalNavigationBar(
                     onSearchIconDoubleTap()
                 }
             },
-            modifier = Modifier.size(settingsButtonSize),
+            modifier = searchButtonModifier,
             shape = CircleShape,
             color = if (isLiquidGlass) searchGlassColor else (if (isSearchSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer),
             contentColor = if (isLiquidGlass) searchContentColor else (if (isSearchSelected) MaterialTheme.colorScheme.background else MaterialTheme.colorScheme.onPrimaryContainer),
