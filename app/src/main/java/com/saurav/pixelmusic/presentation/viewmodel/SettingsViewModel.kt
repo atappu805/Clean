@@ -110,6 +110,8 @@ data class SettingsUiState(
     val showPlayerFileInfo: Boolean = true,
     val isUiMotionBlurEnabled: Boolean = true,
     val uiMotionBlurIntensity: Float = 1f,
+    val liquidGlassEnabled: Boolean = true,
+    val liquidGlassNavBarEnabled: Boolean = true,
     // Developer Options
     val albumArtQuality: AlbumArtQuality = AlbumArtQuality.HIGH,
     val albumArtCacheLimitMb: Int = 200,
@@ -788,6 +790,16 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             userPreferencesRepository.uiMotionBlurEnabledFlow.collect { enabled ->
                 _uiState.update { it.copy(isUiMotionBlurEnabled = enabled) }
+            }
+        }
+        viewModelScope.launch {
+            userPreferencesRepository.liquidGlassEnabledFlow.collect { enabled ->
+                _uiState.update { it.copy(liquidGlassEnabled = enabled) }
+            }
+        }
+        viewModelScope.launch {
+            userPreferencesRepository.liquidGlassNavBarEnabledFlow.collect { enabled ->
+                _uiState.update { it.copy(liquidGlassNavBarEnabled = enabled) }
             }
         }
 
@@ -1852,6 +1864,18 @@ class SettingsViewModel @Inject constructor(
     fun setUiMotionBlurIntensity(intensity: Float) {
         viewModelScope.launch {
             userPreferencesRepository.setUiMotionBlurIntensity(intensity)
+        }
+    }
+
+    fun setLiquidGlassEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            userPreferencesRepository.setLiquidGlassEnabled(enabled)
+        }
+    }
+
+    fun setLiquidGlassNavBarEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            userPreferencesRepository.setLiquidGlassNavBarEnabled(enabled)
         }
     }
 

@@ -328,6 +328,8 @@ constructor(
         val USE_ANIMATED_LYRICS = booleanPreferencesKey("use_animated_lyrics")
         val ANIMATED_LYRICS_BLUR_ENABLED = booleanPreferencesKey("animated_lyrics_blur_enabled")
         val ANIMATED_LYRICS_BLUR_STRENGTH = androidx.datastore.preferences.core.floatPreferencesKey("animated_lyrics_blur_strength")
+        val LIQUID_GLASS_ENABLED = booleanPreferencesKey("liquid_glass_enabled")
+        val LIQUID_GLASS_NAV_BAR_ENABLED = booleanPreferencesKey("liquid_glass_nav_bar_enabled")
 
         // Genre View Preference
         val IS_GENRE_GRID_VIEW = booleanPreferencesKey("is_genre_grid_view")
@@ -2010,6 +2012,28 @@ constructor(
     suspend fun setUiMotionBlurIntensity(intensity: Float) {
         dataStore.edit { preferences ->
             preferences[PreferencesKeys.UI_MOTION_BLUR_INTENSITY] = intensity.coerceIn(0f, 2f)
+        }
+    }
+
+    val liquidGlassEnabledFlow: Flow<Boolean> = dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.LIQUID_GLASS_ENABLED] ?: true
+        }
+
+    suspend fun setLiquidGlassEnabled(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.LIQUID_GLASS_ENABLED] = enabled
+        }
+    }
+
+    val liquidGlassNavBarEnabledFlow: Flow<Boolean> = dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.LIQUID_GLASS_NAV_BAR_ENABLED] ?: true
+        }
+
+    suspend fun setLiquidGlassNavBarEnabled(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.LIQUID_GLASS_NAV_BAR_ENABLED] = enabled
         }
     }
 

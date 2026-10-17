@@ -10,6 +10,7 @@ import java.util.Locale
 import java.util.Date
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.ui.draw.rotate
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.outlined.DarkMode
 import android.content.Context
 import android.content.Intent
@@ -2004,6 +2005,41 @@ fun SettingsCategoryScreen(
 
                             SettingsCategory.DEVICE_CAPABILITIES -> {
                                 // Device Capabilities has its own screen
+                            }
+
+                            SettingsCategory.LIQUID_GLASS -> {
+                                SettingsSubsection(title = "Liquid Glass") {
+                                    SwitchSettingItem(
+                                        title = stringResource(R.string.settings_liquid_glass_global_title),
+                                        subtitle = stringResource(R.string.settings_liquid_glass_global_desc),
+                                        checked = uiState.liquidGlassEnabled,
+                                        onCheckedChange = { settingsViewModel.setLiquidGlassEnabled(it) },
+                                        leadingIcon = {
+                                            Icon(Icons.Rounded.AutoAwesome, null, tint = MaterialTheme.colorScheme.secondary)
+                                        }
+                                    )
+                                }
+
+                                AnimatedVisibility(
+                                    visible = uiState.liquidGlassEnabled,
+                                    enter = fadeIn() + expandVertically(),
+                                    exit = fadeOut() + shrinkVertically()
+                                ) {
+                                    Column {
+                                        Spacer(modifier = Modifier.height(16.dp))
+                                        SettingsSubsection(title = "Components") {
+                                            SwitchSettingItem(
+                                                title = stringResource(R.string.settings_liquid_glass_nav_bar_title),
+                                                subtitle = stringResource(R.string.settings_liquid_glass_nav_bar_desc),
+                                                checked = uiState.liquidGlassNavBarEnabled,
+                                                onCheckedChange = { settingsViewModel.setLiquidGlassNavBarEnabled(it) },
+                                                leadingIcon = {
+                                                    Icon(painterResource(R.drawable.rounded_touch_app_24), null, tint = MaterialTheme.colorScheme.secondary)
+                                                }
+                                            )
+                                        }
+                                    }
+                                }
                             }
 
                             SettingsCategory.LASTFM -> {

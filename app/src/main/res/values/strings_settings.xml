@@ -44,6 +44,12 @@
     <string name="settings_category_device_capabilities_subtitle">Audio specs, codecs, and decoder info</string>
     <string name="settings_category_about_title">About</string>
     <string name="settings_category_about_subtitle">App info, version, and credits</string>
+    <string name="settings_category_liquid_glass_title">Liquid Glass</string>
+    <string name="settings_category_liquid_glass_subtitle">iOS-style liquid refraction and glassmorphism</string>
+    <string name="settings_liquid_glass_global_title">Liquid Glass Effect</string>
+    <string name="settings_liquid_glass_global_desc">Enable iOS-style liquid glass refraction across supported components</string>
+    <string name="settings_liquid_glass_nav_bar_title">Navigation Bar</string>
+    <string name="settings_liquid_glass_nav_bar_desc">Apply liquid glass refraction to the bottom navigation bar and search button</string>
 
     <!-- Common toggles / labels used in ThemeSelectorItem maps -->
     <string name="label_on">On</string>

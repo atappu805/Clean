@@ -334,6 +334,14 @@ object SettingsSearchCatalog {
             listOf("scrobble", "lastfm", "track", "history"),
             SettingsCategory.LASTFM, Screen.SettingsCategory.createRoute(SettingsCategory.LASTFM.id)),
 
+        // ─── Liquid Glass ───────────────────────────────────────────────────────────
+        SearchableSetting("Liquid Glass", "Enable iOS-style liquid glass refraction across supported components",
+            listOf("liquid", "glass", "liquid glass", "refraction", "blur", "ios", "glassmorphism"),
+            SettingsCategory.LIQUID_GLASS, Screen.SettingsCategory.createRoute(SettingsCategory.LIQUID_GLASS.id)),
+        SearchableSetting("Liquid Glass Navigation Bar", "Apply liquid glass refraction to bottom navigation bar",
+            listOf("liquid glass nav", "glass navigation", "ios navigation bar", "glass tab bar"),
+            SettingsCategory.LIQUID_GLASS, Screen.SettingsCategory.createRoute(SettingsCategory.LIQUID_GLASS.id)),
+
         // ─── Equalizer ──────────────────────────────────────────────────────────────
         SearchableSetting("Equalizer", "Launch system audio effects and sound enhancement panel",
             listOf("equalizer", "eq", "audio", "bass", "treble", "dolby", "sound", "effects"),

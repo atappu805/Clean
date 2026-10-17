@@ -43,7 +43,14 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.res.painterResource
+import com.saurav.pixelmusic.ui.theme.GoogleSansRounded
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -115,7 +122,8 @@ fun PlayerInternalNavigationBar(
     navBarStyle: String,
     compactMode: Boolean,
     bottomBarPadding: Dp = 0.dp,
-    onSearchIconDoubleTap: () -> Unit = {}
+    onSearchIconDoubleTap: () -> Unit = {},
+    isLiquidGlass: Boolean = true
 ) {
     val latestCurrentRoute by rememberUpdatedState(currentRoute)
     val latestNavigationEnabled by rememberUpdatedState(currentRoute != null)
@@ -155,102 +163,161 @@ fun PlayerInternalNavigationBar(
     // devices that need extra clearance. It's now applied on top of the base 12dp.
     val bottomPadding = 12.dp
 
-Row(
-    modifier = modifier
-        .fillMaxWidth()
-        .padding(start = horizontalOuterPadding, end = horizontalOuterPadding, bottom = bottomPadding),
-    horizontalArrangement = Arrangement.spacedBy(itemSpacing),
-    verticalAlignment = Alignment.CenterVertically
-) {
-        HorizontalFloatingToolbar(
-            modifier = Modifier.weight(1f),
-            expanded = true,
-            colors = FloatingToolbarDefaults.vibrantFloatingToolbarColors(
-                toolbarContentColor = MaterialTheme.colorScheme.onSurface,
-                toolbarContainerColor = MaterialTheme.colorScheme.primary
-            ),
-            content = {
-                // Ensure the items fill the entire pill width evenly
-                Row(
-                    modifier = Modifier.fillMaxWidth().height(toolbarRowHeight),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                    verticalAlignment = Alignment.CenterVertically
+    val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+
+    // iOS Liquid Glass specular rim gradient and translucent fill colors
+    val glassBorderBrush = remember(isDark) {
+        Brush.verticalGradient(
+            colors = if (isDark) listOf(
+                Color.White.copy(alpha = 0.45f),
+                Color.White.copy(alpha = 0.10f)
+            ) else listOf(
+                Color.White.copy(alpha = 0.85f),
+                Color.White.copy(alpha = 0.35f)
+            )
+        )
+    }
+
+    val glassContainerColor = remember(isDark) {
+        if (isDark) {
+            Color(0x35FFFFFF).compositeOver(Color(0xD018181B))
+        } else {
+            Color(0x60FFFFFF).compositeOver(Color(0xD0F2F2F7))
+        }
+    }
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(start = horizontalOuterPadding, end = horizontalOuterPadding, bottom = bottomPadding),
+        horizontalArrangement = Arrangement.spacedBy(itemSpacing),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (isLiquidGlass) {
+            // iOS 26 Liquid Glass Navigation Capsule
+            Surface(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(settingsButtonSize),
+                shape = CircleShape,
+                color = glassContainerColor,
+                border = BorderStroke(1.dp, glassBorderBrush),
+                shadowElevation = 10.dp
+            ) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
                 ) {
-                    mainItems.forEachIndexed { index, item ->
-                        val isSelected = index == selectedIndex
-
-                        val containerColor by animateColorAsState(
-                            targetValue = if (isSelected) MaterialTheme.colorScheme.background else Color.Transparent,
-                            animationSpec = tween(200),
-                            label = "container_color_$index"
-                        )
-
-                        val contentColor by animateColorAsState(
-                            targetValue = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.background,
-                            animationSpec = tween(200),
-                            label = "content_color_$index"
-                        )
-
-                        // 1. ADD THIS: Animate the weight so the selected tab expands!
-                        val animatedWeight by animateFloatAsState(
-                            targetValue = if (isSelected) selectedItemWeight else 1f,
-                            animationSpec = spring(
-                                dampingRatio = Spring.DampingRatioMediumBouncy,
-                                stiffness = Spring.StiffnessLow
-                            ),
-                            label = "weight_$index"
-                        )
-
-                        Surface(
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                if (latestNavigationEnabled && latestCurrentRoute != item.screen.route) {
-                                    navController.navigateToTopLevelSafely(item.screen.route)
-                                } else if (isSelected && item.screen.route == Screen.Search.route) {
-                                    onSearchIconDoubleTap()
-                                }
-                            },
-                            modifier = Modifier
-                                // 2. CHANGE THIS: Use the animated weight instead of 1f
-                                .weight(animatedWeight)
-                                .height(toolbarRowHeight),
-                            shape = CircleShape,
-                            color = containerColor,
-                            contentColor = contentColor
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center,
-                                modifier = Modifier.fillMaxSize()
-                            ) {
-                                val iconRes = if (isSelected && item.selectedIconResId != null && item.selectedIconResId != 0) {
-                                    item.selectedIconResId
-                                } else {
-                                    item.iconResId
-                                }
-
-                                Icon(
-                                    painter = painterResource(id = iconRes),
-                                    contentDescription = item.label,
-                                    tint = contentColor,
-                                    modifier = Modifier.size(itemIconSize)
+                    // Specular gloss reflection across the top half of the capsule
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .fillMaxHeight(0.5f)
+                            .align(Alignment.TopCenter)
+                            .background(
+                                brush = Brush.verticalGradient(
+                                    colors = listOf(
+                                        Color.White.copy(alpha = if (isDark) 0.12f else 0.22f),
+                                        Color.Transparent
+                                    )
                                 )
+                            )
+                    )
 
-                                AnimatedVisibility(
-                                    visible = isSelected && !shouldHideLabel,
-                                    enter = fadeIn(animationSpec = tween(200)) + expandHorizontally(expandFrom = Alignment.Start),
-                                    exit = fadeOut(animationSpec = tween(150)) + shrinkHorizontally(shrinkTowards = Alignment.Start)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(toolbarRowHeight)
+                            .padding(horizontal = 6.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        mainItems.forEachIndexed { index, item ->
+                            val isSelected = index == selectedIndex
+
+                            val animatedWeight by animateFloatAsState(
+                                targetValue = if (isSelected) selectedItemWeight else 1f,
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                                    stiffness = Spring.StiffnessLow
+                                ),
+                                label = "glass_weight_$index"
+                            )
+
+                            val dropletColor by animateColorAsState(
+                                targetValue = if (isSelected) {
+                                    if (isDark) Color.White.copy(alpha = 0.22f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                                } else {
+                                    Color.Transparent
+                                },
+                                animationSpec = tween(220),
+                                label = "droplet_color_$index"
+                            )
+
+                            val itemContentColor by animateColorAsState(
+                                targetValue = if (isSelected) {
+                                    if (isDark) Color.White else MaterialTheme.colorScheme.primary
+                                } else {
+                                    if (isDark) Color.White.copy(alpha = 0.60f) else Color.Black.copy(alpha = 0.55f)
+                                },
+                                animationSpec = tween(200),
+                                label = "glass_content_color_$index"
+                            )
+
+                            Surface(
+                                onClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    if (latestNavigationEnabled && latestCurrentRoute != item.screen.route) {
+                                        navController.navigateToTopLevelSafely(item.screen.route)
+                                    }
+                                },
+                                modifier = Modifier
+                                    .weight(animatedWeight)
+                                    .height(toolbarRowHeight),
+                                shape = CircleShape,
+                                color = dropletColor,
+                                border = if (isSelected) {
+                                    BorderStroke(
+                                        0.5.dp,
+                                        if (isDark) Color.White.copy(alpha = 0.30f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
+                                    )
+                                } else null
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center,
+                                    modifier = Modifier.fillMaxSize()
                                 ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Text(
-                                            text = item.label,
-                                            style = if (compactMode) MaterialTheme.typography.labelMedium else MaterialTheme.typography.labelLarge,
-                                            maxLines = 1,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.primary,
-                                            softWrap = false
-                                        )
+                                    val iconRes = if (isSelected && item.selectedIconResId != null && item.selectedIconResId != 0) {
+                                        item.selectedIconResId
+                                    } else {
+                                        item.iconResId
+                                    }
+
+                                    Icon(
+                                        painter = painterResource(id = iconRes),
+                                        contentDescription = item.label,
+                                        tint = itemContentColor,
+                                        modifier = Modifier.size(itemIconSize)
+                                    )
+
+                                    AnimatedVisibility(
+                                        visible = isSelected && !shouldHideLabel,
+                                        enter = fadeIn(animationSpec = tween(200)) + expandHorizontally(expandFrom = Alignment.Start),
+                                        exit = fadeOut(animationSpec = tween(150)) + shrinkHorizontally(shrinkTowards = Alignment.Start)
+                                    ) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text(
+                                                text = item.label,
+                                                fontFamily = GoogleSansRounded,
+                                                style = if (compactMode) MaterialTheme.typography.labelMedium else MaterialTheme.typography.labelLarge,
+                                                maxLines = 1,
+                                                fontWeight = FontWeight.Bold,
+                                                color = itemContentColor,
+                                                softWrap = false
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -258,10 +325,125 @@ Row(
                     }
                 }
             }
-        )
+        } else {
+            // Material 3 Standard Floating Toolbar
+            HorizontalFloatingToolbar(
+                modifier = Modifier.weight(1f),
+                expanded = true,
+                colors = FloatingToolbarDefaults.vibrantFloatingToolbarColors(
+                    toolbarContentColor = MaterialTheme.colorScheme.onSurface,
+                    toolbarContainerColor = MaterialTheme.colorScheme.primary
+                ),
+                content = {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().height(toolbarRowHeight),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        mainItems.forEachIndexed { index, item ->
+                            val isSelected = index == selectedIndex
+
+                            val containerColor by animateColorAsState(
+                                targetValue = if (isSelected) MaterialTheme.colorScheme.background else Color.Transparent,
+                                animationSpec = tween(200),
+                                label = "container_color_$index"
+                            )
+
+                            val contentColor by animateColorAsState(
+                                targetValue = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.background,
+                                animationSpec = tween(200),
+                                label = "content_color_$index"
+                            )
+
+                            val animatedWeight by animateFloatAsState(
+                                targetValue = if (isSelected) selectedItemWeight else 1f,
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                                    stiffness = Spring.StiffnessLow
+                                ),
+                                label = "weight_$index"
+                            )
+
+                            Surface(
+                                onClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    if (latestNavigationEnabled && latestCurrentRoute != item.screen.route) {
+                                        navController.navigateToTopLevelSafely(item.screen.route)
+                                    }
+                                },
+                                modifier = Modifier
+                                    .weight(animatedWeight)
+                                    .height(toolbarRowHeight),
+                                shape = CircleShape,
+                                color = containerColor,
+                                contentColor = contentColor
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center,
+                                    modifier = Modifier.fillMaxSize()
+                                ) {
+                                    val iconRes = if (isSelected && item.selectedIconResId != null && item.selectedIconResId != 0) {
+                                        item.selectedIconResId
+                                    } else {
+                                        item.iconResId
+                                    }
+
+                                    Icon(
+                                        painter = painterResource(id = iconRes),
+                                        contentDescription = item.label,
+                                        tint = contentColor,
+                                        modifier = Modifier.size(itemIconSize)
+                                    )
+
+                                    AnimatedVisibility(
+                                        visible = isSelected && !shouldHideLabel,
+                                        enter = fadeIn(animationSpec = tween(200)) + expandHorizontally(expandFrom = Alignment.Start),
+                                        exit = fadeOut(animationSpec = tween(150)) + shrinkHorizontally(shrinkTowards = Alignment.Start)
+                                    ) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text(
+                                                text = item.label,
+                                                fontFamily = GoogleSansRounded,
+                                                style = if (compactMode) MaterialTheme.typography.labelMedium else MaterialTheme.typography.labelLarge,
+                                                maxLines = 1,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.primary,
+                                                softWrap = false
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            )
+        }
 
         // Detached Search Button
         val isSearchSelected = latestCurrentRoute == Screen.Search.route
+        val searchGlassColor by animateColorAsState(
+            targetValue = if (isSearchSelected) {
+                if (isDark) MaterialTheme.colorScheme.primary.copy(alpha = 0.40f).compositeOver(glassContainerColor)
+                else MaterialTheme.colorScheme.primary.copy(alpha = 0.30f).compositeOver(glassContainerColor)
+            } else {
+                glassContainerColor
+            },
+            animationSpec = tween(220),
+            label = "search_glass_color"
+        )
+        val searchContentColor by animateColorAsState(
+            targetValue = if (isSearchSelected) {
+                if (isDark) Color.White else MaterialTheme.colorScheme.primary
+            } else {
+                if (isDark) Color.White.copy(alpha = 0.85f) else Color.Black.copy(alpha = 0.75f)
+            },
+            animationSpec = tween(200),
+            label = "search_content_color"
+        )
+
         Surface(
             onClick = {
                 if (!latestNavigationEnabled) return@Surface
@@ -274,11 +456,42 @@ Row(
             },
             modifier = Modifier.size(settingsButtonSize),
             shape = CircleShape,
-            color = if (isSearchSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer,
-            contentColor = if (isSearchSelected) MaterialTheme.colorScheme.background else MaterialTheme.colorScheme.onPrimaryContainer,
-            shadowElevation = 8.dp
+            color = if (isLiquidGlass) searchGlassColor else (if (isSearchSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer),
+            contentColor = if (isLiquidGlass) searchContentColor else (if (isSearchSelected) MaterialTheme.colorScheme.background else MaterialTheme.colorScheme.onPrimaryContainer),
+            border = if (isLiquidGlass) {
+                BorderStroke(
+                    1.dp,
+                    if (isSearchSelected) {
+                        Brush.verticalGradient(
+                            listOf(
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+                            )
+                        )
+                    } else {
+                        glassBorderBrush
+                    }
+                )
+            } else null,
+            shadowElevation = if (isLiquidGlass) 10.dp else 8.dp
         ) {
             Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                if (isLiquidGlass) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .fillMaxHeight(0.5f)
+                            .align(Alignment.TopCenter)
+                            .background(
+                                brush = Brush.verticalGradient(
+                                    colors = listOf(
+                                        Color.White.copy(alpha = if (isDark) 0.15f else 0.25f),
+                                        Color.Transparent
+                                    )
+                                )
+                            )
+                    )
+                }
                 Icon(
                     painter = painterResource(id = R.drawable.rounded_search_24),
                     contentDescription = "Search",

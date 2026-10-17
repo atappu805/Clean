@@ -11,6 +11,7 @@ import androidx.compose.material.icons.rounded.LibraryMusic
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Language
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.saurav.pixelmusic.R
 
@@ -92,6 +93,12 @@ enum class SettingsCategory(
         titleRes = R.string.settings_category_about_title,
         subtitleRes = R.string.settings_category_about_subtitle,
         icon = Icons.Rounded.Info
+    ),
+    LIQUID_GLASS(
+        id = "liquid_glass",
+        titleRes = R.string.settings_category_liquid_glass_title,
+        subtitleRes = R.string.settings_category_liquid_glass_subtitle,
+        icon = Icons.Rounded.AutoAwesome
     ),
     LASTFM(
         id = "lastfm",
