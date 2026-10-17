@@ -2034,7 +2034,7 @@ fun SettingsCategoryScreen(
                                                 valueRange = 0.2f..2.0f,
                                                 steps = 17,
                                                 onValueChange = { settingsViewModel.setLiquidGlassBlurIntensity(it) },
-                                                valueText = { "${kotlin.math.roundToInt(it * 100)}%" }
+                                                valueText = { "${(it * 100).toInt()}%" }
                                             )
                                             Spacer(modifier = Modifier.height(8.dp))
                                             SliderSettingsItem(
@@ -2043,7 +2043,7 @@ fun SettingsCategoryScreen(
                                                 valueRange = 0.0f..2.0f,
                                                 steps = 19,
                                                 onValueChange = { settingsViewModel.setLiquidGlassRefractionIntensity(it) },
-                                                valueText = { "${kotlin.math.roundToInt(it * 100)}%" }
+                                                valueText = { "${(it * 100).toInt()}%" }
                                             )
                                         }
                                         Spacer(modifier = Modifier.height(16.dp))
